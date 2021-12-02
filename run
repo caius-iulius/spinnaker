@@ -1,0 +1,7 @@
+#!/bin/sh
+
+echo "Building..."
+ghc -outputdir ./target main.hs -o ./target/build
+
+echo "Running..."
+./target/build $1

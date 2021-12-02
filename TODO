@@ -1,0 +1,33 @@
+IMPORTANTE
+la grammatica delle lambda può essere:
+    '\'PATTERN ',' ... ',' PATTERN '{' META '}'
+oppure '\' PATTERN_TERMS '{' META '}'
+
+la differenza sta nel problema dei costruttori, nel primo caso dovrei scrivere, per esempio:
+    \f, g, x{f(g x)}
+    \Pair a b{(a,b)}
+nel secondo:
+    \f g x{f(g x)}
+    \(Pair a b){(a, b)}
+
+nei pattern i costruttori con zero argomenti (tipo Nil) sono comunque considerati patternexpr. Quindi, per esempio:
+"Cons x Nil" va scritto come "Cons x (Nil)"
+
+CONTROLLO DELLE DEFINIZIONI RICORSIVE:
+"def x = x" NON DEVE ESSERE PERMESSO
+Si può tentare il sistema di tipizzazione di ocaml, permettere solo valori di funzioni oppure utilizzare un contesto di funzioni già "computate"
+
+aggiungi le definizioni inline:
+    Sintassi: def inline X = E
+
+STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIMO COMPILATORE
+
+DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
+
+Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta 
+
+aggiungi una sintassi if-then-else che decade in un put
+
+supporto multifile, moduli, incorpora file preludio
+
+prendi una decisione riguardo all'ambiguità sintattica del pattern matching

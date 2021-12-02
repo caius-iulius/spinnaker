@@ -1,0 +1,5 @@
+def head = \l{
+    put l
+    | Nil -> panic()
+    | Cons x xs -> x
+}

@@ -1,0 +1,5 @@
+def fac = \n{
+    put n
+    | 0 -> 1
+    | _ -> n * fac (n - 1)
+}
