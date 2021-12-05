@@ -1,5 +1,4 @@
 --Micro Parser Combinator Library -- Just Enough To Be Dangerous!
---TODO aggiungi un verbo "require", prende un parser e lo rende necessario, cioè non c'è modo di recuperare l'esecuzione
 module MPCL where
 
 import GHC.Base

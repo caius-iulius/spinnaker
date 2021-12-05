@@ -85,6 +85,7 @@ getFloat = do {
     othersSecond <- munch1 tailDigit;
     return (coord, read $ filter ('_' /=) $ (firsts ++ map snd othersFirst ++ "." ++ map snd othersSecond))
 }
+
 getLiteral = describeError "Expected literal" $ do {
     (c, f) <- getFloat;
     return $ (c, LitFloating f)
@@ -106,8 +107,9 @@ getOperator = do {
     else return (c, s)
 }
 
+-- Raccoglie una keyword oppure un simbolo composto dai caratteri di operatore
 thisSyntaxElem test = describeError ("Expected keyword or symbol '" ++ test ++ "'") $ do {
-    (c, s) <- getKeyword <|| getOperatorText; --TODO: Forse invece questo, ma taglia fuori invece "=", che è un operatore usato anche per le assegnazioni: do {(c', s') <- getOperatorText; if elem s' validSymbols then return (c', s') else pfail "thisSyntaxElem"};
+    (c, s) <- getKeyword <|| getOperatorText;
     if s == test then return (c, s) else pfail ""
 }
 
@@ -235,14 +237,6 @@ getProgram = do {
     reachedEof;
     return res
 }
-
-{-main = do {
-    putStr ":= ";
-    input <- getLine;
-    putStrLn $ show $ parse getDefinitions (Coord "in" 1 1, input);
-    return ()
-}-}
-
 
 main = do {
     args <- getArgs;
