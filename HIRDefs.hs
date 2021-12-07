@@ -56,7 +56,7 @@ data HIRDataDef =
     DataDef String [(TyQuant, String)] [HIRDataVariant] --Nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
-data HIRProgram
+data HIRProgramDefs
     = ProgDefs [(StdCoord, String, HIRExpr)] --Lista di coordinate, nome e valore della definizione
     | ProgDataDefs [(StdCoord, HIRDataDef)] --Lista di coordinate e definizioni di tipo
     deriving Show

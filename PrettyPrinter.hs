@@ -1,0 +1,20 @@
+module PrettyPrinter where
+
+import Data.Tree
+import HIRDefs
+
+toTreeData :: DataType -> Tree String
+toTreeData d = Node (show d) []
+
+toTreeHIRPattern :: HIRPattern -> Tree String
+toTreeHIRPattern p = Node (show p) []
+
+toTreeHIRExpr (c, ExprLiteral l) = Node (show c ++ " Literal: " ++ show l) []
+toTreeHIRExpr (c, ExprFCall f a) = Node (show c ++ " Function call") [toTreeHIRExpr f, toTreeHIRExpr a]
+toTreeHIRExpr (c, ExprLabel l) = Node (show c ++ " Label: " ++ show l) []
+toTreeHIRExpr (c, ExprTuple es) = Node (show c ++ " Tuple") (map toTreeHIRExpr es)
+toTreeHIRExpr (c, ExprLambda p expr) = Node (show c ++ " Lambda") [Node "arg" [toTreeHIRPattern p], Node "expr" [toTreeHIRExpr expr]]
+toTreeHIRExpr (c, ExprPut val branches) = Node (show c ++ " Put") [Node "val" [toTreeHIRExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHIRPattern p], Node "expr" [toTreeHIRExpr e]]) branches)]
+
+toTreeProgDef (c, s, e) = Node (show c ++ " Defining: " ++ show s) [toTreeHIRExpr e]
+toTreeHIRProgramDefs (ProgDefs defs) = Node "Value definitions" (map toTreeProgDef defs)
