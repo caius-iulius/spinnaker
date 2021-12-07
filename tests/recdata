@@ -1,0 +1,2 @@
+data LA a b = NilA | ConsA a (LB a b)
+and  LB a b = NilB | ConsB b (LA a b)

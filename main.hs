@@ -23,7 +23,7 @@ commentEnd = "*/"
 
 validSymbols = [inArrow, putSeparator, lambdaInit, commentStart, commentEnd]
 
-keywords = ["let", "put", "_", "def", "pub", "type", "and"]
+keywords = ["let", "put", "_", "def", "data", "pub", "type", "and"]
 
 -- TODO questo dovrà anche riconoscere i commenti
 skipUseless = munch whiteSpace
@@ -116,6 +116,8 @@ thisSyntaxElem test = describeError ("Expected keyword or symbol '" ++ test ++ "
 discard p = p >> return ()
 
 -- Analisi semantica
+
+-- Parser vari per pattern
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getLiteral;
     return (c, PatLiteral l)
@@ -144,6 +146,7 @@ getPatternExpr = do{
     return (c, PatVariant cons args)
 } <|| getPatternTerm
 
+-- Parser vari per le espressioni
 getTerm = describeError "Expected term" $ do { -- Literal
     (c, l) <- getLiteral;
     return (c, ExprLiteral l)
@@ -215,11 +218,11 @@ getPut = do
         return (c, ExprPut val branches)
     }
 
+-- Parser per le definizioni
 getDefinition = do {
     label <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
              <|| getLabel;
-    skipUseless;
-    thisChar '=';
+    thisSyntaxElem "=";
     meta <- getMeta;
     return (fst label, snd label, meta)
 }
@@ -230,9 +233,65 @@ getDefinitions = do {
     return $ ProgDefs defs
 }
 
+-- Parser per i tipi
+getTypeVar = getLabel --TODO: Anche i tipi higher-order? magari è sintassi diversa
+
+-- TODO: TypeMeta, test typeexpr
+getTypeTerm = do { --Tipo quantifier
+    (c, l) <- getLabel;
+    return (c, TypeExprQuantifier l)
+} <|| do { --Tipo concreto
+    (c, l) <- getCapitalLabel;
+    return (c, TypeExprTypeApp l [])
+} <|| do {
+    skipUseless;
+    (c, _) <- thisChar '(';
+    types <- sepBy getTypeMeta (skipUseless >> thisChar ',');
+    skipUseless;
+    require $ thisChar ')';
+    if length types == 1
+    then return $ head types
+    else return (c, TypeExprTuple types)
+}
+
+getTypeExpr = do {
+    (c, l) <- getLabel <|| getCapitalLabel;
+    args <- munch getTypeTerm;
+    return (c, TypeExprTypeApp l args)
+} <|| getTypeTerm
+
+
+getTypeMeta = do {
+    e <- getTypeExpr;
+    (c, _) <- thisSyntaxElem "->";
+    m <- require getTypeMeta;
+    return (c, TypeExprFun e m)
+} <|| getTypeExpr
+
+-- Parser vari per datatype
+getVariant = do {
+    (c, label) <- getCapitalLabel;
+    tyexprs <- munch getTypeTerm;
+    return $ DataVariant c label (map (\e->(DataNOTHING,e)) tyexprs)
+}
+
+getDataDefinition = do { --pfatal "DATA DEFINITIONS NOT IMPLEMENTED"
+    (c, label) <- getCapitalLabel;
+    typevars <- munch getTypeVar; -- TODO 
+    thisSyntaxElem "=";
+    variants <- sepBy1 getVariant $ thisSyntaxElem "|";
+    return (c, DataDef label (map (\(c, tv)->(0, tv)) typevars) variants) --TODO quantificatore iniziale?
+}
+
+getDataDefinitions = do {
+    thisSyntaxElem "data";
+    defs <- sepBy1 getDataDefinition $ thisSyntaxElem "and";
+    return $ ProgDataDefs defs
+}
+
 --Entry point (da modificare)
 getProgram = do {
-    res <- munch getDefinitions;
+    res <- munch (getDefinitions <|| getDataDefinitions);
     skipUseless;
     reachedEof;
     return res

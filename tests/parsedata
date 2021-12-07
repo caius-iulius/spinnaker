@@ -1,0 +1,8 @@
+data ParseResult coord t
+    = POk t (coord, String)
+    | PFail coord ErrMessage
+    | PFatal coord ErrMessage
+
+data Parser coord t
+    = PValue t
+    | PParse ((coord, String) -> ParseResult coord t)

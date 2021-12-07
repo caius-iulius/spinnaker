@@ -43,7 +43,8 @@ type HIRExpr = (StdCoord, HIRExprData)
 data HIRTypeExprData
     = TypeExprFun HIRTypeExpr HIRTypeExpr --Tipo argomento, tipo restituito
     | TypeExprTuple [HIRTypeExpr] --Lista di tipi della n-tupla
-    | TypeExprTypeValue String [HIRTypeExpr] --Nome del tipo, argomenti del tipo
+    | TypeExprTypeApp String [HIRTypeExpr] --Nome del tipo, argomenti del tipo
+    | TypeExprQuantifier String --Nome del singolo valore...TODO migliore documentazione
     deriving Show
 type HIRTypeExpr = (StdCoord, HIRTypeExprData)
 
@@ -52,7 +53,7 @@ data HIRDataVariant =
     deriving Show
 
 data HIRDataDef =
-    DataDef String [(String, TyQuant)] [HIRDataVariant] --Nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
+    DataDef String [(TyQuant, String)] [HIRDataVariant] --Nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
 data HIRProgram
