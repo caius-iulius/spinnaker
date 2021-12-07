@@ -1,4 +1,3 @@
--- TODO: put v | Cons x Nil -> ... non funziona, va scritto put v | Cons x (Nil) -> ... . FIX
 -- TODO: Parsing dei commenti
 -- TODO: Parsing dei datatype
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
@@ -124,6 +123,9 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 } <|| do {
     (c, l) <- getLabel;
     return (c, PatLabel l)
+} <|| do {
+    (c, l) <- getCapitalLabel;
+    return (c, PatVariant l [])
 } <|| do {
     (c, k) <- getKeyword;
     if k == "_" then return (c, PatWildcard)

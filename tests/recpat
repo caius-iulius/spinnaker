@@ -1,0 +1,7 @@
+def myfunction = \x{
+    put x
+    | Nil -> 1
+    | Cons x (Cons x' xs) -> 2
+    | Cons x Nil -> 3
+    | _ -> 4
+}

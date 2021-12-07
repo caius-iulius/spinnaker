@@ -12,9 +12,6 @@ nel secondo:
     \f g x{f(g x)}
     \(Pair a b){(a, b)}
 
-nei pattern i costruttori con zero argomenti (tipo Nil) sono comunque considerati patternexpr. Quindi, per esempio:
-"Cons x Nil" va scritto come "Cons x (Nil)"
-
 CONTROLLO DELLE DEFINIZIONI RICORSIVE:
 "def x = x" NON DEVE ESSERE PERMESSO
 Si può tentare il sistema di tipizzazione di ocaml, permettere solo valori di funzioni oppure utilizzare un contesto di funzioni già "computate"
