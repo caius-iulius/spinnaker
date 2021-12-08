@@ -11,8 +11,16 @@ data DataType
     | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
     | DataFun DataType DataType --Tipo dell'argomento e del valore restituito
     | DataQuant TyQuant --Quantificatore
-    | DataTypeValue String [DataType] --Nome del tipo, lista dei suoi argomenti
-    deriving Show
+    | DataTypeApp String [DataType] --Nome del tipo, lista dei suoi argomenti
+
+instance Show DataType where
+    show DataNOTHING = "NOTHING"
+    show DataInt = "Int"
+    show DataFlt = "Flt"
+    show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
+    show (DataFun a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
+    show (DataQuant q) = "q"++ show q
+    show (DataTypeApp s types) = "(" ++ foldr1 ((++) . (++ " ")) (s:map show types) ++ ")"
 
 data Literal
     = LitInteger Int

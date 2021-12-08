@@ -3,9 +3,6 @@ module PrettyPrinter where
 import Data.Tree
 import HIRDefs
 
-toTreeData :: DataType -> Tree String
-toTreeData d = Node (show d) []
-
 toTreeHIRPattern :: HIRPattern -> Tree String
 toTreeHIRPattern p = Node (show p) []
 
@@ -19,7 +16,7 @@ toTreeHIRExpr (c, ExprPut val branches) = Node (show c ++ " Put") [Node "val" [t
 toTreeHIRTypeExpr :: HIRTypeExpr -> Tree String
 toTreeHIRTypeExpr te = Node (show te) []
 
-toTreeHIRDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(dt, te) -> Node "arg" [toTreeData dt, toTreeHIRTypeExpr te]) args)
+toTreeHIRDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(dt, te) -> Node "arg" [Node (show dt) [], toTreeHIRTypeExpr te]) args)
 
 toTreeHIRDataDef (c, DataDef labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHIRDataVariant variants)
