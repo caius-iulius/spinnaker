@@ -5,6 +5,7 @@ module Parser where
 
 import MPCL
 import HIRDefs
+import TypingDefs(DataType(DataNOTHING))
 
 labelFirst = thisChar '_' <|| alphaLower
 capitalLabelFirst = alphaCapital
@@ -150,13 +151,13 @@ getPatternExpr = do{
 -- Parser vari per le espressioni
 getTerm = describeError "Expected term" $ do { -- Literal
     (c, l) <- getLiteral;
-    return (c, ExprLiteral l)
+    return (c, DataNOTHING, ExprLiteral l)
 } <|| do { -- Label
     (c, l) <- getLabel;
-    return (c, ExprLabel l)
+    return (c, DataNOTHING, ExprLabel l)
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
     (c, l) <- getCapitalLabel;
-    return (c, ExprLabel l)
+    return (c, DataNOTHING, ExprLabel l)
 } <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
     (c, _) <- thisChar '(';
@@ -165,7 +166,7 @@ getTerm = describeError "Expected term" $ do { -- Literal
     require $ thisChar ')';
     if length m == 1
     then return $ head m
-    else return (c, ExprTuple m)
+    else return (c, DataNOTHING, ExprTuple m)
 }
 
 getExpr = do {
@@ -177,17 +178,17 @@ getExpr = do {
     internal <- getMeta; --Expr
     skipUseless;
     require $ thisChar '}';
-    return $ foldr (\p e-> (fst p, ExprLambda p e)) internal curriedargs
+    return $ foldr (\p e-> (fst p, DataNOTHING, ExprLambda p e)) internal curriedargs
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
-    return $ foldl1 (\t1 t2 -> (fst t1, ExprFCall t1 t2)) terms
+    return $ foldl1 (\t1 t2 -> ((\(c,_,_)->c) t1, DataNOTHING, ExprFCall t1 t2)) terms
 } 
 
 getMeta = getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;
-    return (opc, ExprFCall (opc, ExprFCall (opc, ExprLabel op) expr) meta) 
+    return (opc, DataNOTHING, ExprFCall (opc, DataNOTHING, ExprFCall (opc, DataNOTHING, ExprLabel op) expr) meta)
 } <|| getExpr
 
 getLet = do
@@ -198,7 +199,7 @@ getLet = do
         val <- getMeta;
         thisSyntaxElem "->";
         expr <- getMeta;
-        return (c, ExprPut val [(p, expr)])
+        return (c, DataNOTHING, ExprPut val [(p, expr)])
     }
 
 getBranch = do
@@ -216,7 +217,7 @@ getPut = do
     require $ do {
         val <- getMeta;
         branches <- munch1 getBranch;
-        return (c, ExprPut val branches)
+        return (c, DataNOTHING, ExprPut val branches)
     }
 
 -- Parser per le definizioni

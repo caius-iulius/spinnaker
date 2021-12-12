@@ -1,26 +1,6 @@
 module HIRDefs where
 import MPCL(StdCoord)
-
-type TyQuant = Int
-
---TODO DataType...
-data DataType
-    = DataNOTHING --Tipo temporaneo generato dal parser
-    | DataInt
-    | DataFlt
-    | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
-    | DataFun DataType DataType --Tipo dell'argomento e del valore restituito
-    | DataQuant TyQuant --Quantificatore
-    | DataTypeApp String [DataType] --Nome del tipo, lista dei suoi argomenti
-
-instance Show DataType where
-    show DataNOTHING = "NOTHING"
-    show DataInt = "Int"
-    show DataFlt = "Flt"
-    show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
-    show (DataFun a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
-    show (DataQuant q) = "q"++ show q
-    show (DataTypeApp s types) = "(" ++ foldr1 ((++) . (++ " ")) (s:map show types) ++ ")"
+import TypingDefs
 
 data Literal
     = LitInteger Int
@@ -46,7 +26,7 @@ data HIRExprData
     | ExprLambda HIRPattern HIRExpr --Argomento(anche "smontato") e valore interno
     | ExprPut HIRExpr [(HIRPattern, HIRExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
     deriving Show
-type HIRExpr = (StdCoord, HIRExprData)
+type HIRExpr = (StdCoord, DataType, HIRExprData)
 
 data HIRTypeExprData
     = TypeExprFun HIRTypeExpr HIRTypeExpr --Tipo argomento, tipo restituito
