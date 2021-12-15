@@ -1,4 +1,7 @@
-migliori messaggi di errore quando le definizioni (di valore e di tipi)
+implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
+migliori messaggi di errore quando le definizioni (di valore e di tipi) sono vuote/non sono complete ecc (quindi serve require dopo i def...)
+phantom types per determinare se un programma è stato tipizzato?
+la sintassi def...and... si può ridurre a def...def... e raggruppare tutto dopo?
 
 IMPORTANTE
 la grammatica delle lambda può essere:

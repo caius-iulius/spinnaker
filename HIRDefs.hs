@@ -11,11 +11,10 @@ data Literal
 data HIRPatternData
     = PatWildcard
     | PatLiteral Literal --Il literal rappresentato
-    | PatLabel String --Assegnazione valore a label
     | PatTuple [HIRPattern] --Lista di elementi della n-tupla
     | PatVariant String [HIRPattern] --Nome della variante, lista di argomenti di questo
     deriving Show
-type HIRPattern = (StdCoord, HIRPatternData)
+type HIRPattern = (StdCoord, Maybe String, HIRPatternData) -- coordinate, eventuale assegnazione del valore (tipo haskell labl@pat) e pattern vero e proprio
 
 
 data HIRExprData 

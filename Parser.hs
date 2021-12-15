@@ -119,16 +119,16 @@ discard p = p >> return ()
 -- Parser vari per pattern
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getLiteral;
-    return (c, PatLiteral l)
+    return (c, Nothing, PatLiteral l)
 } <|| do {
     (c, l) <- getLabel;
-    return (c, PatLabel l)
+    return (c, Just l, PatWildcard)
 } <|| do {
     (c, l) <- getCapitalLabel;
-    return (c, PatVariant l [])
+    return (c, Nothing, PatVariant l [])
 } <|| do {
     (c, k) <- getKeyword;
-    if k == "_" then return (c, PatWildcard)
+    if k == "_" then return (c, Nothing, PatWildcard)
     else pfail ""
 } <|| do {
     skipUseless;
@@ -139,13 +139,13 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 
     if length m == 1
     then return $ head m
-    else return (c, PatTuple m)
+    else return (c, Nothing, PatTuple m)
 }
 
 getPatternExpr = do{
     (c, cons) <- getCapitalLabel;
     args <- munch getPatternTerm;
-    return (c, PatVariant cons args)
+    return (c, Nothing, PatVariant cons args)
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
@@ -178,7 +178,7 @@ getExpr = do {
     internal <- getMeta; --Expr
     skipUseless;
     require $ thisChar '}';
-    return $ foldr (\p e-> (fst p, DataNOTHING, ExprLambda p e)) internal curriedargs
+    return $ foldr (\p e-> ((\(c',_,_)->c') p, DataNOTHING, ExprLambda p e)) internal curriedargs
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
     return $ foldl1 (\t1 t2 -> ((\(c,_,_)->c) t1, DataNOTHING, ExprFCall t1 t2)) terms
