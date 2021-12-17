@@ -5,6 +5,8 @@ import Parser
 import PrettyPrinter
 import MPCL
 import Data.Tree
+import TypingDefs
+import TypeTyper
 
 main = do {
     args <- getArgs;
@@ -13,6 +15,13 @@ main = do {
     putStrLn "Program:";
     putStrLn contents;
     case parse getProgram (Coord (head args) 1 1, contents) of
-        POk progdefslist _ -> putStrLn $ drawTree $ Node "Parsed" (map toTreeHIRProgramDefs progdefslist)
+        POk untyped _ -> do {
+            -- Da qui in poi è tutto temporaneo
+            putStrLn $ drawTree $ Node "Parsed" [toTreeHIRProgram untyped];
+            (either, _) <- runTyperState $ typeProgram untyped;
+            case either of
+                Left e -> putStrLn $ "Typing error: " ++ e
+                Right valdef -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeHIRValDef valdef]
+        }
         pe -> print pe
 }

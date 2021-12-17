@@ -221,18 +221,13 @@ getPut = do
     }
 
 -- Parser per le definizioni
-getDefinition = do {
-    label <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
+getValDefinition = do {
+    (c, _) <- thisSyntaxElem "def";
+    (_, label) <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
              <|| getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
-    return (fst label, snd label, meta)
-}
-
-getDefinitions = do {
-    (c, _) <- thisSyntaxElem "def";
-    defs <- sepBy1 getDefinition $ thisSyntaxElem "and";
-    return $ ProgDefs defs
+    return $ Right $ ValDef c label meta
 }
 
 -- Parser per i tipi
@@ -278,23 +273,24 @@ getVariant = do {
 }
 
 getDataDefinition = do { --pfatal "DATA DEFINITIONS NOT IMPLEMENTED"
-    (c, label) <- getCapitalLabel;
+    (c, _) <- thisSyntaxElem "data";
+    (_, label) <- getCapitalLabel;
     typevars <- munch getTypeVar; -- TODO 
     thisSyntaxElem "=";
     variants <- sepBy1 getVariant $ thisSyntaxElem "|";
-    return (c, DataDef label (map (\(c, tv)->(0, tv)) typevars) variants) --TODO quantificatore iniziale?
+    return $ Left $ DataDef c label (map (\(c, tv)->(0, tv)) typevars) variants --TODO quantificatore iniziale?
 }
 
-getDataDefinitions = do {
-    thisSyntaxElem "data";
-    defs <- sepBy1 getDataDefinition $ thisSyntaxElem "and";
-    return $ ProgDataDefs defs
-}
-
+listEitherDefToTup [] = ([], [])
+listEitherDefToTup (Left ddef:defs) =
+    let (ddefs, vdefs) = listEitherDefToTup defs in (ddef:ddefs, vdefs)
+listEitherDefToTup (Right vdef:defs) =
+    let (ddefs, vdefs) = listEitherDefToTup defs in (ddefs, vdef:vdefs)
 --Entry point (da modificare)
 getProgram = do {
-    res <- munch (getDefinitions <|| getDataDefinitions);
+    res <- munch (getValDefinition <|| getDataDefinition);
     skipUseless;
     reachedEof;
-    return res
+    let (ddefs, vdefs) = listEitherDefToTup res
+        in return $ Program ddefs vdefs
 }

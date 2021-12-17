@@ -39,11 +39,11 @@ data HIRDataVariant =
     DataVariant StdCoord String [(DataType, HIRTypeExpr)] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi
     deriving Show
 
+data HIRValDef = ValDef StdCoord String HIRExpr -- Cordinate della definizione, nome del valore, espressione
+    deriving Show
 data HIRDataDef =
-    DataDef String [(TyQuant, String)] [HIRDataVariant] --Nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
+    DataDef StdCoord String [(TyQuant, String)] [HIRDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
-data HIRProgramDefs
-    = ProgDefs [(StdCoord, String, HIRExpr)] --Lista di coordinate, nome e valore della definizione
-    | ProgDataDefs [(StdCoord, HIRDataDef)] --Lista di coordinate e definizioni di tipo
+data HIRProgram = Program [HIRDataDef] [HIRValDef]
     deriving Show

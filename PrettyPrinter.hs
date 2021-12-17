@@ -18,10 +18,9 @@ toTreeHIRTypeExpr te = Node (show te) []
 
 toTreeHIRDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(dt, te) -> Node "arg" [Node (show dt) [], toTreeHIRTypeExpr te]) args)
 
-toTreeHIRDataDef (c, DataDef labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
+toTreeHIRDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHIRDataVariant variants)
 
-toTreeProgDef (c, s, e) = Node (show c ++ " Defining: " ++ show s) [toTreeHIRExpr e]
+toTreeHIRValDef (ValDef c s e) = Node (show c ++ " Defining val: " ++ show s) [toTreeHIRExpr e]
 
-toTreeHIRProgramDefs (ProgDefs defs) = Node "Value definitions" (map toTreeProgDef defs)
-toTreeHIRProgramDefs (ProgDataDefs defs) = Node "Data definitions" (map toTreeHIRDataDef defs)
+toTreeHIRProgram (Program ddefs vdefs) = Node "Program" [Node "Data detinitions" (map toTreeHIRDataDef ddefs), Node "Value definitions" (map toTreeHIRValDef vdefs)]
