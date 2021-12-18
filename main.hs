@@ -21,7 +21,7 @@ main = do {
             (either, _) <- runTyperState $ typeProgram untyped;
             case either of
                 Left e -> putStrLn $ "Typing error: " ++ e
-                Right valdef -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeHIRValDef valdef]
+                Right typed -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeHIRProgram typed]
         }
         pe -> print pe
 }

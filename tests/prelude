@@ -1,6 +1,6 @@
-/*TODO:Questo file andrà copiato in una stringa in defs.rs*/
-/* operatori di base */
+# TODO:Questo file andrà copiato in una stringa in defs.rs
 
+# operatori di base
 def (+) = \a,b{_addInt(a,b)}
 def (-) = \a,b{_subInt(a,b)}
 def (*) = \a,b{_mulInt(a,b)}
@@ -11,25 +11,23 @@ def (>) = \a,b{_greInt(a,b)}
 def (>=) = \a,b{_geqInt(a,b)}
 def (=) = \a,b{_equInt(a,b)}
 
-/* operatori funzionali */
-/* NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).
-Oltretutto (|>) e (<|) sono pipe e non composizioni,ma (|>) è associativa a sinistra. Bisogna considerare vantaggi e svantaggi dei vari approcci in un sistema associativo a destra.
-In F#:
-def (|>) = \x,f{f x}
-
-In molti casi la composizione è rappresentata da un punto,ma al momento sto pensando di usarlo per i namespace.
-*/
+# operatori funzionali
+# NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).
+# Oltretutto (|>) e (<|) sono pipe e non composizioni,ma (|>) è associativa a sinistra. Bisogna considerare vantaggi e svantaggi dei vari approcci in un sistema associativo a destra.
+#   In F#:
+#   def (|>) = \x,f{f x}
+# In molti casi la composizione è rappresentata da un punto,ma al momento sto pensando di usarlo per i namespace e le struct
 
 def (|>) = \f,g,x{g(f x)}
 def (<|) = \f,g,x{f(g x)}
 
-/* questi in forse */
+# questi in forse
 def ($) = \a,b{a b}
 def (|->) = \x,f{f x}
 
-/* altra roba utile */
-def flip = \f,x,y{f y x}
+# altra roba utile
+# def flip = \f,x,y{f y x}
+# def curry = \f,x,y{f(x,y)}
+# def uncurry = \f,(x,y){f x y}
 
-/*
-NOTA: Ovviamente serve tanta roba, come le funzioni flip, curry, uncurry, liftM2, cose su liste, monadi, moduli...
-*/
+# NOTA: Ovviamente serve tanta roba, come le funzioni flip, curry, uncurry, liftM2, cose su liste, monadi, moduli...

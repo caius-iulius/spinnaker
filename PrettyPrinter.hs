@@ -23,4 +23,6 @@ toTreeHIRDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining d
 
 toTreeHIRValDef (ValDef c s e) = Node (show c ++ " Defining val: " ++ show s) [toTreeHIRExpr e]
 
-toTreeHIRProgram (Program ddefs vdefs) = Node "Program" [Node "Data detinitions" (map toTreeHIRDataDef ddefs), Node "Value definitions" (map toTreeHIRValDef vdefs)]
+toTreeHIRValDefs vdefs = Node "Group of vals" (map toTreeHIRValDef vdefs)
+
+toTreeHIRProgram (Program ddefs vdefss) = Node "Program" [Node "Data detinitions" (map toTreeHIRDataDef ddefs), Node "Value definitions" (map toTreeHIRValDefs vdefss)]

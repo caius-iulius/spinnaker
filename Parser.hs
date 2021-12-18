@@ -1,5 +1,4 @@
--- TODO: Parsing dei commenti
--- TODO: Parsing dei datatype
+-- TODO FORSE: Parsing dei commenti multilinea
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
 module Parser where
 
@@ -12,7 +11,7 @@ capitalLabelFirst = alphaCapital
 labelChar = thisChar '_' <|| alphanumeric
 tailDigit = thisChar '_' <|| numeric
 
-opChar = anyChar ":!#$%&*+/-<=>?@\\^|."
+opChar = anyChar ":!$%&*+/-<=>?@\\^|."
 
 inArrow = "->"
 putSeparator = "|"
@@ -22,10 +21,16 @@ commentEnd = "*/"
 
 validSymbols = [inArrow, putSeparator, lambdaInit, commentStart, commentEnd]
 
-keywords = ["let", "put", "_", "def", "data", "pub", "type", "and"]
+keywords = ["let", "put", "_", "def", "and", "data", "pub", "type", "and"]
 
--- TODO questo dovrà anche riconoscere i commenti
-skipUseless = munch whiteSpace
+lineComment = do {
+    thisChar '#';
+    munch (stdSatisfy (not . ('\n'==)) "");
+}
+
+skipUseless = do {
+    munch (discard whiteSpace <|| discard lineComment);
+}
 getLabelText = do {
     skipUseless;
     (c, f) <- labelFirst;
@@ -222,12 +227,16 @@ getPut = do
 
 -- Parser per le definizioni
 getValDefinition = do {
-    (c, _) <- thisSyntaxElem "def";
-    (_, label) <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
+    (c, label) <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
              <|| getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
-    return $ Right $ ValDef c label meta
+    return $ ValDef c label meta
+}
+getValDefinitions = do {
+    thisSyntaxElem "def";
+    defs <- sepBy1 getValDefinition (thisSyntaxElem "and");
+    return $ Right defs
 }
 
 -- Parser per i tipi
@@ -288,7 +297,7 @@ listEitherDefToTup (Right vdef:defs) =
     let (ddefs, vdefs) = listEitherDefToTup defs in (ddefs, vdef:vdefs)
 --Entry point (da modificare)
 getProgram = do {
-    res <- munch (getValDefinition <|| getDataDefinition);
+    res <- munch (getValDefinitions <|| getDataDefinition);
     skipUseless;
     reachedEof;
     let (ddefs, vdefs) = listEitherDefToTup res
