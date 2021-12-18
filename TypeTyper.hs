@@ -23,6 +23,8 @@ substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (s
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
 
+substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
+
 quantBind :: TyQuant -> DataType -> TyperState Subst
 quantBind q t
     | t == DataQuant q = return nullSubst
@@ -48,7 +50,7 @@ mgu (DataTypeName s) (DataTypeName s') =
 mgu (DataTypeApp f a) (DataTypeApp f' a') = do
     s <- mgu f f'
     s' <- mgu (substApply s a) (substApply s a')
-    return (composeSubst s s')
+    return (composeSubst s' s)
 mgu t t' =
     throwError $ "Could not unify types: " ++ show t ++ " and " ++ show t'
 
@@ -59,6 +61,8 @@ class Types t where
     substApply :: Subst -> t -> t
 
 data TyScheme = TyScheme [TyQuant] DataType
+instance Show TyScheme where
+    show (TyScheme qs dt) = "forall " ++ foldl (++) "" (map (show . DataQuant) qs) ++ "." ++ show dt
 
 instance Types DataType where
     -- freetyvars DataInt = Set.empty
@@ -85,6 +89,7 @@ instance Types TyScheme where
 
 -- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
 data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String [DataType])
+    deriving Show
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 
@@ -181,5 +186,64 @@ typeExpr env@(TypingEnv _ _ vs) (c, _, ExprLambda pat expr) = do
 -- TEMPORANEO
 typeValDef env (ValDef c l e) = do
     (s, dt, e') <- typeExpr env e
-    return $ ValDef c l e'
-typeProgram (Program ddefs vdefs) = typeValDef (TypingEnv Map.empty Map.empty Map.empty) (head vdefs)
+    lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show dt ++ " and subst: " ++ show s
+    return (s, ValDef c l e')
+
+quantifiedValDefEnv init_env [] = return init_env
+quantifiedValDefEnv env (ValDef _ s _:vdefs) = do
+    t <- freshType
+    env' <- tyBindAdd env s (TyScheme [] t)
+    quantifiedValDefEnv env' vdefs
+
+typeValDefsLoop _ [] = return (nullSubst, [])
+typeValDefsLoop env (vdef:vdefs) = do
+    (s, vdef') <- typeValDef env vdef
+    (s', vdefs') <- typeValDefsLoop (substApply s env) vdefs
+    return (composeSubst s' s, substApplyValDef s' vdef':vdefs')
+
+{-
+addValDefEnv _ env [] = return (nullSubst, env)
+addValDefEnv oldenv@(TypingEnv ts _ _) env (ValDef _ l (_, t, _):vdefs) = do
+    tFromEnv <- case Map.lookup l ts of
+        Just scheme -> instantiate scheme
+    s <- mgu t tFromEnv --TODO: La sostituzione è propagata nel modo giusto?
+    lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
+    env' <- tyBindAdd env l (generalize env (substApply s t))
+    (s', finalEnv) <- addValDefEnv (substApply s oldenv) (substApply s env') (map (substApplyValDef s) vdefs)
+    return (composeSubst s' s, finalEnv)
+-}
+
+addValDefsEnv env [] = return env
+addValDefsEnv env (ValDef _ l (_, t, _):vdefs) = do
+    env' <- tyBindAdd env l (generalize env t)
+    addValDefsEnv env' vdefs
+
+unionValDefEnv (TypingEnv ts _ _) (ValDef _ l (_, t, _)) = do
+    tFromEnv <- case Map.lookup l ts of
+        Just scheme -> instantiate scheme
+    s <- mgu t tFromEnv
+    lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
+    return s
+
+typeValDefs env vdefs = do
+    vars_env <- quantifiedValDefEnv env vdefs
+    (s, vdefs') <- typeValDefsLoop vars_env vdefs
+    --(s', env') <- addValDefEnv (substApply s vars_env) (substApply s env) vdefs'
+    substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
+    s' <- return $ foldl (flip composeSubst) s substs
+    vdefs'' <- return $ map (substApplyValDef s') vdefs'
+    env' <- addValDefsEnv (substApply s' env) vdefs''
+    return (s', env', vdefs'')
+
+typeValDefsGroups env [] = return (nullSubst, env, [])
+typeValDefsGroups env (vdefs:vdefss) = do
+    (s, env', vdefs') <- typeValDefs env vdefs
+    (s', env'', vdefss') <- typeValDefsGroups env' vdefss
+    return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
+
+typeProgram :: HIRProgram -> TyperState HIRProgram
+typeProgram (Program ddefs vdefss) = let init_env = (TypingEnv Map.empty Map.empty Map.empty) in do--typeValDef (TypingEnv Map.empty Map.empty Map.empty) (head vdefs)
+    (s, e, typed) <- typeValDefsGroups init_env vdefss
+    lift $ lift $ putStrLn $ "Final substitution: " ++ show s
+    lift $ lift $ putStrLn $ "Final env: " ++ show e
+    return (Program ddefs typed)
