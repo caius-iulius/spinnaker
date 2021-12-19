@@ -4,6 +4,7 @@ import Control.Monad.State
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import TypingDefs
+import MPCL (StdCoord)
 import HIRDefs
 
 --Roba per le sostituzioni
@@ -33,26 +34,26 @@ quantBind q t
 
 --Algoritmo MGU
 
-tupsMgu [] [] = return nullSubst
-tupsMgu (t:ts) (t':ts') = do
-    s <- mgu t t'
-    s' <- tupsMgu (map (substApply s) ts) (map (substApply s) ts')
+tupsMgu _ [] [] = return nullSubst
+tupsMgu c (t:ts) (t':ts') = do
+    s <- mgu c t t'
+    s' <- tupsMgu c (map (substApply s) ts) (map (substApply s) ts')
     return $ composeSubst s' s
 
-mgu :: DataType -> DataType -> TyperState Subst
-mgu (DataQuant q) t = quantBind q t
-mgu t (DataQuant q) = quantBind q t
-mgu (DataTuple dts) (DataTuple dts') =
-    if length dts /= length dts' then throwError $ "Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
-    else tupsMgu dts dts'
-mgu (DataTypeName s) (DataTypeName s') =
-    if s == s' then return nullSubst else throwError $ "Could not unify typenames: " ++ s ++ " and " ++ s'
-mgu (DataTypeApp f a) (DataTypeApp f' a') = do
-    s <- mgu f f'
-    s' <- mgu (substApply s a) (substApply s a')
+mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
+mgu _ (DataQuant q) t = quantBind q t
+mgu _ t (DataQuant q) = quantBind q t
+mgu c (DataTuple dts) (DataTuple dts') =
+    if length dts /= length dts' then throwError $ show c ++ " Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
+    else tupsMgu c dts dts'
+mgu c (DataTypeName s) (DataTypeName s') =
+    if s == s' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ s ++ " and " ++ s'
+mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
+    s <- mgu c f f'
+    s' <- mgu c (substApply s a) (substApply s a')
     return (composeSubst s' s)
-mgu t t' =
-    throwError $ "Could not unify types: " ++ show t ++ " and " ++ show t'
+mgu c t t' =
+    throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
 
 -- Classe Types e altre funzioni utili
 
@@ -161,7 +162,7 @@ typeExpr env (c, _, ExprFCall f a) = do
     q <- freshType
     (s1, t1, f') <- typeExpr env f
     (s2, t2, a') <- typeExpr (substApply s1 env) a
-    s3 <- mgu (substApply s2 t1) (buildFunType t2 q)
+    s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
     let finals = composeSubst s3 (composeSubst s2 s1) in
         let finalt = substApply s3 q in
             return (finals, finalt, substApplyExpr finals (c, finalt, ExprFCall f' a'))
@@ -218,13 +219,14 @@ addValDefsEnv env (ValDef _ l (_, t, _):vdefs) = do
     env' <- tyBindAdd env l (generalize env t)
     addValDefsEnv env' vdefs
 
-unionValDefEnv (TypingEnv ts _ _) (ValDef _ l (_, t, _)) = do
+unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
-    s <- mgu t tFromEnv
+    s <- mgu c t tFromEnv
     lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
     return s
 
+-- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
 typeValDefs env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
