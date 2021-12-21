@@ -33,19 +33,28 @@ quantBind q t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
-
+{-
 tupsMgu _ [] [] = return nullSubst
 tupsMgu c (t:ts) (t':ts') = do
     s <- mgu c t t'
     s' <- tupsMgu c (map (substApply s) ts) (map (substApply s) ts')
     return $ composeSubst s' s
+-}
+
+tupsMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
+tupsMgu c tts =
+    foldl (\m_subst (dta, dtb) -> do{
+        s <- m_subst;
+        s' <- mgu c (substApply s dta) (substApply s dtb);
+        return $ composeSubst s' s
+    }) (return nullSubst) tts
 
 mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
 mgu _ (DataQuant q) t = quantBind q t
 mgu _ t (DataQuant q) = quantBind q t
 mgu c (DataTuple dts) (DataTuple dts') =
     if length dts /= length dts' then throwError $ show c ++ " Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
-    else tupsMgu c dts dts'
+    else tupsMgu c $ zip dts dts'
 mgu c (DataTypeName s) (DataTypeName s') =
     if s == s' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ s ++ " and " ++ s'
 mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
@@ -182,6 +191,32 @@ typeExpr env@(TypingEnv _ _ vs) (c, _, ExprLambda pat expr) = do
     (s, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
         in return (s, finaldt, (c, finaldt, ExprLambda pat e))
+typeExpr env (c, _, ExprPut val pses) = do
+    (s, tval, val') <- typeExpr env val
+    (s', tval') <- unifyPats (substApply s env) tval pses
+    tempt <- freshType --TODO GIUSTO UN FRESH?
+    (s'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) tval' tempt pses
+    return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut (substApplyExpr (composeSubst s'' s') val') pses'))
+
+--Funzioni helper per putexpr
+unifyPats :: TypingEnv -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType)
+unifyPats _ t [] = return (nullSubst, t)
+unifyPats env@(TypingEnv _ _ vs) t ((pat, (c, _, _)):branches) = do
+    tpat <- typePat vs pat
+    s <- mgu c t tpat
+    (s', t') <- unifyPats (substApply s env) (substApply s t) branches
+    return (composeSubst s' s, t')
+
+typePutBranches :: TypingEnv -> DataType -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType, [(HIRPattern, HIRExpr)])
+typePutBranches _ _ texpr [] = return (nullSubst, texpr, [])
+typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
+    env' <- patVarsInEnv (generalize env) env pat tpat
+    (s, texpr', expr') <- typeExpr env' expr
+    s' <- mgu c texpr texpr'
+    mys <- return $ composeSubst s' s
+    (s'', tfinal, others) <- typePutBranches (substApply mys env) tpat (substApply s' texpr) branches
+    return (composeSubst s'' mys, tfinal, (pat, substApplyExpr (composeSubst s'' s') expr'):others)
+    
 -- DA LIBRO ALGORITHM W, SECTION 2.2
 
 -- TEMPORANEO
@@ -239,7 +274,7 @@ typeValDefs env vdefs = do
 
 typeValDefsGroups env [] = return (nullSubst, env, [])
 typeValDefsGroups env (vdefs:vdefss) = do
-    (s, env', vdefs') <- typeValDefs env vdefs
+    (s, env', vdefs') <- typeValDefs env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
     (s', env'', vdefss') <- typeValDefsGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
 

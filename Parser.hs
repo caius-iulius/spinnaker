@@ -177,13 +177,15 @@ getTerm = describeError "Expected term" $ do { -- Literal
 getExpr = do {
     skipUseless;
     (c, _) <- thisChar '\\';
-    curriedargs <- sepBy1 getPatternTerm (skipUseless >> thisChar ','); --[Pattern]
-    skipUseless;
-    require $ thisChar '{';
-    internal <- getMeta; --Expr
-    skipUseless;
-    require $ thisChar '}';
-    return $ foldr (\p e-> ((\(c',_,_)->c') p, DataNOTHING, ExprLambda p e)) internal curriedargs
+    require $ do{
+        curriedargs <- sepBy1 getPatternTerm (skipUseless >> thisChar ','); --[Pattern]
+        skipUseless;
+        thisChar '{';
+        internal <- getMeta; --Expr
+        skipUseless;
+        thisChar '}';
+        return $ foldr (\p e-> ((\(c',_,_)->c') p, DataNOTHING, ExprLambda p e)) internal curriedargs
+    }
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
     return $ foldl1 (\t1 t2 -> ((\(c,_,_)->c) t1, DataNOTHING, ExprFCall t1 t2)) terms
