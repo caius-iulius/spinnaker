@@ -277,10 +277,3 @@ typeValDefsGroups env (vdefs:vdefss) = do
     (s, env', vdefs') <- typeValDefs env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
     (s', env'', vdefss') <- typeValDefsGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
-
-typeProgram :: HIRProgram -> TyperState HIRProgram
-typeProgram (Program ddefs vdefss) = let init_env = (TypingEnv Map.empty Map.empty Map.empty) in do--typeValDef (TypingEnv Map.empty Map.empty Map.empty) (head vdefs)
-    (s, e, typed) <- typeValDefsGroups init_env vdefss
-    lift $ lift $ putStrLn $ "Final substitution: " ++ show s
-    lift $ lift $ putStrLn $ "Final env: " ++ show e
-    return (Program ddefs typed)

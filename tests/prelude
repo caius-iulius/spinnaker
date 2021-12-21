@@ -1,16 +1,27 @@
 # TODO:Questo file andrà copiato in una stringa in defs.rs
 
 # operatori di base
-def (+) = \a,b{_addInt(a,b)}
-def (-) = \a,b{_subInt(a,b)}
-def (*) = \a,b{_mulInt(a,b)}
-def (/) = \a,b{_divInt(a,b)}
-def (<) = \a,b{_lesInt(a,b)}
-def (<=) = \a,b{_leqInt(a,b)}
-def (>) = \a,b{_greInt(a,b)}
-def (>=) = \a,b{_geqInt(a,b)}
-def (=) = \a,b{_equInt(a,b)}
-
+# def (+) = \a,b{_addInt(a,b)}
+# def (-) = \a,b{_subInt(a,b)}
+# def (*) = \a,b{_mulInt(a,b)}
+# def (/) = \a,b{_divInt(a,b)}
+# def (<) = \a,b{_lesInt(a,b)}
+# def (<=) = \a,b{_leqInt(a,b)}
+# def (>) = \a,b{_greInt(a,b)}
+# def (>=) = \a,b{_geqInt(a,b)}
+# def (=) = \a,b{_equInt(a,b)}
+# def (!=) = \a,b{_nequInt(a,b)}
+# TODO: Queste definizioni vanno eliminate, per ora le uso per far funzionare il tipizzatore
+def (+) = \0,0{0}
+def (-) = \0,0{0}
+def (*) = \0,0{0}
+def (/) = \0,0{0}
+def (<) = \0,0{0}
+def (<=) = \0,0{0}
+def (>) = \0,0{0}
+def (>=) = \0,0{0}
+def (=) = \0,0{0}
+def (!=) = \0,0{0}
 # operatori funzionali
 # NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).
 # Oltretutto (|>) e (<|) sono pipe e non composizioni,ma (|>) è associativa a sinistra. Bisogna considerare vantaggi e svantaggi dei vari approcci in un sistema associativo a destra.
