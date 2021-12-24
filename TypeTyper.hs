@@ -96,10 +96,10 @@ instance Types TyScheme where
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 
-tyBindAdd :: TypingEnv -> String -> TyScheme -> TyperState TypingEnv
-tyBindAdd (TypingEnv ts ks vs) labl scheme =
+tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TyperState TypingEnv
+tyBindAdd c (TypingEnv ts ks vs) labl scheme =
     case Map.lookup labl ts of
-        Just _ -> throwError $ "Variable already bound: " ++ labl
+        Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
         Nothing -> do
             return $ TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
 
@@ -148,7 +148,7 @@ innerPatVarsInEnv gf c env (PatVariant v ps) _ = error "TODO Pattern variant inn
 patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HIRPattern -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
 patVarsInEnv gf env (c, Just labl, pdata) dt = do
-    env' <- tyBindAdd env labl (gf dt)
+    env' <- tyBindAdd c env labl (gf dt)
     innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
@@ -219,9 +219,9 @@ typeValDef env (ValDef c l e) = do
     return (s, ValDef c l e')
 
 quantifiedValDefEnv init_env [] = return init_env
-quantifiedValDefEnv env (ValDef _ s _:vdefs) = do
+quantifiedValDefEnv env (ValDef c s _:vdefs) = do
     t <- freshType
-    env' <- tyBindAdd env s (TyScheme [] t)
+    env' <- tyBindAdd c env s (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
 typeValDefsLoop _ [] = return (nullSubst, [])
@@ -243,8 +243,8 @@ addValDefEnv oldenv@(TypingEnv ts _ _) env (ValDef _ l (_, t, _):vdefs) = do
 -}
 
 addValDefsEnv env [] = return env
-addValDefsEnv env (ValDef _ l (_, t, _):vdefs) = do
-    env' <- tyBindAdd env l (generalize env t)
+addValDefsEnv env (ValDef c l (_, t, _):vdefs) = do
+    env' <- tyBindAdd c env l (generalize env t)
     addValDefsEnv env' vdefs
 
 unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do

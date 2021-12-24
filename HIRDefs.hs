@@ -29,10 +29,10 @@ type HIRExpr = (StdCoord, DataType, HIRExprData)
 
 -- TODO Rifai in vista dei tipi higher kinded
 data HIRTypeExprData
-    = TypeExprFun HIRTypeExpr HIRTypeExpr --Tipo argomento, tipo restituito
+    = TypeExprQuantifier String -- Nome del quantifier, forse va incorporato con TypeExprName?
     | TypeExprTuple [HIRTypeExpr] --Lista di tipi della n-tupla
-    | TypeExprTypeApp String [HIRTypeExpr] --Nome del tipo, argomenti del tipo
-    | TypeExprQuantifier String --Nome del singolo valore...TODO migliore documentazione
+    | TypeExprName String -- Nome del tipo
+    | TypeExprApp HIRTypeExpr HIRTypeExpr --Tipo funzione, tipo argomento
     deriving Show
 type HIRTypeExpr = (StdCoord, HIRTypeExprData)
 

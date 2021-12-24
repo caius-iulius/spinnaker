@@ -195,8 +195,9 @@ getExpr = do {
     }
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
-    return $ foldl1 (\t1 t2 -> ((\(c,_,_)->c) t1, DataNOTHING, ExprFCall t1 t2)) terms
-} 
+    return $ let (c,_,_) = head terms in
+        foldl1 (\t1 t2 -> (c, DataNOTHING, ExprFCall t1 t2)) terms
+}
 
 getMeta = getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
@@ -255,9 +256,9 @@ getTypeVar = getLabel --TODO: Anche i tipi higher-order? magari è sintassi dive
 getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
     return (c, TypeExprQuantifier l)
-} <|| do { --Tipo concreto
+} <|| do { --Tipo data
     (c, l) <- getCapitalLabel;
-    return (c, TypeExprTypeApp l [])
+    return (c, TypeExprName l)
 } <|| do {
     skipUseless;
     (c, _) <- thisChar '(';
@@ -270,9 +271,9 @@ getTypeTerm = do { --Tipo quantifier
 }
 
 getTypeExpr = do {
-    (c, l) <- getLabel <|| getCapitalLabel;
-    args <- munch getTypeTerm;
-    return (c, TypeExprTypeApp l args)
+    terms <- munch1 getTypeTerm;
+    return $ let (c,_) = head terms in
+        foldl1 (\t1 t2 -> (c, TypeExprApp t1 t2)) terms
 } <|| getTypeTerm
 
 
@@ -280,7 +281,7 @@ getTypeMeta = do {
     e <- getTypeExpr;
     (c, _) <- thisSyntaxElem "->";
     m <- require getTypeMeta;
-    return (c, TypeExprFun e m)
+    return (c, TypeExprApp (c, TypeExprApp (c, TypeExprName "->") e) m)
 } <|| getTypeExpr
 
 -- Parser vari per datatype
