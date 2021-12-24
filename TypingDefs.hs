@@ -1,6 +1,7 @@
 module TypingDefs where
 import Control.Monad.Except
 import Control.Monad.State
+import qualified Data.Map as Map
 
 type KindQuant = Int
 
@@ -43,6 +44,14 @@ instance Show DataType where
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
 
 
+data TyScheme = TyScheme [TyQuant] DataType
+instance Show TyScheme where
+    show (TyScheme qs dt) = "forall " ++ foldl (++) "" (map (show . DataQuant) qs) ++ "." ++ show dt
+
+-- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
+data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String [DataType])
+    deriving Show
+
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuant
     deriving Show
@@ -64,6 +73,11 @@ newKindQuant = do
     (TIState k t) <- get
     put $ TIState (k+1) t
     return k
+
+freshKind :: TyperState Kind
+freshKind = do
+    q <- newKindQuant
+    return $ KindQuant q
 
 runTyperState :: TyperState t -> IO (Either String t, TIState)
 runTyperState t =

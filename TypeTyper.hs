@@ -26,10 +26,10 @@ substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (subs
 
 substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
 
-quantBind :: TyQuant -> DataType -> TyperState Subst
-quantBind q t
+quantBind :: StdCoord -> TyQuant -> DataType -> TyperState Subst
+quantBind c q t
     | t == DataQuant q = return nullSubst
-    | Set.member q (freetyvars t) = throwError $ "Occurs check fails: " ++ show (DataQuant q) ++ " into " ++ show t
+    | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show (DataQuant q) ++ " into " ++ show t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
@@ -50,8 +50,8 @@ tupsMgu c tts =
     }) (return nullSubst) tts
 
 mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
-mgu _ (DataQuant q) t = quantBind q t
-mgu _ t (DataQuant q) = quantBind q t
+mgu c (DataQuant q) t = quantBind c q t
+mgu c t (DataQuant q) = quantBind c q t
 mgu c (DataTuple dts) (DataTuple dts') =
     if length dts /= length dts' then throwError $ show c ++ " Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
     else tupsMgu c $ zip dts dts'
@@ -69,10 +69,6 @@ mgu c t t' =
 class Types t where
     freetyvars :: t -> Set.Set TyQuant
     substApply :: Subst -> t -> t
-
-data TyScheme = TyScheme [TyQuant] DataType
-instance Show TyScheme where
-    show (TyScheme qs dt) = "forall " ++ foldl (++) "" (map (show . DataQuant) qs) ++ "." ++ show dt
 
 instance Types DataType where
     -- freetyvars DataInt = Set.empty
@@ -97,9 +93,6 @@ instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
--- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
-data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String [DataType])
-    deriving Show
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 

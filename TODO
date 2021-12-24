@@ -2,6 +2,8 @@ implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentaz
 migliori messaggi di errore quando le definizioni (di valore e di tipi) sono vuote/non sono complete ecc (quindi serve require dopo i def...)
 phantom types per determinare se un programma è stato tipizzato?
 
+invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costrazione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli "monomorficamente"
+
 IMPORTANTE
 la grammatica delle lambda può essere:
     '\'PATTERN ',' ... ',' PATTERN '{' META '}'
@@ -13,6 +15,12 @@ la differenza sta nel problema dei costruttori, nel primo caso dovrei scrivere, 
 nel secondo:
     \f g x{f(g x)}
     \(Pair a b){(a, b)}
+la sintassi delle lambda, se promosse a META, si potrebbe modificare in:
+    \f, g, x -> f(g x)
+    \Pair a b -> (a, b)
+oppure:
+    \f g x -> f(g x)
+    \(Pair a b) -> (a, b)
 
 CONTROLLO DELLE DEFINIZIONI RICORSIVE:
 "def x = x" NON DEVE ESSERE PERMESSO
