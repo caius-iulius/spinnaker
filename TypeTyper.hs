@@ -29,7 +29,7 @@ substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
 quantBind :: StdCoord -> TyQuant -> DataType -> TyperState Subst
 quantBind c q t
     | t == DataQuant q = return nullSubst
-    | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show (DataQuant q) ++ " into " ++ show t
+    | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show q ++ " into " ++ show t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
@@ -55,8 +55,8 @@ mgu c t (DataQuant q) = quantBind c q t
 mgu c (DataTuple dts) (DataTuple dts') =
     if length dts /= length dts' then throwError $ show c ++ " Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
     else tupsMgu c $ zip dts dts'
-mgu c (DataTypeName s) (DataTypeName s') =
-    if s == s' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ s ++ " and " ++ s'
+mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
+    if s == s'  && k == k' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
 mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
     s <- mgu c f f'
     s' <- mgu c (substApply s a) (substApply s a')
@@ -75,10 +75,10 @@ instance Types DataType where
     -- freetyvars DataFlt = Set.empty
     freetyvars (DataQuant q) = Set.singleton q
     freetyvars (DataTuple dts) = Set.unions $ map freetyvars dts
-    freetyvars (DataTypeName _) = Set.empty
+    freetyvars (DataTypeName _ _) = Set.empty
     freetyvars (DataTypeApp dta dtb) = Set.union (freetyvars dta) (freetyvars dtb)
 
-    substApply s (DataQuant q) = case Map.lookup q s of
+    substApply s (DataQuant q) = case Map.lookup q s of --TODO Controlla se la sostituzione è kind-preserving
         Nothing -> DataQuant q
         Just t -> t
     substApply s (DataTuple dts) =
@@ -87,7 +87,7 @@ instance Types DataType where
         DataTypeApp (substApply s dta) (substApply s dtb)
     -- substApply s DataInt = DataInt
     -- substApply s DataFlt = DataFlt
-    substApply s (DataTypeName tn) = (DataTypeName tn)
+    substApply s (DataTypeName tn k) = (DataTypeName tn k)
 
 instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
@@ -113,22 +113,22 @@ generalize env t =
 
 instantiate :: TyScheme -> TyperState DataType
 instantiate (TyScheme qs t) = do
-    nqs <- mapM (\_ -> freshType) qs
+    nqs <- mapM (\(TyQuant _ k) -> freshType k) qs
     let subst = Map.fromList (zip qs nqs) in return $ substApply subst t
 
 
 -- Funzioni di typing
 
 buildFunType a r =
-    DataTypeApp (DataTypeApp (DataTypeName "->") a) r
+    DataTypeApp (DataTypeApp (DataTypeName "->" (KindFunction KindConcrete (KindFunction KindConcrete KindConcrete))) a) r
 
 typeLit :: Literal -> DataType
-typeLit (LitInteger _) = DataTypeName "Int"
-typeLit (LitFloating _) = DataTypeName "Flt"
+typeLit (LitInteger _) = DataTypeName "Int" KindConcrete
+typeLit (LitFloating _) = DataTypeName "Flt" KindConcrete
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
 typePat :: Map.Map String [DataType] -> HIRPattern -> TyperState DataType
-typePat _ (_, _, PatWildcard) = freshType
+typePat _ (_, _, PatWildcard) = freshType KindConcrete
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat vs (_, _, PatTuple ps) = do
     ts <- mapM (typePat vs) ps
@@ -161,7 +161,7 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
 typeExpr env (c, _, ExprFCall f a) = do
-    q <- freshType
+    q <- freshType KindConcrete
     (s1, t1, f') <- typeExpr env f
     (s2, t2, a') <- typeExpr (substApply s1 env) a
     s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
@@ -187,7 +187,7 @@ typeExpr env@(TypingEnv _ _ vs) (c, _, ExprLambda pat expr) = do
 typeExpr env (c, _, ExprPut val pses) = do
     (s, tval, val') <- typeExpr env val
     (s', tval') <- unifyPats (substApply s env) tval pses
-    tempt <- freshType --TODO GIUSTO UN FRESH?
+    tempt <- freshType KindConcrete--TODO GIUSTO UN FRESH?
     (s'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) tval' tempt pses
     return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut (substApplyExpr (composeSubst s'' s') val') pses'))
 
@@ -220,7 +220,7 @@ typeValDef env (ValDef c l e) = do
 
 quantifiedValDefEnv init_env [] = return init_env
 quantifiedValDefEnv env (ValDef c s _:vdefs) = do
-    t <- freshType
+    t <- freshType KindConcrete
     env' <- tyBindAdd c env s (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 

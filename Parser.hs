@@ -4,7 +4,7 @@ module Parser where
 
 import MPCL
 import HIRDefs
-import TypingDefs(DataType(DataNOTHING), Kind(KindNOTHING))
+import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
 
 labelFirst = thisChar '_' <|| alphaLower
 capitalLabelFirst = alphaCapital
@@ -296,8 +296,8 @@ getDataDefinition = do { --pfatal "DATA DEFINITIONS NOT IMPLEMENTED"
     (_, label) <- getCapitalLabel;
     typevars <- munch getTypeVar; -- TODO 
     thisSyntaxElem "=";
-    variants <- sepBy1 getVariant $ thisSyntaxElem "|";
-    return $ Left $ DataDef c label (map (\(c, tv)->(tv, 0)) typevars) variants --TODO quantificatore iniziale?
+    variants <- sepBy getVariant $ thisSyntaxElem "|";
+    return $ Left $ DataDef c label (map (\(c, tv)->(tv, (TyQuant 0 KindNOTHING))) typevars) variants --TODO quantificatore iniziale?
 }
 
 listEitherDefToTup [] = ([], [])
