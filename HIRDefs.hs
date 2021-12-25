@@ -45,7 +45,7 @@ data HIRValDef = ValDef StdCoord String HIRExpr -- Cordinate della definizione, 
 type HIRValDefs = [HIRValDef]
 
 data HIRDataDef =
-    DataDef StdCoord String [(Kind, String)] [HIRDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
+    DataDef StdCoord String [(String, TyQuant)] [HIRDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
 data HIRProgram = Program [HIRDataDef] [HIRValDefs]

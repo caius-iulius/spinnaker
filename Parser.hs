@@ -297,7 +297,7 @@ getDataDefinition = do { --pfatal "DATA DEFINITIONS NOT IMPLEMENTED"
     typevars <- munch getTypeVar; -- TODO 
     thisSyntaxElem "=";
     variants <- sepBy1 getVariant $ thisSyntaxElem "|";
-    return $ Left $ DataDef c label (map (\(c, tv)->(KindNOTHING, tv)) typevars) variants --TODO quantificatore iniziale?
+    return $ Left $ DataDef c label (map (\(c, tv)->(tv, 0)) typevars) variants --TODO quantificatore iniziale?
 }
 
 listEitherDefToTup [] = ([], [])
