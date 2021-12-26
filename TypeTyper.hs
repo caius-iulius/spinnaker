@@ -82,10 +82,7 @@ instance Types TyScheme where
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
 
-
-
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
-
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TyperState TypingEnv
 tyBindAdd c (TypingEnv ts ks vs) labl scheme =
     case Map.lookup labl ts of
@@ -132,7 +129,6 @@ patListPatVarsInEnv gf env (p:ps) (t:ts) = do
 -}
 --TODO Da testare
 patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf e p t}) (return env) (zip ps ts)
-
 
 innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
