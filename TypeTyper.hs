@@ -110,13 +110,13 @@ typeLit (LitInteger _) = intT
 typeLit (LitFloating _) = fltT
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
-typePat :: Map.Map String [DataType] -> HIRPattern -> TyperState DataType
+typePat :: TypingEnv -> HIRPattern -> TyperState DataType
 typePat _ (_, _, PatWildcard) = freshType KStar
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
-typePat vs (_, _, PatTuple ps) = do
-    ts <- mapM (typePat vs) ps
+typePat env (_, _, PatTuple ps) = do
+    ts <- mapM (typePat env) ps
     return $ DataTuple ts
-typePat vs (c, _, PatVariant v ps) = error "TODO Pattern variant typing"
+typePat env (c, _, PatVariant v ps) = error "TODO Pattern variant typing"
 
 {-patListPatVarsInEnv gf env [] [] = return env
 patListPatVarsInEnv gf env (p:ps) (t:ts) = do
@@ -165,8 +165,8 @@ typeExpr env (c, _, ExprTuple exprs) =
     in do
         (s, dts, finalexprs) <- typeExprsInternal env exprs
         return (s, DataTuple dts, (c, DataTuple dts, ExprTuple finalexprs))
-typeExpr env@(TypingEnv _ _ vs) (c, _, ExprLambda pat expr) = do
-    argt <- typePat vs pat
+typeExpr env (c, _, ExprLambda pat expr) = do
+    argt <- typePat env pat
     env' <- patVarsInEnv (TyScheme []) env pat argt
     (s, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
@@ -181,8 +181,8 @@ typeExpr env (c, _, ExprPut val pses) = do
 --Funzioni helper per putexpr
 unifyPats :: TypingEnv -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType)
 unifyPats _ t [] = return (nullSubst, t)
-unifyPats env@(TypingEnv _ _ vs) t ((pat, (c, _, _)):branches) = do
-    tpat <- typePat vs pat
+unifyPats env t ((pat, (c, _, _)):branches) = do
+    tpat <- typePat env pat
     s <- mgu c t tpat
     (s', t') <- unifyPats (substApply s env) (substApply s t) branches
     return (composeSubst s' s, t')

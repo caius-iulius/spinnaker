@@ -5,12 +5,12 @@ def (+) = \a,b{_addInt(a,b)}
 def (-) = \a,b{_subInt(a,b)}
 def (*) = \a,b{_mulInt(a,b)}
 def (/) = \a,b{_divInt(a,b)}
-# def (<) = \a,b{_lesInt(a,b)}
-# def (<=) = \a,b{_leqInt(a,b)}
-# def (>) = \a,b{_greInt(a,b)}
-# def (>=) = \a,b{_geqInt(a,b)}
-# def (=) = \a,b{_equInt(a,b)}
-# def (!=) = \a,b{_nequInt(a,b)}
+def (<) = \a,b{_lesInt(a,b)}
+def (>) = \a,b{_greInt(a,b)}
+def (=) = \a,b{_equInt(a,b)}
+def (!=)= \a,b{_neqInt(a,b)}
+def (<=)= \a,b{_greInt(b,a)}
+def (>=)= \a,b{_lesInt(b,a)}
 
 # operatori funzionali
 # NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).

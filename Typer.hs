@@ -10,6 +10,7 @@ typeProgramM (Program ddefs vdefss) = do
     (s, e, typed) <- typeValDefsGroups initEnv vdefss
     lift $ lift $ putStrLn $ "Final substitution: " ++ show s
     lift $ lift $ putStrLn $ "Final env: " ++ show e
+    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e)
     return (Program ddefs typed)
 
 typeProgram :: HIRProgram -> IO (Either String HIRProgram)

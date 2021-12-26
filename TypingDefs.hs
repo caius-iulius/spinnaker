@@ -47,8 +47,10 @@ instance Show TyScheme where
     show (TyScheme qs dt) = let showq (TyQuant q k) = " " ++ show q ++ ":" ++ show k in
         "forall" ++ foldl (++) "" (map showq qs) ++ "." ++ show dt
 
+data VariantData = VariantData String [DataType] DataType -- Nome della variante, argomenti, datatype di appartenenza
+    deriving Show
 -- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
-data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String [DataType])
+data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) --NOTE: Il nome della variante qui è duplicato
     deriving Show
 
 --Definizioni utili
@@ -56,18 +58,28 @@ buildFunType a r =
     DataTypeApp (DataTypeApp (DataTypeName "->" (KFun KStar (KFun KStar KStar))) a) r
 intT = DataTypeName "Int" KStar
 fltT = DataTypeName "Flt" KStar
+boolT = DataTypeName "Bool" KStar
 builtinTypes =
     [   ("->", KFun KStar (KFun KStar KStar))
     ,   ("Int", KStar)
     ,   ("Flt", KStar)
+    ,   ("Bool", KStar)
     ]
 builtinVals =
     [   ("_addInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
     ,   ("_subInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
     ,   ("_mulInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
     ,   ("_divInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_equInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_neqInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_lesInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_greInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
     ]
-initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) Map.empty)
+builtinVars =
+    [   VariantData "True" [] boolT
+    ,   VariantData "False" [] boolT
+    ]
+initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _)->(l,v)) builtinVars))
 
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId
