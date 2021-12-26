@@ -47,7 +47,7 @@ instance Show TyScheme where
     show (TyScheme qs dt) = let showq (TyQuant q k) = " " ++ show q ++ ":" ++ show k in
         "forall" ++ foldl (++) "" (map showq qs) ++ "." ++ show dt
 
-data VariantData = VariantData String [DataType] DataType -- Nome della variante, argomenti, datatype di appartenenza
+data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome della variante, quantificatori generici, argomenti, datatype di appartenenza
     deriving Show
 -- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
 data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) --NOTE: Il nome della variante qui è duplicato
@@ -76,10 +76,13 @@ builtinVals =
     ,   ("_greInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
     ]
 builtinVars =
-    [   VariantData "True" [] boolT
-    ,   VariantData "False" [] boolT
+    [   VariantData "True" [] [] boolT
+    ,   VariantData "False" [] [] boolT
+    --TEMPORANEI
+    --,   VariantData "Nil" [TyQuant 100 KStar] [] (DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar)))
+    --,   VariantData "Cons" [TyQuant 100 KStar] [DataQuant (TyQuant 100 KStar), DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar))] (DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar)))
     ]
-initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _)->(l,v)) builtinVars))
+initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinVars))
 
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId

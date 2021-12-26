@@ -1,7 +1,7 @@
-def myfunction = \x{
-    put x
+def myfunction = \a{
+    put a
+    | Cons x Nil -> x
     | Nil -> 1
     | Cons x (Cons x' xs) -> 2
-    | Cons x Nil -> 3
     | _ -> 4
 }

@@ -98,10 +98,14 @@ generalize env t =
     let quants = Set.toList $ Set.difference (freetyvars t) (freetyvars env)
     in TyScheme quants t
 
+getInstantiationSubst qs = do
+    nqs <- mapM (\(TyQuant _ k) -> freshType k) qs
+    return $ Map.fromList (zip qs nqs)
+
 instantiate :: TyScheme -> TyperState DataType
 instantiate (TyScheme qs t) = do
-    nqs <- mapM (\(TyQuant _ k) -> freshType k) qs
-    let subst = Map.fromList (zip qs nqs) in return $ substApply subst t
+    subst <- getInstantiationSubst qs
+    return $ substApply subst t
 
 
 -- Funzioni di typing
@@ -116,7 +120,16 @@ typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat env (_, _, PatTuple ps) = do
     ts <- mapM (typePat env) ps
     return $ DataTuple ts
-typePat env (c, _, PatVariant v ps) = error "TODO Pattern variant typing"
+typePat env@(TypingEnv _ _ vs) (c, _, PatVariant v ps) =
+    case Map.lookup v vs of
+        Nothing -> throwError $ show c ++ " Unbound constructor: " ++ v
+        Just (VariantData _ qs vts dt) -> if length ps /= length vts then throwError $ show c ++ " Constructor is applied to wrong number of arguments"
+        else do
+            s <- getInstantiationSubst qs
+            pts <- mapM (typePat env) ps
+            s' <- mgu c (substApply s (DataTuple vts)) (DataTuple pts) --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
+            lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
+            return $ substApply s' $ substApply s dt
 
 {-patListPatVarsInEnv gf env [] [] = return env
 patListPatVarsInEnv gf env (p:ps) (t:ts) = do
@@ -129,7 +142,9 @@ patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf 
 innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
 innerPatVarsInEnv gf c env (PatTuple ps) (DataTuple ts) = patListPatVarsInEnv gf env ps ts
-innerPatVarsInEnv gf c env (PatVariant v ps) _ = error "TODO Pattern variant innerPatVarsInEnv"
+innerPatVarsInEnv gf c env@(TypingEnv _ _ vs) (PatVariant v ps) dt = let Just (VariantData _ qs vts vdt) = Map.lookup v vs in do
+    s <- mgu c vdt dt --TODO: Forse serve un algoritmo di unificazione "one-way"
+    patListPatVarsInEnv gf env ps (map (substApply s) vts)
 
 patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HIRPattern -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
