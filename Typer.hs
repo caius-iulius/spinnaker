@@ -7,9 +7,9 @@ import qualified Data.Map as Map
 import Control.Monad.Trans
 
 builtinTypes =
-    [   ("->", KindFunction KindConcrete (KindFunction KindConcrete KindConcrete))
-    ,   ("Int", KindConcrete)
-    ,   ("Flt", KindConcrete)
+    [   ("->", KFun KStar (KFun KStar KStar))
+    ,   ("Int", KStar)
+    ,   ("Flt", KStar)
     ]
 initEnv = (TypingEnv Map.empty (Map.fromList builtinTypes) Map.empty)
 

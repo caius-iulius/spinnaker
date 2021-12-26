@@ -6,6 +6,7 @@ import qualified Data.Set as Set
 import TypingDefs
 import MPCL (StdCoord)
 import HIRDefs
+import KindTyper(kind)
 
 --Roba per le sostituzioni
 
@@ -16,20 +17,11 @@ nullSubst = Map.empty
 
 composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
 
-substApplyExpr :: Subst -> HIRExpr -> HIRExpr
-substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
-substApplyExpr s (c, dt, ExprFCall f a) = (c, substApply s dt, ExprFCall (substApplyExpr s f) (substApplyExpr s a))
-substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
-substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
-substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
-substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
-
-substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
-
 quantBind :: StdCoord -> TyQuant -> DataType -> TyperState Subst
 quantBind c q t
     | t == DataQuant q = return nullSubst
     | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show q ++ " into " ++ show t
+    | kind q /= kind t = throwError $ show c ++ " Kinds do not match in substitution: " ++ show q ++ "into " ++ show t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
@@ -71,27 +63,25 @@ class Types t where
     substApply :: Subst -> t -> t
 
 instance Types DataType where
-    -- freetyvars DataInt = Set.empty
-    -- freetyvars DataFlt = Set.empty
     freetyvars (DataQuant q) = Set.singleton q
     freetyvars (DataTuple dts) = Set.unions $ map freetyvars dts
     freetyvars (DataTypeName _ _) = Set.empty
     freetyvars (DataTypeApp dta dtb) = Set.union (freetyvars dta) (freetyvars dtb)
 
-    substApply s (DataQuant q) = case Map.lookup q s of --TODO Controlla se la sostituzione è kind-preserving
+    substApply s (DataQuant q) = case Map.lookup q s of
         Nothing -> DataQuant q
         Just t -> t
     substApply s (DataTuple dts) =
         DataTuple $ map (substApply s) dts
     substApply s (DataTypeApp dta dtb) =
         DataTypeApp (substApply s dta) (substApply s dtb)
-    -- substApply s DataInt = DataInt
-    -- substApply s DataFlt = DataFlt
     substApply s (DataTypeName tn k) = (DataTypeName tn k)
 
 instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
+
+
 
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
@@ -120,25 +110,29 @@ instantiate (TyScheme qs t) = do
 -- Funzioni di typing
 
 buildFunType a r =
-    DataTypeApp (DataTypeApp (DataTypeName "->" (KindFunction KindConcrete (KindFunction KindConcrete KindConcrete))) a) r
+    DataTypeApp (DataTypeApp (DataTypeName "->" (KFun KStar (KFun KStar KStar))) a) r
 
 typeLit :: Literal -> DataType
-typeLit (LitInteger _) = DataTypeName "Int" KindConcrete
-typeLit (LitFloating _) = DataTypeName "Flt" KindConcrete
+typeLit (LitInteger _) = DataTypeName "Int" KStar
+typeLit (LitFloating _) = DataTypeName "Flt" KStar
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
 typePat :: Map.Map String [DataType] -> HIRPattern -> TyperState DataType
-typePat _ (_, _, PatWildcard) = freshType KindConcrete
+typePat _ (_, _, PatWildcard) = freshType KStar
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat vs (_, _, PatTuple ps) = do
     ts <- mapM (typePat vs) ps
     return $ DataTuple ts
 typePat vs (c, _, PatVariant v ps) = error "TODO Pattern variant typing"
 
-patListPatVarsInEnv gf env [] [] = return env
+{-patListPatVarsInEnv gf env [] [] = return env
 patListPatVarsInEnv gf env (p:ps) (t:ts) = do
     env' <- patVarsInEnv gf env p t
     patListPatVarsInEnv gf env' ps ts
+-}
+--TODO Da testare
+patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf e p t}) (return env) (zip ps ts)
+
 
 innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
@@ -161,20 +155,21 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
 typeExpr env (c, _, ExprFCall f a) = do
-    q <- freshType KindConcrete
+    q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
     (s2, t2, a') <- typeExpr (substApply s1 env) a
     s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
-    let finals = composeSubst s3 (composeSubst s2 s1) in
-        let finalt = substApply s3 q in
-            return (finals, finalt, substApplyExpr finals (c, finalt, ExprFCall f' a'))
+    lift $ lift $ putStrLn $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
+    let finals = composeSubst s3 (composeSubst s2 s1)
+        finalt = substApply finals q
+    return (finals, finalt, (c, finalt, ExprFCall f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
 typeExpr env (c, _, ExprTuple exprs) =
     let typeExprsInternal _ ([]) = return (nullSubst, [], [])
         typeExprsInternal env' (e:es) = do
             (s, dt, e') <- typeExpr env' e
             (s', dts, es') <- typeExprsInternal (substApply s env') es
-            return (composeSubst s' s, substApply s' dt : dts, substApplyExpr s' e' : es')
+            return (composeSubst s' s, substApply s' dt : dts, e' : es')
     in do
         (s, dts, finalexprs) <- typeExprsInternal env exprs
         return (s, DataTuple dts, (c, DataTuple dts, ExprTuple finalexprs))
@@ -187,9 +182,9 @@ typeExpr env@(TypingEnv _ _ vs) (c, _, ExprLambda pat expr) = do
 typeExpr env (c, _, ExprPut val pses) = do
     (s, tval, val') <- typeExpr env val
     (s', tval') <- unifyPats (substApply s env) tval pses
-    tempt <- freshType KindConcrete--TODO GIUSTO UN FRESH?
+    tempt <- freshType KStar--TODO GIUSTO IL FRESH?
     (s'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) tval' tempt pses
-    return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut (substApplyExpr (composeSubst s'' s') val') pses'))
+    return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut val' pses'))
 
 --Funzioni helper per putexpr
 unifyPats :: TypingEnv -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType)
@@ -208,11 +203,20 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     s' <- mgu c texpr texpr'
     mys <- return $ composeSubst s' s
     (s'', tfinal, others) <- typePutBranches (substApply mys env) tpat (substApply s' texpr) branches
-    return (composeSubst s'' mys, tfinal, (pat, substApplyExpr (composeSubst s'' s') expr'):others)
-    
--- DA LIBRO ALGORITHM W, SECTION 2.2
+    return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
--- TEMPORANEO
+--Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
+substApplyExpr :: Subst -> HIRExpr -> HIRExpr
+substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
+substApplyExpr s (c, dt, ExprFCall f a) = (c, substApply s dt, ExprFCall (substApplyExpr s f) (substApplyExpr s a))
+substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
+substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
+substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
+substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
+
+substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
+
+--Funzioni per le definizioni globali
 typeValDef env (ValDef c l e) = do
     (s, dt, e') <- typeExpr env e
     lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show dt ++ " and subst: " ++ show s
@@ -220,7 +224,7 @@ typeValDef env (ValDef c l e) = do
 
 quantifiedValDefEnv init_env [] = return init_env
 quantifiedValDefEnv env (ValDef c s _:vdefs) = do
-    t <- freshType KindConcrete
+    t <- freshType KStar
     env' <- tyBindAdd c env s (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
@@ -228,24 +232,13 @@ typeValDefsLoop _ [] = return (nullSubst, [])
 typeValDefsLoop env (vdef:vdefs) = do
     (s, vdef') <- typeValDef env vdef
     (s', vdefs') <- typeValDefsLoop (substApply s env) vdefs
-    return (composeSubst s' s, substApplyValDef s' vdef':vdefs')
+    return (composeSubst s' s, vdef':vdefs')
 
-{-
-addValDefEnv _ env [] = return (nullSubst, env)
-addValDefEnv oldenv@(TypingEnv ts _ _) env (ValDef _ l (_, t, _):vdefs) = do
-    tFromEnv <- case Map.lookup l ts of
-        Just scheme -> instantiate scheme
-    s <- mgu t tFromEnv --TODO: La sostituzione è propagata nel modo giusto?
-    lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
-    env' <- tyBindAdd env l (generalize env (substApply s t))
-    (s', finalEnv) <- addValDefEnv (substApply s oldenv) (substApply s env') (map (substApplyValDef s) vdefs)
-    return (composeSubst s' s, finalEnv)
--}
-
-addValDefsEnv env [] = return env
+{-addValDefsEnv env [] = return env
 addValDefsEnv env (ValDef c l (_, t, _):vdefs) = do
     env' <- tyBindAdd c env l (generalize env t)
-    addValDefsEnv env' vdefs
+    addValDefsEnv env' vdefs-}
+addValDefsEnv env vdefs = foldl (\me (ValDef c l (_, t, _))->do{e<-me; tyBindAdd c e l (generalize e t)}) (return env) vdefs
 
 unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
     tFromEnv <- case Map.lookup l ts of
@@ -258,7 +251,6 @@ unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
 typeValDefs env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
-    --(s', env') <- addValDefEnv (substApply s vars_env) (substApply s env) vdefs'
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
     s' <- return $ foldl (flip composeSubst) s substs
     vdefs'' <- return $ map (substApplyValDef s') vdefs'

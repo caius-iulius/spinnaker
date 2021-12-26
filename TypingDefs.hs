@@ -7,17 +7,16 @@ type KindQuant = Int
 
 data Kind
     = KindNOTHING --Kind temporaneo generato dal parser
-    | KindConcrete
+    | KStar
     | KindQuant KindQuant --Questo l'ho tolto perché alla fine dell'inferenza tutti i kind liberi diventano *
-    | KindFunction Kind Kind
+    | KFun Kind Kind
     deriving Eq
 
 instance Show Kind where
     show KindNOTHING = "NOTHING"
-    show KindConcrete = "*"
+    show KStar = "*"
     show (KindQuant q) = "k" ++ show q
-    show (KindFunction a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
-
+    show (KFun a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
 
 type TyQuantId = Int
 data TyQuant = TyQuant TyQuantId Kind
@@ -29,8 +28,6 @@ instance Show TyQuant where
 
 data DataType
     = DataNOTHING --Tipo temporaneo generato dal parser
-    -- | DataInt
-    -- | DataFlt
     | DataQuant TyQuant --Quantificatore
     | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
     | DataTypeName String Kind -- Nome del tipo, kind del tipo
@@ -39,16 +36,11 @@ data DataType
 
 instance Show DataType where
     show DataNOTHING = "NOTHING"
-    -- show DataInt = "Int"
-    -- show DataFlt = "Flt"
     show (DataQuant q) = show q
     show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
-    --show (DataFun a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
-    --show (DataTypeApp s types) = "(" ++ foldr1 ((++) . (++ " ")) (s:map show types) ++ ")"
     show (DataTypeName s k) = s++":"++show k
     show (DataTypeApp (DataTypeApp (DataTypeName "->" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
-
 
 data TyScheme = TyScheme [TyQuant] DataType
 instance Show TyScheme where

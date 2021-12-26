@@ -1,0 +1,6 @@
+def (+) = \0,0{0}
+def (*) = \0,0{0}
+
+def composed = (\f,g,x{f(g x)}) (\x{x+1}) (\x{x*2})
+
+#def c = (\a{a}) 1
