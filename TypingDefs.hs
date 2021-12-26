@@ -51,6 +51,24 @@ instance Show TyScheme where
 data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String [DataType])
     deriving Show
 
+--Definizioni utili
+buildFunType a r =
+    DataTypeApp (DataTypeApp (DataTypeName "->" (KFun KStar (KFun KStar KStar))) a) r
+intT = DataTypeName "Int" KStar
+fltT = DataTypeName "Flt" KStar
+builtinTypes =
+    [   ("->", KFun KStar (KFun KStar KStar))
+    ,   ("Int", KStar)
+    ,   ("Flt", KStar)
+    ]
+builtinVals =
+    [   ("_addInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_subInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_mulInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_divInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ]
+initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) Map.empty)
+
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId
     deriving Show

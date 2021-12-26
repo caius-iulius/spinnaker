@@ -6,13 +6,6 @@ import TypeTyper
 import qualified Data.Map as Map
 import Control.Monad.Trans
 
-builtinTypes =
-    [   ("->", KFun KStar (KFun KStar KStar))
-    ,   ("Int", KStar)
-    ,   ("Flt", KStar)
-    ]
-initEnv = (TypingEnv Map.empty (Map.fromList builtinTypes) Map.empty)
-
 typeProgramM (Program ddefs vdefss) = do
     (s, e, typed) <- typeValDefsGroups initEnv vdefss
     lift $ lift $ putStrLn $ "Final substitution: " ++ show s

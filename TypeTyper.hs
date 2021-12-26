@@ -105,13 +105,9 @@ instantiate (TyScheme qs t) = do
 
 
 -- Funzioni di typing
-
-buildFunType a r =
-    DataTypeApp (DataTypeApp (DataTypeName "->" (KFun KStar (KFun KStar KStar))) a) r
-
 typeLit :: Literal -> DataType
-typeLit (LitInteger _) = DataTypeName "Int" KStar
-typeLit (LitFloating _) = DataTypeName "Flt" KStar
+typeLit (LitInteger _) = intT
+typeLit (LitFloating _) = fltT
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
 typePat :: Map.Map String [DataType] -> HIRPattern -> TyperState DataType

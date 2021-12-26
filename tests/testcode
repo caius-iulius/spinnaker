@@ -1,7 +1,7 @@
-def (+) = \0,0{0}
-def (*) = \0,0{0}
-def (-) = \0,0{0}
-def (/) = \0,0{0}
+def (+) = \x,y{_addInt(x,y)}
+def (*) = \x,y{_mulInt(x,y)}
+def (-) = \x,y{_subInt(x,y)}
+def (/) = \x,y{_divInt(x,y)}
 
 def id = \i{i}
 
