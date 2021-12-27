@@ -88,6 +88,7 @@ tyBindAdd c (TypingEnv ts ks vs) labl scheme =
     case Map.lookup labl ts of
         Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
         Nothing -> do
+            lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             return $ TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
 
 instance Types TypingEnv where
@@ -161,12 +162,19 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
         Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
+typeExpr (TypingEnv _ _ vs) (c, _, ExprConstructor l) =
+    case Map.lookup l vs of
+        Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
+        Just (VariantData _ qs argts dt) -> do
+            s <- getInstantiationSubst qs
+            let mydt = substApply s (foldr buildFunType dt argts)
+            return (nullSubst, mydt, (c, mydt, ExprConstructor l))
 typeExpr env (c, _, ExprFCall f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
     (s2, t2, a') <- typeExpr (substApply s1 env) a
     s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
-    lift $ lift $ putStrLn $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
+    -- lift $ lift $ putStrLn $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
     let finals = composeSubst s3 (composeSubst s2 s1)
         finalt = substApply finals q
     return (finals, finalt, (c, finalt, ExprFCall f' a'))
@@ -209,7 +217,7 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     (s, texpr', expr') <- typeExpr env' expr
     s' <- mgu c texpr texpr'
     mys <- return $ composeSubst s' s
-    (s'', tfinal, others) <- typePutBranches (substApply mys env) tpat (substApply s' texpr) branches
+    (s'', tfinal, others) <- typePutBranches (substApply mys env) (substApply mys tpat) (substApply s' texpr) branches
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
@@ -217,6 +225,7 @@ substApplyExpr :: Subst -> HIRExpr -> HIRExpr
 substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
 substApplyExpr s (c, dt, ExprFCall f a) = (c, substApply s dt, ExprFCall (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
+substApplyExpr s (c, dt, ExprConstructor l) = (c, substApply s dt, ExprConstructor l)
 substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))

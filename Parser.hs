@@ -162,7 +162,7 @@ getTerm = describeError "Expected term" $ do { -- Literal
     return (c, DataNOTHING, ExprLabel l)
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
     (c, l) <- getCapitalLabel;
-    return (c, DataNOTHING, ExprLabel l)
+    return (c, DataNOTHING, ExprConstructor l)
 } <|| do { -- '(' OPERATOR ')'
     skipUseless;
     thisChar '(';

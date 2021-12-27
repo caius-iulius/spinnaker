@@ -21,6 +21,7 @@ data HIRExprData
     = ExprLiteral Literal --Valore letterale
     | ExprFCall HIRExpr HIRExpr --Funzione, argomento
     | ExprLabel String --Riferimento a label
+    | ExprConstructor String -- Riferimento a una variante
     | ExprTuple [HIRExpr] --Elementi della n-tupla
     | ExprLambda HIRPattern HIRExpr --Argomento(anche "smontato") e valore interno
     | ExprPut HIRExpr [(HIRPattern, HIRExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
