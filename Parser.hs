@@ -16,10 +16,9 @@ opChar = anyChar ":!$%&*+/-<=>?@\\^|."
 inArrow = "->"
 putSeparator = "|"
 lambdaInit = "\\"
-commentStart = "/*"
-commentEnd = "*/"
+fieldDot = "."
 
-validSymbols = [inArrow, putSeparator, lambdaInit, commentStart, commentEnd]
+validSymbols = [inArrow, putSeparator, lambdaInit, fieldDot]
 
 keywords = ["let", "put", "_", "def", "and", "data", "pub", "type", "and"]
 
@@ -46,18 +45,12 @@ getKeyword = do {
     else pfail "Expected keyword"
 }
 
-getLabel = do {
-    (c, s) <- getLabelText;
-    if elem s keywords
-    then pfail "Expected label"
-    else return (c, s)
-}
-
 getCapitalLabel = do {
     skipUseless;
     (c, f) <- capitalLabelFirst;
     others <- munch labelChar;
-    return (c, f:map snd others)
+    quotes <- munch $ thisChar '\'';
+    return (c, f:map snd (others++quotes))
 }
 
 getInteger = do {
@@ -108,6 +101,20 @@ getOperator = do {
     (c, s) <- getOperatorText;
     if elem s validSymbols
     then pfail "Expected operator"
+    else return (c, s)
+}
+
+getLabel = do {
+    skipUseless;
+    thisChar '(';
+    op <- getOperator;
+    skipUseless;
+    require $ describeError "Expected closing paren after operator section" $ thisChar ')';
+    return op
+} <|| do {
+    (c, s) <- getLabelText;
+    if elem s keywords
+    then pfail "Expected label"
     else return (c, s)
 }
 
@@ -163,13 +170,6 @@ getTerm = describeError "Expected term" $ do { -- Literal
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
     (c, l) <- getCapitalLabel;
     return (c, DataNOTHING, ExprConstructor l)
-} <|| do { -- '(' OPERATOR ')'
-    skipUseless;
-    thisChar '(';
-    (c, op) <- getOperator;
-    skipUseless;
-    require $ thisChar ')';
-    return (c, DataNOTHING, ExprLabel op)
 } <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
     (c, _) <- thisChar '(';
@@ -182,8 +182,7 @@ getTerm = describeError "Expected term" $ do { -- Literal
 }
 
 getExpr = do {
-    skipUseless;
-    (c, _) <- thisChar '\\';
+    (c, _) <- thisSyntaxElem "\\";
     require $ do{
         curriedargs <- sepBy1 getPatternTerm (skipUseless >> thisChar ','); --[Pattern]
         skipUseless;
@@ -218,8 +217,7 @@ getLet = do
     }
 
 getBranch = do
-    skipUseless;
-    thisChar '|';
+    thisSyntaxElem "|";
     require $ do {
         p <- require getPatternExpr;
         thisSyntaxElem "->";
@@ -237,8 +235,7 @@ getPut = do
 
 -- Parser per le definizioni
 getValDefinition = do {
-    (c, label) <- describeError "Expected a label or a parenthesisised operator" $ do {skipUseless; thisChar '('; op <- getOperator; skipUseless; thisChar ')'; return op}
-             <|| getLabel;
+    (c, label) <- getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
     return $ ValDef c label meta
