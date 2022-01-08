@@ -1,3 +1,4 @@
+def panic = \(){panic ()}
 def head = \l{
     put l
     | Nil -> panic()

@@ -1,0 +1,9 @@
+def putStr = \s{put s
+    | Prelude.Nil -> ()
+    | Prelude.Cons c cs ->
+        let _ = Prelude._putChr c ->
+        putStr cs
+}
+
+def main =
+    putStr "Hello, World!\n"

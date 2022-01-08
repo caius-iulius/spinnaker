@@ -1,15 +1,16 @@
 -- TODO FORSE: Parsing dei commenti multilinea
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
 module Parser where
+import GHC.Unicode
 
 import MPCL
 import HIRDefs
 import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
 
-labelFirst = thisChar '_' <|| alphaLower
-capitalLabelFirst = alphaCapital
-labelChar = thisChar '_' <|| alphanumeric
-tailDigit = thisChar '_' <|| numeric
+labelFirst = thisChar '_' <|| asciiAlphaLower
+capitalLabelFirst = asciiAlphaUpper
+labelChar = thisChar '_' <|| asciiAlphaNumeric
+tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":!$%&*+/-<=>?@\\^|."
 
@@ -20,7 +21,7 @@ fieldDot = "."
 
 validSymbols = [inArrow, putSeparator, lambdaInit, fieldDot]
 
-keywords = ["let", "put", "_", "def", "and", "data", "pub", "type", "and"]
+keywords = ["_", "put", "let", "pub", "and", "def", "data", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -56,11 +57,11 @@ getCapitalLabel = do {
 getInteger = do {
     skipUseless;
     (coord, firsts) <- describeError "Expected either a '-' or a digit in an integer" $ do {
-        (c, first) <- numeric;
+        (c, first) <- digit;
         return (c, first:[])
     } <|| do {
         (c, sign) <- thisChar '-';
-        (_, first) <- numeric;
+        (_, first) <- digit;
         return (c, sign:first:[])
     };
     others <- munch tailDigit;
@@ -70,11 +71,11 @@ getInteger = do {
 getFloat = do {
     skipUseless;
     (coord, firsts) <- describeError "Expected either a '-' or a digit in a float" $ do {
-        (c, first) <- numeric;
+        (c, first) <- digit;
         return (c, first:[])
     } <|| do {
         (c, sign) <- thisChar '-';
-        (_, first) <- numeric;
+        (_, first) <- digit;
         return (c, sign:first:[])
     };
     othersFirst <- munch tailDigit;
@@ -83,13 +84,30 @@ getFloat = do {
     return (coord, read $ filter ('_' /=) $ (firsts ++ map snd othersFirst ++ "." ++ map snd othersSecond))
 }
 
+getEscape = do {
+    (c, _) <- thisChar '\\';
+    char <- (thisChar 'n' >> return '\n') <|| (thisChar '"' >> return '"'); --TODO Altri escape
+    return (c, char)
+}
+
+getString = do {
+    skipUseless;
+    (c, _) <- thisChar '\"';
+    chars <- munch (difference (stdSatisfy isPrint "") (thisChar '"' <|| thisChar '\\') <|| getEscape <|| whiteSpace);
+    require $ thisChar '\"';
+    return (c, map snd chars)
+}
+
 getLiteral = describeError "Expected literal" $ do {
     (c, f) <- getFloat;
     return $ (c, LitFloating f)
 } <|| do {
     (c, i) <- getInteger;
     return $ (c, LitInteger i)
-}
+} {- <|| do {
+    (c, s) <- getString;
+    return $ (c, LitString s)
+} -}
 
 getOperatorText = do {
     skipUseless;
@@ -124,7 +142,21 @@ thisSyntaxElem test = describeError ("Expected keyword or symbol '" ++ test ++ "
     if s == test then return (c, s) else pfail ""
 }
 
-discard p = p >> return ()
+getModName = getCapitalLabel
+
+getPath = munch $ do{l <- getModName; thisSyntaxElem "."; return l}
+
+getPathLabel = do {
+    path <- getPath;
+    (c, label) <- getLabel;
+    return (if length path == 0 then c else fst $ head path, Path (map snd $ path) label)
+}
+
+getPathCapitalLabel = do {
+    path <- getPath;
+    (c, label) <- getCapitalLabel;
+    return (if length path == 0 then c else fst $ head path, Path (map snd $ path) label)
+}
 
 -- Analisi semantica
 
@@ -136,7 +168,7 @@ getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getLabel;
     return (c, Just l, PatWildcard)
 } <|| do {
-    (c, l) <- getCapitalLabel;
+    (c, l) <- getPathCapitalLabel;
     return (c, Nothing, PatVariant l [])
 } <|| do {
     (c, k) <- getKeyword;
@@ -155,7 +187,7 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 }
 
 getPatternExpr = do{
-    (c, cons) <- getCapitalLabel;
+    (c, cons) <- getPathCapitalLabel;
     args <- munch getPatternTerm;
     return (c, Nothing, PatVariant cons args)
 } <|| getPatternTerm
@@ -165,10 +197,10 @@ getTerm = describeError "Expected term" $ do { -- Literal
     (c, l) <- getLiteral;
     return (c, DataNOTHING, ExprLiteral l)
 } <|| do { -- Label
-    (c, l) <- getLabel;
+    (c, l) <- getPathLabel;
     return (c, DataNOTHING, ExprLabel l)
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
-    (c, l) <- getCapitalLabel;
+    (c, l) <- getPathCapitalLabel;
     return (c, DataNOTHING, ExprConstructor l)
 } <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
@@ -195,14 +227,14 @@ getExpr = do {
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
     return $ let (c,_,_) = head terms in
-        foldl1 (\t1 t2 -> (c, DataNOTHING, ExprFCall t1 t2)) terms
+        foldl1 (\t1 t2 -> (c, DataNOTHING, ExprApp t1 t2)) terms
 }
 
 getMeta = getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;
-    return (opc, DataNOTHING, ExprFCall (opc, DataNOTHING, ExprFCall (opc, DataNOTHING, ExprLabel op) expr) meta)
+    return (opc, DataNOTHING, ExprApp (opc, DataNOTHING, ExprApp (opc, DataNOTHING, ExprLabel $ Path [] op) expr) meta)
 } <|| getExpr
 
 getLet = do
@@ -233,17 +265,20 @@ getPut = do
         return (c, DataNOTHING, ExprPut val branches)
     }
 
+-- Parser globali
+getVisibility = option Private (thisSyntaxElem "pub" >> return Public)
 -- Parser per le definizioni
 getValDefinition = do {
+    visib <- getVisibility;
     (c, label) <- getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
-    return $ ValDef c label meta
+    return $ (visib, ValDef c label meta)
 }
 getValDefinitions = do {
     thisSyntaxElem "def";
     defs <- sepBy1 getValDefinition (thisSyntaxElem "and");
-    return $ Right defs
+    return $ ModValGroup defs
 }
 
 -- Parser per i tipi
@@ -254,7 +289,7 @@ getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
     return (c, TypeExprQuantifier l)
 } <|| do { --Tipo data
-    (c, l) <- getCapitalLabel;
+    (c, l) <- getPathCapitalLabel;
     return (c, TypeExprName l)
 } <|| do {
     skipUseless;
@@ -278,7 +313,7 @@ getTypeMeta = do {
     e <- getTypeExpr;
     (c, _) <- thisSyntaxElem "->";
     m <- require getTypeMeta;
-    return (c, TypeExprApp (c, TypeExprApp (c, TypeExprName "->") e) m)
+    return (c, TypeExprApp (c, TypeExprApp (c, TypeExprName $ Path [] "->") e) m)
 } <|| getTypeExpr
 
 -- Parser vari per datatype
@@ -287,26 +322,52 @@ getVariant = do {
     tyexprs <- munch getTypeTerm;
     return $ DataVariant c label (map (\e->(DataNOTHING,e)) tyexprs)
 }
-
-getDataDefinition = do { --pfatal "DATA DEFINITIONS NOT IMPLEMENTED"
-    (c, _) <- thisSyntaxElem "data";
-    (_, label) <- getCapitalLabel;
+getDataDefinition = do {
+    visib <- getVisibility;
+    (c, label) <- getCapitalLabel;
     typevars <- munch getTypeVar; -- TODO 
     thisSyntaxElem "=";
     variants <- sepBy getVariant $ thisSyntaxElem "|";
-    return $ Left $ DataDef c label (map (\(c, tv)->(tv, (TyQuant 0 KindNOTHING))) typevars) variants --TODO quantificatore iniziale?
+    return $ DataDef c visib label (map (\(c, tv)->(tv, (TyQuant 0 KindNOTHING))) typevars) variants --TODO quantificatore iniziale?
 }
 
-listEitherDefToTup [] = ([], [])
-listEitherDefToTup (Left ddef:defs) =
-    let (ddefs, vdefs) = listEitherDefToTup defs in (ddef:ddefs, vdefs)
-listEitherDefToTup (Right vdef:defs) =
-    let (ddefs, vdefs) = listEitherDefToTup defs in (ddefs, vdef:vdefs)
+getDataDefinitions = do {
+    thisSyntaxElem "data";
+    defs <- sepBy1 getDataDefinition (thisSyntaxElem "and");
+    return $ ModDataGroup defs
+}
+
+getUse = do {
+    (c, _) <- thisSyntaxElem "use";
+    require $ do {
+        visib <- getVisibility;
+        (_, path) <- getPathCapitalLabel;
+        return (ModUse c visib path)
+    }
+}
+
+getModuleDef = do {
+    (c, _) <- thisSyntaxElem "mod";
+    require $ do {
+        visib <- getVisibility;
+        (_, label) <- getCapitalLabel;
+        skipUseless;
+        thisChar '{';
+        mod <- getModuleInnerDefs;
+        skipUseless;
+        thisChar '}';
+        return $ ModMod c visib label mod
+    }
+}
+
+getModuleInnerDefs = do {
+    res <- munch (getValDefinitions <|| getDataDefinitions <|| getUse <|| getModuleDef);
+    return $ Module res
+}
 --Entry point (da modificare)
 getProgram = do {
-    res <- munch (getValDefinitions <|| getDataDefinition);
+    prog <- getModuleInnerDefs;
     skipUseless;
     reachedEof;
-    let (ddefs, vdefs) = listEitherDefToTup res
-        in return $ Program ddefs vdefs
+    return prog
 }

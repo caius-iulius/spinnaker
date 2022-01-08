@@ -3,27 +3,34 @@ module PrettyPrinter where
 import Data.Tree
 import HIRDefs
 
-toTreeHIRPattern :: HIRPattern -> Tree String
-toTreeHIRPattern p = Node (show p) []
+toTreeHLPattern p = Node (show p) []
 
-toTreeHIRExpr (c, dt, ExprLiteral l) = Node (show c ++ " DT:" ++ show dt ++ " Literal: " ++ show l) []
-toTreeHIRExpr (c, dt, ExprFCall f a) = Node (show c ++ " DT:" ++ show dt ++ " Function call") [toTreeHIRExpr f, toTreeHIRExpr a]
-toTreeHIRExpr (c, dt, ExprLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: " ++ show l) []
-toTreeHIRExpr (c, dt, ExprConstructor l) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) []
-toTreeHIRExpr (c, dt, ExprTuple es) = Node (show c ++ " DT:" ++ show dt ++ " Tuple") (map toTreeHIRExpr es)
-toTreeHIRExpr (c, dt, ExprLambda p expr) = Node (show c ++ " DT:" ++ show dt ++ " Lambda") [Node "arg" [toTreeHIRPattern p], Node "expr" [toTreeHIRExpr expr]]
-toTreeHIRExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "val" [toTreeHIRExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHIRPattern p], Node "expr" [toTreeHIRExpr e]]) branches)]
+toTreeHLExpr (c, dt, ExprLiteral l) = Node (show c ++ " DT:" ++ show dt ++ " Literal: " ++ show l) []
+toTreeHLExpr (c, dt, ExprApp f a) = Node (show c ++ " DT:" ++ show dt ++ " Function call") [toTreeHLExpr f, toTreeHLExpr a]
+toTreeHLExpr (c, dt, ExprLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: " ++ show l) []
+toTreeHLExpr (c, dt, ExprConstructor l) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) []
+toTreeHLExpr (c, dt, ExprTuple es) = Node (show c ++ " DT:" ++ show dt ++ " Tuple") (map toTreeHLExpr es)
+toTreeHLExpr (c, dt, ExprLambda p expr) = Node (show c ++ " DT:" ++ show dt ++ " Lambda") [Node "arg" [toTreeHLPattern p], Node "expr" [toTreeHLExpr expr]]
+toTreeHLExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "val" [toTreeHLExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHLPattern p], Node "expr" [toTreeHLExpr e]]) branches)]
 
 toTreeHIRTypeExpr :: HIRTypeExpr -> Tree String
 toTreeHIRTypeExpr te = Node (show te) []
 
 toTreeHIRDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(dt, te) -> Node "arg" [Node (show dt) [], toTreeHIRTypeExpr te]) args)
 
-toTreeHIRDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
+toTreeHIRDataDef (DataDef c v labl quants variants) = Node (show c ++ " Defining " ++ show v ++ " data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHIRDataVariant variants)
 
-toTreeHIRValDef (ValDef c s e) = Node (show c ++ " Defining val: " ++ show s) [toTreeHIRExpr e]
+toTreeHLValDef (ValDef c s e) = Node (show c ++ " Defining val: " ++ show s) [toTreeHLExpr e]
+toTreeHIRValDef (v, ValDef c s e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s) [toTreeHLExpr e]
 
-toTreeHIRValDefs vdefs = Node "Group of vals" (map toTreeHIRValDef vdefs)
+toTreeBlockProgram (BlockProgram valgroups) = Node "BlockProgram" [
+        Node "Vals" (map (\group->Node "Group of vals" (map toTreeHLValDef group)) valgroups)
+    ]
 
-toTreeHIRProgram (Program ddefs vdefss) = Node "Program" [Node "Data detinitions" (map toTreeHIRDataDef ddefs), Node "Value definitions" (map toTreeHIRValDefs vdefss)]
+toTreeHIRModDef (ModMod c v l m) = Node (show c ++ " Defining " ++ show v ++ " module: " ++ show l) [toTreeHIRMod m]
+toTreeHIRModDef (ModUse c v p) = Node (show c ++ " Using " ++ show v ++ " module: " ++ show p) []
+toTreeHIRModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeHIRValDef vvdefs)
+toTreeHIRModDef (ModDataGroup group) = Node "Group of datas" (map toTreeHIRDataDef group)
+
+toTreeHIRMod (Module defs) = Node "Module" (map toTreeHIRModDef defs)

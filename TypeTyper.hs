@@ -25,14 +25,6 @@ quantBind c q t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
-{-
-tupsMgu _ [] [] = return nullSubst
-tupsMgu c (t:ts) (t':ts') = do
-    s <- mgu c t t'
-    s' <- tupsMgu c (map (substApply s) ts) (map (substApply s) ts')
-    return $ composeSubst s' s
--}
-
 tupsMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
 tupsMgu c tts =
     foldl (\m_subst (dta, dtb) -> do{
@@ -86,7 +78,7 @@ instance Types TyScheme where
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TyperState TypingEnv
 tyBindAdd c (TypingEnv ts ks vs) labl scheme =
     case Map.lookup labl ts of
-        Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
+        --Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
         Nothing -> do
             lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             return $ TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
@@ -115,7 +107,7 @@ typeLit (LitInteger _) = intT
 typeLit (LitFloating _) = fltT
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
-typePat :: TypingEnv -> HIRPattern -> TyperState DataType
+typePat :: TypingEnv -> HLPattern String -> TyperState DataType
 typePat _ (_, _, PatWildcard) = freshType KStar
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat env (_, _, PatTuple ps) = do
@@ -123,7 +115,7 @@ typePat env (_, _, PatTuple ps) = do
     return $ DataTuple ts
 typePat env@(TypingEnv _ _ vs) (c, _, PatVariant v ps) =
     case Map.lookup v vs of
-        Nothing -> throwError $ show c ++ " Unbound constructor: " ++ v
+        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ v
         Just (VariantData _ qs vts dt) -> if length ps /= length vts then throwError $ show c ++ " Constructor is applied to wrong number of arguments"
         else do
             s <- getInstantiationSubst qs
@@ -147,29 +139,29 @@ innerPatVarsInEnv gf c env@(TypingEnv _ _ vs) (PatVariant v ps) dt = let Just (V
     s <- mgu c vdt dt --TODO: Forse serve un algoritmo di unificazione "one-way"
     patListPatVarsInEnv gf env ps (map (substApply s) vts)
 
-patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HIRPattern -> DataType -> TyperState TypingEnv
+patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HLPattern String -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
 patVarsInEnv gf env (c, Just labl, pdata) dt = do
     env' <- tyBindAdd c env labl (gf dt)
     innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
-typeExpr :: TypingEnv -> HIRExpr -> TyperState (Subst, DataType, HIRExpr)
+typeExpr :: TypingEnv -> HLExpr String -> TyperState (Subst, DataType, HLExpr String)
 typeExpr _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, dt, (c, dt, ExprLiteral lit))
 typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
-        Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
+        --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
 typeExpr (TypingEnv _ _ vs) (c, _, ExprConstructor l) =
     case Map.lookup l vs of
-        Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
+        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
         Just (VariantData _ qs argts dt) -> do
             s <- getInstantiationSubst qs
             let mydt = substApply s (foldr buildFunType dt argts)
             return (nullSubst, mydt, (c, mydt, ExprConstructor l))
-typeExpr env (c, _, ExprFCall f a) = do
+typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
     (s2, t2, a') <- typeExpr (substApply s1 env) a
@@ -177,7 +169,7 @@ typeExpr env (c, _, ExprFCall f a) = do
     -- lift $ lift $ putStrLn $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
     let finals = composeSubst s3 (composeSubst s2 s1)
         finalt = substApply finals q
-    return (finals, finalt, (c, finalt, ExprFCall f' a'))
+    return (finals, finalt, (c, finalt, ExprApp f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
 typeExpr env (c, _, ExprTuple exprs) =
     let typeExprsInternal _ ([]) = return (nullSubst, [], [])
@@ -202,7 +194,7 @@ typeExpr env (c, _, ExprPut val pses) = do
     return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut val' pses'))
 
 --Funzioni helper per putexpr
-unifyPats :: TypingEnv -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType)
+unifyPats :: TypingEnv -> DataType -> [(HLPattern String, HLExpr String)] -> TyperState (Subst, DataType)
 unifyPats _ t [] = return (nullSubst, t)
 unifyPats env t ((pat, (c, _, _)):branches) = do
     tpat <- typePat env pat
@@ -210,7 +202,7 @@ unifyPats env t ((pat, (c, _, _)):branches) = do
     (s', t') <- unifyPats (substApply s env) (substApply s t) branches
     return (composeSubst s' s, t')
 
-typePutBranches :: TypingEnv -> DataType -> DataType -> [(HIRPattern, HIRExpr)] -> TyperState (Subst, DataType, [(HIRPattern, HIRExpr)])
+typePutBranches :: TypingEnv -> DataType -> DataType -> [(HLPattern String, HLExpr String)] -> TyperState (Subst, DataType, [(HLPattern String, HLExpr String)])
 typePutBranches _ _ texpr [] = return (nullSubst, texpr, [])
 typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     env' <- patVarsInEnv (generalize env) env pat tpat
@@ -221,9 +213,9 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
-substApplyExpr :: Subst -> HIRExpr -> HIRExpr
+substApplyExpr :: Subst -> HLExpr String -> HLExpr String
 substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
-substApplyExpr s (c, dt, ExprFCall f a) = (c, substApply s dt, ExprFCall (substApplyExpr s f) (substApplyExpr s a))
+substApplyExpr s (c, dt, ExprApp f a) = (c, substApply s dt, ExprApp (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
 substApplyExpr s (c, dt, ExprConstructor l) = (c, substApply s dt, ExprConstructor l)
 substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
@@ -264,17 +256,19 @@ unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
     return s
 
 -- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
-typeValDefs env vdefs = do
+-- TODO: Mi sa che questa funzione non dovrebbe restituire una sostituzione
+typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
     s' <- return $ foldl (flip composeSubst) s substs
     vdefs'' <- return $ map (substApplyValDef s') vdefs'
     env' <- addValDefsEnv (substApply s' env) vdefs''
-    return (s', env', vdefs'')
+    if (0 == (length $ freetyvars env')) then return (s', env', vdefs'')
+    else throwError $ show ((\(ValDef c _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la dipizzazione di un gruppo di valdef"
 
-typeValDefsGroups env [] = return (nullSubst, env, [])
-typeValDefsGroups env (vdefs:vdefss) = do
-    (s, env', vdefs') <- typeValDefs env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
-    (s', env'', vdefss') <- typeValDefsGroups env' vdefss
+typeValDefGroups env [] = return (nullSubst, env, [])
+typeValDefGroups env (vdefs:vdefss) = do
+    (s, env', vdefs') <- typeValDefGroup env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
+    (s', env'', vdefss') <- typeValDefGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')

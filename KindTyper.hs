@@ -68,7 +68,7 @@ kindmgu c (KFun a r) (KFun a' r') = do
     s2 <- kindmgu c (kindSubstApply s1 r) (kindSubstApply s1 r')
     return $ composeKSubst s1 s2
 kindmgu c k1 k2 = throwError $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
-
+{-
 -- Funzioni di typing
 typeTyExpr :: TypingEnv -> Map.Map String TyQuant -> HIRTypeExpr -> TyperState (KindSubst, Kind, DataType)
 typeTyExpr _ qmap (c, TypeExprQuantifier l) =
@@ -107,3 +107,4 @@ typeDataVariants env qmap (v:vs) = do
     (s, v') <- typeDataVariant env qmap v
     (s', vs') <- typeDataVariants env (substApplyQmap s qmap) vs
     return (composeKSubst s' s, (substApplyVariant s' v'):vs')
+-}

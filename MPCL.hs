@@ -2,6 +2,7 @@
 module MPCL where
 
 import GHC.Base
+import GHC.Unicode
 
 type ErrMessage = String
 data ParseResult coord t
@@ -61,6 +62,7 @@ require p = PParse(\cs ->
         _ -> resp
     )
 
+discard p = p >> return ()
 {-
 --Aggiunge la stringa specificata all'inizio del messaggio di errore
 detailError s p = PParse(\cs ->
@@ -113,6 +115,13 @@ sepBy1 p sep = do {
 --Elabora zero o più p separati da sep
 sepBy p sep = sepBy1 p sep <|| return []
 
+--Se e ha successo il parser fallisce, altrimenti fai p
+difference p e = PParse(\cs ->
+    case parse e cs of
+        POk res (c, _) -> PFail c ("Unexpected parse: " ++ show res)
+        _ -> parse p cs
+    )
+
 --Se p è ha successo lo restituisce, altrimenti val
 option val p = p <|| return val
 
@@ -146,9 +155,8 @@ thisChar char = stdSatisfy (char==) ("Expected character: \'" ++ char : '\'' : [
 anyChar chars = stdSatisfy (\c -> any (c==) chars) ("Expected one of these chars: \"" ++ chars ++ "\"")
 
 --alcuni parser utili
---TODO utilizza GHC.Unicode
-alphaLower   = anyChar "abcdefghijklmnopqrstuvwxyz"
-alphaCapital = anyChar "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-numeric      = anyChar "01234567890"
-alphanumeric = alphaLower <|| alphaCapital <|| numeric
-whiteSpace   = anyChar " \n\t\r"
+asciiAlphaLower   = anyChar "abcdefghijklmnopqrstuvwxyz"
+asciiAlphaUpper   = anyChar "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+digit             = anyChar "01234567890"
+asciiAlphaNumeric = asciiAlphaLower <|| asciiAlphaUpper <|| digit
+whiteSpace        = stdSatisfy isSpace "Expected a whitespace"

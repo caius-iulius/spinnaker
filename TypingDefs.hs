@@ -39,7 +39,7 @@ instance Show DataType where
     show (DataQuant q) = show q
     show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
     show (DataTypeName s k) = s++":"++show k
-    show (DataTypeApp (DataTypeApp (DataTypeName "->" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
+    show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
 
 data TyScheme = TyScheme [TyQuant] DataType
@@ -55,34 +55,42 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
 
 --Definizioni utili
 buildFunType a r =
-    DataTypeApp (DataTypeApp (DataTypeName "->" (KFun KStar (KFun KStar KStar))) a) r
-intT = DataTypeName "Int" KStar
-fltT = DataTypeName "Flt" KStar
-boolT = DataTypeName "Bool" KStar
+    DataTypeApp (DataTypeApp (DataTypeName "->#BI" (KFun KStar (KFun KStar KStar))) a) r
+intT = DataTypeName "Int#BI" KStar
+fltT = DataTypeName "Flt#BI" KStar
+boolT = DataTypeName "Bool#BI" KStar
+charT = DataTypeName "Char#BI" KStar
+listT t = DataTypeApp (DataTypeName "List#BI" (KFun KStar KStar)) t
+
 builtinTypes =
-    [   ("->", KFun KStar (KFun KStar KStar))
-    ,   ("Int", KStar)
-    ,   ("Flt", KStar)
-    ,   ("Bool", KStar)
+    [   ("->#BI", KFun KStar (KFun KStar KStar))
+    ,   ("Int#BI", KStar)
+    ,   ("Flt#BI", KStar)
+    ,   ("Bool#BI", KStar)
+    --TEMPORANEI
+    ,   ("Char#BI", KStar)
     ]
 builtinVals =
-    [   ("_addInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_subInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_mulInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_divInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_equInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_neqInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_lesInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_greInt", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    [   ("_addInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_subInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_mulInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_divInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
+    ,   ("_equInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_neqInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_lesInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    ,   ("_greInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    --TEMPORANEI
+    ,   ("_putChr#BI", TyScheme [] (buildFunType charT (DataTuple [])))
+    ,   ("_getChr#BI", TyScheme [] (buildFunType (DataTuple []) charT))
     ]
 builtinVars =
-    [   VariantData "True" [] [] boolT
-    ,   VariantData "False" [] [] boolT
+    [   VariantData "True#BI" [] [] boolT
+    ,   VariantData "False#BI" [] [] boolT
     --TEMPORANEI
-    --,   VariantData "Nil" [TyQuant 100 KStar] [] (DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar)))
-    --,   VariantData "Cons" [TyQuant 100 KStar] [DataQuant (TyQuant 100 KStar), DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar))] (DataTypeApp (DataTypeName "List" (KFun KStar KStar)) (DataQuant (TyQuant 100 KStar)))
+    ,   VariantData "Nil#BI" [TyQuant 0 KStar] [] (listT (DataQuant (TyQuant 0 KStar)))
+    ,   VariantData "Cons#BI" [TyQuant 0 KStar] [DataQuant (TyQuant 0 KStar), listT (DataQuant (TyQuant 0 KStar))] (listT (DataQuant (TyQuant 0 KStar)))
     ]
-initEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinVars))
+initTypingEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinVars))
 
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId

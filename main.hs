@@ -15,11 +15,11 @@ main = do {
     putStrLn contents;
     case parse getProgram (Coord (head args) 1 1, contents) of
         POk untyped _ -> do {
-            putStrLn $ drawTree $ Node "Parsed" [toTreeHIRProgram untyped];
+            putStrLn $ drawTree $ Node "Parsed" [toTreeHIRMod untyped];
             either <- typeProgram untyped;
             case either of
                 Left e -> putStrLn $ "Typing error: " ++ e
-                Right typed -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeHIRProgram typed]
+                Right typed -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeBlockProgram typed]
         }
         pe -> print pe
 }

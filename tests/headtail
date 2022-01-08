@@ -1,0 +1,15 @@
+# use Prelude
+
+def halt = \(){halt()}
+
+def head = \l{
+    put l
+    | Prelude.Nil -> halt()
+    | Prelude.Cons x xs -> x
+}
+
+def tail = \l{
+    put l
+    | Prelude.Nil -> halt()
+    | Prelude.Cons x xs -> xs
+}
