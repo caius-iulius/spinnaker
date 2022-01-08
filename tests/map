@@ -1,3 +1,5 @@
+use Core
+
 def map = \f, l{
     put l
     | Nil -> Nil

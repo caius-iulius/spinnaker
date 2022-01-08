@@ -1,3 +1,5 @@
+use Core
+
 def fac = \n{
     put n
     | 0 -> 1

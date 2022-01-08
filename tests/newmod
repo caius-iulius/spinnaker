@@ -1,11 +1,11 @@
 mod pub MyMod {
-    use Prelude
+    use Core
     def internal_1 = 1
     def internal_2 = 2
     def internal_add = (+)
     def pub pubresult = internal_add internal_1 internal_2
 }
 
-mod UseAs{use pub Prelude}
+mod UseAs{use pub Core}
 
 def fifteen = UseAs.(*) 3 5

@@ -1,15 +1,15 @@
-# use Prelude
+# use Core
 
 def halt = \(){halt()}
 
 def head = \l{
     put l
-    | Prelude.Nil -> halt()
-    | Prelude.Cons x xs -> x
+    | Core.Nil -> halt()
+    | Core.Cons x xs -> x
 }
 
 def tail = \l{
     put l
-    | Prelude.Nil -> halt()
-    | Prelude.Cons x xs -> xs
+    | Core.Nil -> halt()
+    | Core.Cons x xs -> xs
 }

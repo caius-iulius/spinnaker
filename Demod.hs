@@ -1,17 +1,16 @@
-module Demod (demodProgram) where
+module Demod (DemodEnv(..), demodModule, runDemodState, concatBlockPrograms) where
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
 import HIRDefs
 import MPCL(StdCoord)
-import PrettyPrinter
-import Data.Tree
 
 data DemodEnv = DemodEnv 
     (Map.Map String (Visibility, DemodEnv)) -- Mods
     (Map.Map String (Visibility, String)) -- Vals
     (Map.Map String (Visibility, String)) -- Types
     (Map.Map String (Visibility, String)) -- Constructors
+    deriving Show
 
 envGetPubs (DemodEnv m v t c) = (DemodEnv (filterpub m) (filterpub v) (filterpub t) (filterpub c))
     where filterpub = Map.filter (\(v, _)->
@@ -24,15 +23,6 @@ envSetPrivate (DemodEnv m v t c) = (DemodEnv (setpriv m) (setpriv v) (setpriv t)
 --Al momento questo sceglie automaticamente l'elemento di sinistra quando c'è un'ambiguità. Bisogna considerare una scelta a destra o vincolare a contesti disgiunti
 envsUnion :: DemodEnv -> DemodEnv -> DemodEnv
 envsUnion (DemodEnv m v t c) (DemodEnv m' v' t' c') = DemodEnv (Map.union m m') (Map.union v v') (Map.union t t') (Map.union c c')
-
-builtinTypes = ["->", "Int", "Flt", "Bool", "Char"]
-builtinVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_lesInt", "_greInt", "_putChr", "_getChr"]
-builtinVars = ["True", "False", "Nil", "Cons"]
-
-buildBIDemod l = (l, (Public, l++"#BI"))
-buildBIDemodMap list = Map.fromList $ map buildBIDemod list
-
-initDemodEnv = DemodEnv Map.empty (buildBIDemodMap builtinVals) (buildBIDemodMap builtinTypes) (buildBIDemodMap builtinVars)
 
 type DemodState t = ExceptT String (StateT Int IO) t
 
@@ -130,6 +120,7 @@ demodModDef env@(DemodEnv ms vs ts cs) (ModMod c v l m) =
         Just _ -> throwError $ show c ++ " Module: " ++ show l ++ " already defined"
         Nothing -> do
             (menv, demodded) <- demodModule (envSetPrivate env) m
+            lift $ lift $ putStrLn $ "Final module env of " ++ show l ++ ": " ++ show (envGetPubs menv)
             return (DemodEnv (Map.union ms (Map.singleton l (v, envGetPubs menv))) vs ts cs, demodded)
 demodModDef env (ModUse c v (Path p l)) =
     let setVisib = case v of
@@ -143,11 +134,13 @@ demodModDef env (ModValGroup vvdefs) = do
     vdefs' <- mapM (demodValDef env') vdefs
     return (env', BlockProgram [vdefs'])
 
+concatBlockPrograms (BlockProgram valgroups) (BlockProgram valgroups') = BlockProgram $ valgroups++valgroups'
+
 demodModDefs env [] = return (env, BlockProgram [])
 demodModDefs env (def:defs) = do
-    (env', BlockProgram valgroups) <- demodModDef env def
-    (env'', BlockProgram valgroups') <- demodModDefs env' defs
-    return (env'', BlockProgram (valgroups++valgroups'))
+    (env', block) <- demodModDef env def
+    (env'', block') <- demodModDefs env' defs
+    return (env'', concatBlockPrograms block block')
 
 demodModule :: DemodEnv -> HIRModule -> DemodState (DemodEnv, BlockProgram)
 demodModule env (Module defs) = demodModDefs env defs
@@ -156,10 +149,3 @@ runDemodState :: DemodState t -> IO (Either String t)
 runDemodState t = do
     (either, state) <- runStateT (runExceptT t) 0
     return either
-
-demodProgram mod = do
-    prog <- runDemodState $ demodModule initDemodEnv mod
-    case prog of
-        Right (_, block) -> putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram block)
-        Left _ -> return ()
-    return prog

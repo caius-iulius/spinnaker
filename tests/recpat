@@ -1,3 +1,5 @@
+use Core
+
 def myfunction = \a{
     put a
     | Cons x Nil -> x

@@ -62,36 +62,6 @@ boolT = DataTypeName "Bool#BI" KStar
 charT = DataTypeName "Char#BI" KStar
 listT t = DataTypeApp (DataTypeName "List#BI" (KFun KStar KStar)) t
 
-builtinTypes =
-    [   ("->#BI", KFun KStar (KFun KStar KStar))
-    ,   ("Int#BI", KStar)
-    ,   ("Flt#BI", KStar)
-    ,   ("Bool#BI", KStar)
-    --TEMPORANEI
-    ,   ("Char#BI", KStar)
-    ]
-builtinVals =
-    [   ("_addInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_subInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_mulInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_divInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_equInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_neqInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_lesInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_greInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (buildFunType charT (DataTuple [])))
-    ,   ("_getChr#BI", TyScheme [] (buildFunType (DataTuple []) charT))
-    ]
-builtinVars =
-    [   VariantData "True#BI" [] [] boolT
-    ,   VariantData "False#BI" [] [] boolT
-    --TEMPORANEI
-    ,   VariantData "Nil#BI" [TyQuant 0 KStar] [] (listT (DataQuant (TyQuant 0 KStar)))
-    ,   VariantData "Cons#BI" [TyQuant 0 KStar] [DataQuant (TyQuant 0 KStar), listT (DataQuant (TyQuant 0 KStar))] (listT (DataQuant (TyQuant 0 KStar)))
-    ]
-initTypingEnv = (TypingEnv (Map.fromList builtinVals) (Map.fromList builtinTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinVars))
-
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId
     deriving Show

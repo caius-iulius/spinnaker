@@ -1,3 +1,5 @@
+use Core
+
 def panic = \(){panic ()}
 def head = \l{
     put l

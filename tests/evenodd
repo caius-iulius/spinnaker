@@ -1,10 +1,12 @@
+use Core
+
 def even = \n{
     put n
-    | 0 -> true
+    | 0 -> True
     | _ -> odd (n - 1)
 }
 and odd = \n{
     put n
-    | 0 -> false
+    | 0 -> False
     | _ -> even (n - 1)
 }
