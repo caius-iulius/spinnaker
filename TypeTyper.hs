@@ -3,9 +3,9 @@ import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import TypingDefs
 import MPCL (StdCoord)
-import HIRDefs
+import TypingDefs
+import HLDefs
 import KindTyper(kind)
 
 --Roba per le sostituzioni

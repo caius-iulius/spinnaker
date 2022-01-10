@@ -2,8 +2,9 @@ module Demod (DemodEnv(..), demodModule, runDemodState, concatBlockPrograms) whe
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
-import HIRDefs
 import MPCL(StdCoord)
+import HLDefs
+import HIRDefs
 
 data DemodEnv = DemodEnv 
     (Map.Map String (Visibility, DemodEnv)) -- Mods

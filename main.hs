@@ -1,9 +1,9 @@
 import System.IO
 import System.Environment
 
+import MPCL
 import Parser
 import PrettyPrinter
-import MPCL
 import Data.Tree
 import Typer
 

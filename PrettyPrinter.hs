@@ -1,6 +1,6 @@
 module PrettyPrinter where
-
 import Data.Tree
+import HLDefs
 import HIRDefs
 
 toTreeHLPattern p = Node (show p) []

@@ -3,8 +3,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Control.Monad.Except
 import MPCL(StdCoord)
-import HIRDefs
 import TypingDefs
+import HIRDefs
 
 type KindSubst = Map.Map KindQuant Kind
 nullKSubst :: KindSubst

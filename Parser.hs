@@ -2,10 +2,10 @@
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
 module Parser where
 import GHC.Unicode
-
 import MPCL
-import HIRDefs
 import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
+import HLDefs
+import HIRDefs
 
 labelFirst = thisChar '_' <|| asciiAlphaLower
 capitalLabelFirst = asciiAlphaUpper

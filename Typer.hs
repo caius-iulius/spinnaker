@@ -1,13 +1,14 @@
 module Typer (typeProgram) where
+import qualified Data.Map as Map
+import Control.Monad.Trans
+import Data.Tree
+import PrettyPrinter
+import HLDefs
 import HIRDefs
 import Demod
 import TypingDefs
 import KindTyper
 import TypeTyper
-import qualified Data.Map as Map
-import Control.Monad.Trans
-import Data.Tree
-import PrettyPrinter
 
 --Definizioni builtin per Demod
 builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Char"]
