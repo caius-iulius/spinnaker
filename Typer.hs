@@ -30,17 +30,17 @@ builtinTypingTypes =
     ,   ("Char#BI", KStar)
     ]
 builtinTypingVals =
-    [   ("_addInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_subInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_mulInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_divInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) intT))
-    ,   ("_equInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_neqInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_lesInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
-    ,   ("_greInt#BI", TyScheme [] (buildFunType (DataTuple [intT, intT]) boolT))
+    [   ("_addInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_subInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_mulInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_divInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_equInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_neqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_lesInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_greInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (buildFunType charT (DataTuple [])))
-    ,   ("_getChr#BI", TyScheme [] (buildFunType (DataTuple []) charT))
+    ,   ("_putChr#BI", TyScheme [] (buildFunType charT (buildTupType [])))
+    ,   ("_getChr#BI", TyScheme [] (buildFunType (buildTupType []) charT))
     ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT

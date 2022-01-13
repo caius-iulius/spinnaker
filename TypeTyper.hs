@@ -25,8 +25,8 @@ quantBind c q t
     | otherwise = return (Map.singleton q t)
 
 --Algoritmo MGU
-tupsMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
-tupsMgu c tts =
+listMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
+listMgu c tts =
     foldl (\m_subst (dta, dtb) -> do{
         s <- m_subst;
         s' <- mgu c (substApply s dta) (substApply s dtb);
@@ -36,9 +36,10 @@ tupsMgu c tts =
 mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
 mgu c (DataQuant q) t = quantBind c q t
 mgu c t (DataQuant q) = quantBind c q t
-mgu c (DataTuple dts) (DataTuple dts') =
+{- mgu c (DataTuple dts) (DataTuple dts') =
     if length dts /= length dts' then throwError $ show c ++ " Could not unify tuples of different arity: " ++ show (DataTuple dts) ++ " and " ++ show (DataTuple dts')
     else tupsMgu c $ zip dts dts'
+-}
 mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
     if s == s'  && k == k' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
 mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
@@ -56,15 +57,15 @@ class Types t where
 
 instance Types DataType where
     freetyvars (DataQuant q) = Set.singleton q
-    freetyvars (DataTuple dts) = Set.unions $ map freetyvars dts
+    --freetyvars (DataTuple dts) = Set.unions $ map freetyvars dts
     freetyvars (DataTypeName _ _) = Set.empty
     freetyvars (DataTypeApp dta dtb) = Set.union (freetyvars dta) (freetyvars dtb)
 
     substApply s (DataQuant q) = case Map.lookup q s of
         Nothing -> DataQuant q
         Just t -> t
-    substApply s (DataTuple dts) =
-        DataTuple $ map (substApply s) dts
+    {- substApply s (DataTuple dts) =
+        DataTuple $ map (substApply s) dts -}
     substApply s (DataTypeApp dta dtb) =
         DataTypeApp (substApply s dta) (substApply s dtb)
     substApply s (DataTypeName tn k) = (DataTypeName tn k)
@@ -83,6 +84,17 @@ tyBindAdd c (TypingEnv ts ks vs) labl scheme =
             lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             return $ TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
 
+getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
+getVariantData _ _ l@('(':')':slen) =
+    let len :: Int
+        len = read slen
+    in do
+        qs <- mapM (\_->newTyQuant KStar) [1..len]
+        let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
+getVariantData c (TypingEnv _ _ vs) l =
+    case Map.lookup l vs of
+        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
+        Just vdata -> return vdata
 instance Types TypingEnv where
     freetyvars (TypingEnv ts ks vs) = Set.unions $ map freetyvars (Map.elems ts)
     substApply s (TypingEnv ts ks vs) = TypingEnv (Map.map (substApply s) ts) ks vs
@@ -110,19 +122,20 @@ typeLit (LitFloating _) = fltT
 typePat :: TypingEnv -> HLPattern String -> TyperState DataType
 typePat _ (_, _, PatWildcard) = freshType KStar
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
+{-
 typePat env (_, _, PatTuple ps) = do
     ts <- mapM (typePat env) ps
     return $ DataTuple ts
-typePat env@(TypingEnv _ _ vs) (c, _, PatVariant v ps) =
-    case Map.lookup v vs of
-        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ v
-        Just (VariantData _ qs vts dt) -> if length ps /= length vts then throwError $ show c ++ " Constructor is applied to wrong number of arguments"
-        else do
-            s <- getInstantiationSubst qs
-            pts <- mapM (typePat env) ps
-            s' <- mgu c (substApply s (DataTuple vts)) (DataTuple pts) --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
-            lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
-            return $ substApply s' $ substApply s dt
+-}
+typePat env (c, _, PatVariant v ps) = do
+    (VariantData _ qs vts dt) <- getVariantData c env v
+    if length ps /= length vts then throwError $ show c ++ " Constructor is applied to wrong number of arguments"
+    else do
+        s <- getInstantiationSubst qs
+        pts <- mapM (typePat env) ps
+        s' <- listMgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
+        lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
+        return $ substApply s' $ substApply s dt
 
 {-patListPatVarsInEnv gf env [] [] = return env
 patListPatVarsInEnv gf env (p:ps) (t:ts) = do
@@ -134,8 +147,9 @@ patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf 
 
 innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
-innerPatVarsInEnv gf c env (PatTuple ps) (DataTuple ts) = patListPatVarsInEnv gf env ps ts
-innerPatVarsInEnv gf c env@(TypingEnv _ _ vs) (PatVariant v ps) dt = let Just (VariantData _ qs vts vdt) = Map.lookup v vs in do
+-- innerPatVarsInEnv gf c env (PatTuple ps) (DataTuple ts) = patListPatVarsInEnv gf env ps ts
+innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
+    (VariantData _ qs vts vdt) <- getVariantData c env v
     s <- mgu c vdt dt --TODO: Forse serve un algoritmo di unificazione "one-way"
     patListPatVarsInEnv gf env ps (map (substApply s) vts)
 
@@ -154,13 +168,11 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
         --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
-typeExpr (TypingEnv _ _ vs) (c, _, ExprConstructor l) =
-    case Map.lookup l vs of
-        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
-        Just (VariantData _ qs argts dt) -> do
-            s <- getInstantiationSubst qs
-            let mydt = substApply s (foldr buildFunType dt argts)
-            return (nullSubst, mydt, (c, mydt, ExprConstructor l))
+typeExpr env (c, _, ExprConstructor l) = do
+    (VariantData _ qs argts dt) <- getVariantData c env l
+    s <- getInstantiationSubst qs
+    let mydt = substApply s (foldr buildFunType dt argts)
+    return (nullSubst, mydt, (c, mydt, ExprConstructor l))
 typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
@@ -171,7 +183,7 @@ typeExpr env (c, _, ExprApp f a) = do
         finalt = substApply finals q
     return (finals, finalt, (c, finalt, ExprApp f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
-typeExpr env (c, _, ExprTuple exprs) =
+{- typeExpr env (c, _, ExprTuple exprs) =
     let typeExprsInternal _ ([]) = return (nullSubst, [], [])
         typeExprsInternal env' (e:es) = do
             (s, dt, e') <- typeExpr env' e
@@ -180,6 +192,7 @@ typeExpr env (c, _, ExprTuple exprs) =
     in do
         (s, dts, finalexprs) <- typeExprsInternal env exprs
         return (s, DataTuple dts, (c, DataTuple dts, ExprTuple finalexprs))
+-}
 typeExpr env (c, _, ExprLambda pat expr) = do
     argt <- typePat env pat
     env' <- patVarsInEnv (TyScheme []) env pat argt
@@ -218,7 +231,7 @@ substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
 substApplyExpr s (c, dt, ExprApp f a) = (c, substApply s dt, ExprApp (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
 substApplyExpr s (c, dt, ExprConstructor l) = (c, substApply s dt, ExprConstructor l)
-substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
+-- substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
 

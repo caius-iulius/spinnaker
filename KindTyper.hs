@@ -33,11 +33,11 @@ instance Kinds TyQuant where
 
 instance Kinds DataType where
     kind (DataQuant q) = kind q
-    kind (DataTuple _) = KStar
+    --kind (DataTuple _) = KStar
     kind (DataTypeName _ k) = k
     kind (DataTypeApp t _) = let (KFun _ k) = kind t in k
     kindSubstApply s (DataQuant q) = DataQuant (kindSubstApply s q)
-    kindSubstApply s (DataTuple ts) = DataTuple (map (kindSubstApply s) ts)
+    --kindSubstApply s (DataTuple ts) = DataTuple (map (kindSubstApply s) ts)
     kindSubstApply s (DataTypeName l k) = DataTypeName l (kindSubstApply s k)
     kindSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kindSubstApply s t1) (kindSubstApply s t2)
 

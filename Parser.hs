@@ -163,16 +163,16 @@ getPathCapitalLabel = do {
 -- Parser vari per pattern
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getLiteral;
-    return (c, Nothing, PatLiteral l)
+    return (c, Nothing, SynPatLiteral l)
 } <|| do {
     (c, l) <- getLabel;
-    return (c, Just l, PatWildcard)
+    return (c, Just l, SynPatWildcard)
 } <|| do {
     (c, l) <- getPathCapitalLabel;
-    return (c, Nothing, PatVariant l [])
+    return (c, Nothing, SynPatVariant l [])
 } <|| do {
     (c, k) <- getKeyword;
-    if k == "_" then return (c, Nothing, PatWildcard)
+    if k == "_" then return (c, Nothing, SynPatWildcard)
     else pfail ""
 } <|| do {
     skipUseless;
@@ -183,25 +183,25 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 
     if length m == 1
     then return $ head m
-    else return (c, Nothing, PatTuple m)
+    else return (c, Nothing, SynPatTuple m)
 }
 
 getPatternExpr = do{
     (c, cons) <- getPathCapitalLabel;
     args <- munch getPatternTerm;
-    return (c, Nothing, PatVariant cons args)
+    return (c, Nothing, SynPatVariant cons args)
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
 getTerm = describeError "Expected term" $ do { -- Literal
     (c, l) <- getLiteral;
-    return (c, DataNOTHING, ExprLiteral l)
+    return (c, SynExprLiteral l)
 } <|| do { -- Label
     (c, l) <- getPathLabel;
-    return (c, DataNOTHING, ExprLabel l)
+    return (c, SynExprLabel l)
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
     (c, l) <- getPathCapitalLabel;
-    return (c, DataNOTHING, ExprConstructor l)
+    return (c, SynExprConstructor l)
 } <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
     (c, _) <- thisChar '(';
@@ -210,7 +210,7 @@ getTerm = describeError "Expected term" $ do { -- Literal
     require $ thisChar ')';
     if length m == 1
     then return $ head m
-    else return (c, DataNOTHING, ExprTuple m)
+    else return (c, SynExprTuple m)
 }
 
 getExpr = do {
@@ -222,19 +222,19 @@ getExpr = do {
         internal <- getMeta; --Expr
         skipUseless;
         thisChar '}';
-        return $ foldr (\p e-> ((\(c',_,_)->c') p, DataNOTHING, ExprLambda p e)) internal curriedargs
+        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
     }
 } <|| do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
-    return $ let (c,_,_) = head terms in
-        foldl1 (\t1 t2 -> (c, DataNOTHING, ExprApp t1 t2)) terms
+    return $ let (c,_) = head terms in
+        foldl1 (\t1 t2 -> (c, SynExprApp t1 t2)) terms
 }
 
 getMeta = getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;
-    return (opc, DataNOTHING, ExprApp (opc, DataNOTHING, ExprApp (opc, DataNOTHING, ExprLabel $ Path [] op) expr) meta)
+    return (opc, SynExprApp (opc, SynExprApp (opc, SynExprLabel $ Path [] op) expr) meta)
 } <|| getExpr
 
 getLet = do
@@ -245,7 +245,7 @@ getLet = do
         val <- getMeta;
         thisSyntaxElem "->";
         expr <- getMeta;
-        return (c, DataNOTHING, ExprPut val [(p, expr)])
+        return (c, SynExprPut val [(p, expr)])
     }
 
 getBranch = do
@@ -262,7 +262,7 @@ getPut = do
     require $ do {
         val <- getMeta;
         branches <- munch1 getBranch;
-        return (c, DataNOTHING, ExprPut val branches)
+        return (c, SynExprPut val branches)
     }
 
 -- Parser globali
@@ -273,7 +273,7 @@ getValDefinition = do {
     (c, label) <- getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
-    return $ (visib, ValDef c label meta)
+    return $ (visib, SynValDef c label meta)
 }
 getValDefinitions = do {
     thisSyntaxElem "def";
@@ -287,10 +287,10 @@ getTypeVar = getLabel --TODO: Anche i tipi higher-order? magari è sintassi dive
 -- TODO: TypeMeta, test typeexpr
 getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
-    return (c, TypeExprQuantifier l)
+    return (c, SynTypeExprQuantifier l)
 } <|| do { --Tipo data
     (c, l) <- getPathCapitalLabel;
-    return (c, TypeExprName l)
+    return (c, SynTypeExprName l)
 } <|| do {
     skipUseless;
     (c, _) <- thisChar '(';
@@ -299,13 +299,13 @@ getTypeTerm = do { --Tipo quantifier
     require $ thisChar ')';
     if length types == 1
     then return $ head types
-    else return (c, TypeExprTuple types)
+    else return (c, SynTypeExprTuple types)
 }
 
 getTypeExpr = do {
     terms <- munch1 getTypeTerm;
     return $ let (c,_) = head terms in
-        foldl1 (\t1 t2 -> (c, TypeExprApp t1 t2)) terms
+        foldl1 (\t1 t2 -> (c, SynTypeExprApp t1 t2)) terms
 } <|| getTypeTerm
 
 
@@ -313,7 +313,7 @@ getTypeMeta = do {
     e <- getTypeExpr;
     (c, _) <- thisSyntaxElem "->";
     m <- require getTypeMeta;
-    return (c, TypeExprApp (c, TypeExprApp (c, TypeExprName $ Path [] "->") e) m)
+    return (c, SynTypeExprApp (c, SynTypeExprApp (c, SynTypeExprName $ Path [] "->") e) m)
 } <|| getTypeExpr
 
 -- Parser vari per datatype

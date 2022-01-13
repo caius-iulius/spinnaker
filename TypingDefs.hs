@@ -29,15 +29,16 @@ instance Show TyQuant where
 data DataType
     = DataNOTHING --Tipo temporaneo generato dal parser
     | DataQuant TyQuant --Quantificatore
-    | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
+    -- | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
     | DataTypeName String Kind -- Nome del tipo, kind del tipo
     | DataTypeApp DataType DataType --Funzione di tipi, argomento
     deriving Eq
 
+-- TODO: Miglior debug per tipi tupla (o tipi-nome)
 instance Show DataType where
     show DataNOTHING = "NOTHING"
     show (DataQuant q) = show q
-    show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
+    -- show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
     show (DataTypeName s k) = s++":"++show k
     show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
@@ -54,6 +55,12 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
     deriving Show
 
 --Definizioni utili
+buildTupKind len = foldr (\_ ret -> KFun KStar ret) KStar [1..len]
+buildTupType ts =
+    let len = length ts
+        labl = "()" ++ show len
+    in foldl DataTypeApp (DataTypeName labl $ buildTupKind len) ts
+
 buildFunType a r =
     DataTypeApp (DataTypeApp (DataTypeName "->#BI" (KFun KStar (KFun KStar KStar))) a) r
 intT = DataTypeName "Int#BI" KStar

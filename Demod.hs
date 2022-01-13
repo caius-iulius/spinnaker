@@ -3,6 +3,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
 import MPCL(StdCoord)
+import TypingDefs (DataType(DataNOTHING))
 import HLDefs
 import SyntaxDefs
 
@@ -45,12 +46,12 @@ patsValsInEnv env (p:ps) = do
     (env'', ps') <- patsValsInEnv env' ps
     return (env'', p':ps')
 
-patValsInEnvInner _ env PatWildcard = return (env, PatWildcard)
-patValsInEnvInner _ env (PatLiteral l) = return (env, PatLiteral l)
-patValsInEnvInner _ env (PatTuple ps) = do
+patValsInEnvInner _ env SynPatWildcard = return (env, PatWildcard)
+patValsInEnvInner _ env (SynPatLiteral l) = return (env, PatLiteral l)
+patValsInEnvInner _ env (SynPatTuple ps) = do
     (env', ps') <- patsValsInEnv env ps
-    return (env', PatTuple ps')
-patValsInEnvInner c env (PatVariant pathlabl@(Path path labl) ps) = do
+    return (env', PatVariant ("()"++ (show $ length ps')) ps')
+patValsInEnvInner c env (SynPatVariant pathlabl@(Path path labl) ps) = do
     (DemodEnv _ _ _ cs) <- getPathEnv c env path
     case Map.lookup labl cs of
         Nothing -> throwError $ show c ++ " Unbound constructor: " ++ show pathlabl
@@ -70,50 +71,52 @@ patValsInEnv (DemodEnv ms vs ts cs) (c, Just l, inner) =
             (env', inner') <- patValsInEnvInner c (DemodEnv ms (Map.union vs (Map.singleton l (Private, l++suffix))) ts cs) inner
             return (env', (c, Just $ l++suffix, inner'))
 
-demodExpr _ (c, t, ExprLiteral l) = return (c, t, ExprLiteral l)
-demodExpr env (c, t, ExprApp f a) = do
+demodExpr _ (c, SynExprLiteral l) = return (c, DataNOTHING, ExprLiteral l)
+demodExpr env (c, SynExprApp f a) = do
     f' <- demodExpr env f
     a' <- demodExpr env a
-    return (c, t, ExprApp f' a')
-demodExpr env (c, t, ExprLabel pathlabl@(Path path labl)) = do
+    return (c, DataNOTHING, ExprApp f' a')
+demodExpr env (c, SynExprLabel pathlabl@(Path path labl)) = do
     (DemodEnv _ vs _ _) <- getPathEnv c env path
     case Map.lookup labl vs of
         Nothing -> throwError $ show c ++ " Unbound value: " ++ show pathlabl
-        Just (_, nlabl) -> return (c, t, ExprLabel nlabl)
-demodExpr env (c, t, ExprConstructor pathlabl@(Path path labl)) = do
+        Just (_, nlabl) -> return (c, DataNOTHING, ExprLabel nlabl)
+demodExpr env (c, SynExprConstructor pathlabl@(Path path labl)) = do
     (DemodEnv _ _ _ cs) <- getPathEnv c env path
     case Map.lookup labl cs of
         Nothing -> throwError $ show c ++ " Unbound constructor: " ++ show pathlabl
-        Just (_, nlabl) -> return (c, t, ExprConstructor nlabl)
-demodExpr env (c, t, ExprTuple es) = do
-    es' <- mapM (demodExpr env) es
-    return (c, t, ExprTuple es')
-demodExpr env (c, t, ExprLambda pat expr) = do
+        Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl)
+demodExpr env (c, SynExprTuple es) =
+    let buildExprTuple exprs = foldl (\tup ne -> (c, DataNOTHING, ExprApp tup ne)) (c, DataNOTHING, ExprConstructor $ "()" ++ (show $ length exprs)) exprs
+    in do
+        es' <- mapM (demodExpr env) es
+        return $ buildExprTuple es'
+demodExpr env (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
     expr' <- demodExpr env' expr
-    return (c, t, ExprLambda pat' expr')
-demodExpr env (c, t, ExprPut val pses) = do
+    return (c, DataNOTHING, ExprLambda pat' expr')
+demodExpr env (c, SynExprPut val pses) = do
     val' <- demodExpr env val
     pses' <- mapM (\(pat, e)->do
         (env', pat') <- patValsInEnv env pat
         e' <- demodExpr env' e
         return (pat', e')
         ) pses
-    return (c, t, ExprPut val' pses')
+    return (c, DataNOTHING, ExprPut val' pses')
 
-demodValDef env (ValDef c l e) = do
+demodValDef env (SynValDef c l e) = do
     e' <- demodExpr env e
     return (ValDef c l e')
 
 valDefGroupEnv :: DemodEnv -> [(Visibility, SyntaxValDef)] -> DemodState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
-valDefGroupEnv env@(DemodEnv ms vs ts cs) ((v, ValDef c l e):vvdefs) =
+valDefGroupEnv env@(DemodEnv ms vs ts cs) ((v, SynValDef c l e):vvdefs) =
     case Map.lookup l vs of
         Just _ -> throwError $ show c ++ " Value: " ++ show v ++ " already bound"
         Nothing -> do
             suffix <- getUniqueSuffix
             (env', vdefs') <- valDefGroupEnv (DemodEnv ms (Map.union (Map.singleton l (v, l++suffix)) vs) ts cs) vvdefs
-            return (env', ValDef c (l++suffix) e:vdefs')
+            return (env', SynValDef c (l++suffix) e:vdefs')
 
 demodModDef :: DemodEnv -> SyntaxModDef -> DemodState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs) (ModMod c v l m) =
