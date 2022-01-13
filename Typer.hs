@@ -4,7 +4,7 @@ import Control.Monad.Trans
 import Data.Tree
 import PrettyPrinter
 import HLDefs
-import HIRDefs
+import SyntaxDefs
 import Demod
 import TypingDefs
 import KindTyper
@@ -66,7 +66,7 @@ typeBlockProgram (BlockProgram {-ddefs-} vdefgroups) = do
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e)
     return (BlockProgram vdefgroups')
 
-typeProgram :: HIRModule -> HIRModule -> IO (Either String BlockProgram)
+typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String BlockProgram)
 typeProgram core program = do
     eitherBlock <- demodProgram core program
     case eitherBlock of

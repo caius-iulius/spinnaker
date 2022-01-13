@@ -1,37 +1,39 @@
 # data List a = Nil | Cons a (List a)
 use Core
 
-def (::) = Cons
+mod pub Sort {
+    def (::) = Cons
 
-def split = \(curra, currb), lst{
-    put lst
-    | Cons x (Cons xp xs) -> split (x :: curra, xp :: currb) xs
-    | Cons x Nil -> (x::curra, currb)
-    | Nil -> (curra, currb)
+    def split = \(curra, currb), lst{
+        put lst
+        | Cons x (Cons xp xs) -> split (x :: curra, xp :: currb) xs
+        | Cons x Nil -> (x::curra, currb)
+        | Nil -> (curra, currb)
+    }
+
+    def merge = \compare, lists{
+        put lists
+        | (l, Nil) -> l
+        | (Nil, l) -> l
+        | (Cons xa xsa, Cons xb xsb) -> (
+            put compare xa xb
+            | True -> xa :: merge compare (xsa, (xb::xsb))
+            | _ -> xb :: merge compare ((xa::xsa), xsb)
+        )
+    }
+
+    def mytest = \lists{
+        put lists
+        | (Cons xa xsa, Cons xb xsb) -> (xa::xsb, xb::xsa)
+    }
+
+    def pub mergesort = \compare, list{
+        put list
+        | Nil -> Nil
+        | Cons x Nil -> list
+        | _ -> let (left, right) = split (Nil, Nil) list ->
+            merge compare (mergesort compare left, mergesort compare right)
+    }
+
+    def mergesortInt = mergesort (<=)
 }
-
-def merge = \compare, lists{
-    put lists
-    | (l, Nil) -> l
-    | (Nil, l) -> l
-    | (Cons xa xsa, Cons xb xsb) -> (
-        put compare xa xb
-        | True -> xa :: merge compare (xsa, (xb::xsb))
-        | _ -> xb :: merge compare ((xa::xsa), xsb)
-    )
-}
-
-def mytest = \lists{
-    put lists
-    | (Cons xa xsa, Cons xb xsb) -> (xa::xsb, xb::xsa)
-}
-
-def mergesort = \compare, list{
-    put list
-    | Nil -> Nil
-    | Cons x Nil -> list
-    | _ -> let (left, right) = split (Nil, Nil) list ->
-        merge compare (mergesort compare left, mergesort compare right)
-}
-
-def mergesortInt = mergesort (<=)

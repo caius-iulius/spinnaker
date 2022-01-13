@@ -4,7 +4,7 @@ import Control.Monad.State
 import qualified Data.Map as Map
 import MPCL(StdCoord)
 import HLDefs
-import HIRDefs
+import SyntaxDefs
 
 data DemodEnv = DemodEnv 
     (Map.Map String (Visibility, DemodEnv)) -- Mods
@@ -58,7 +58,7 @@ patValsInEnvInner c env (PatVariant pathlabl@(Path path labl) ps) = do
             (env', ps') <- patsValsInEnv env ps
             return (env', PatVariant nlabl ps')
 
-patValsInEnv :: DemodEnv -> HIRPattern -> DemodState (DemodEnv, HLPattern String)
+patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern String)
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
     return (env', (c, Nothing, inner'))
@@ -105,7 +105,7 @@ demodValDef env (ValDef c l e) = do
     e' <- demodExpr env e
     return (ValDef c l e')
 
-valDefGroupEnv :: DemodEnv -> [(Visibility, HIRValDef)] -> DemodState (DemodEnv, [HIRValDef])
+valDefGroupEnv :: DemodEnv -> [(Visibility, SyntaxValDef)] -> DemodState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
 valDefGroupEnv env@(DemodEnv ms vs ts cs) ((v, ValDef c l e):vvdefs) =
     case Map.lookup l vs of
@@ -115,7 +115,7 @@ valDefGroupEnv env@(DemodEnv ms vs ts cs) ((v, ValDef c l e):vvdefs) =
             (env', vdefs') <- valDefGroupEnv (DemodEnv ms (Map.union (Map.singleton l (v, l++suffix)) vs) ts cs) vvdefs
             return (env', ValDef c (l++suffix) e:vdefs')
 
-demodModDef :: DemodEnv -> HIRModDef -> DemodState (DemodEnv, BlockProgram)
+demodModDef :: DemodEnv -> SyntaxModDef -> DemodState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs) (ModMod c v l m) =
     case Map.lookup l ms of
         Just _ -> throwError $ show c ++ " Module: " ++ show l ++ " already defined"
@@ -143,7 +143,7 @@ demodModDefs env (def:defs) = do
     (env'', block') <- demodModDefs env' defs
     return (env'', concatBlockPrograms block block')
 
-demodModule :: DemodEnv -> HIRModule -> DemodState (DemodEnv, BlockProgram)
+demodModule :: DemodEnv -> SyntaxModule -> DemodState (DemodEnv, BlockProgram)
 demodModule env (Module defs) = demodModDefs env defs
 
 runDemodState :: DemodState t -> IO (Either String t)

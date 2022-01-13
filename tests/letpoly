@@ -1,0 +1,3 @@
+def five =
+    let id = \x{x}
+    -> id 5

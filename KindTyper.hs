@@ -4,7 +4,7 @@ import qualified Data.Set as Set
 import Control.Monad.Except
 import MPCL(StdCoord)
 import TypingDefs
-import HIRDefs
+import SyntaxDefs
 
 type KindSubst = Map.Map KindQuant Kind
 nullKSubst :: KindSubst
@@ -70,7 +70,7 @@ kindmgu c (KFun a r) (KFun a' r') = do
 kindmgu c k1 k2 = throwError $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
 {-
 -- Funzioni di typing
-typeTyExpr :: TypingEnv -> Map.Map String TyQuant -> HIRTypeExpr -> TyperState (KindSubst, Kind, DataType)
+typeTyExpr :: TypingEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState (KindSubst, Kind, DataType)
 typeTyExpr _ qmap (c, TypeExprQuantifier l) =
     case Map.lookup l qmap of
         Nothing -> throwError $ show c ++ " Unbound quantifier: " ++ l

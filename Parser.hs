@@ -5,7 +5,7 @@ import GHC.Unicode
 import MPCL
 import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
 import HLDefs
-import HIRDefs
+import SyntaxDefs
 
 labelFirst = thisChar '_' <|| asciiAlphaLower
 capitalLabelFirst = asciiAlphaUpper
