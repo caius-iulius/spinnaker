@@ -119,7 +119,7 @@ typeLit (LitInteger _) = intT
 typeLit (LitFloating _) = fltT
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
-typePat :: TypingEnv -> HLPattern String -> TyperState DataType
+typePat :: TypingEnv -> HLPattern -> TyperState DataType
 typePat _ (_, _, PatWildcard) = freshType KStar
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 {-
@@ -153,14 +153,14 @@ innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
     s <- mgu c vdt dt --TODO: Forse serve un algoritmo di unificazione "one-way"
     patListPatVarsInEnv gf env ps (map (substApply s) vts)
 
-patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HLPattern String -> DataType -> TyperState TypingEnv
+patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HLPattern -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
 patVarsInEnv gf env (c, Just labl, pdata) dt = do
     env' <- tyBindAdd c env labl (gf dt)
     innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
-typeExpr :: TypingEnv -> HLExpr String -> TyperState (Subst, DataType, HLExpr String)
+typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, DataType, HLExpr)
 typeExpr _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, dt, (c, dt, ExprLiteral lit))
 typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
@@ -207,7 +207,7 @@ typeExpr env (c, _, ExprPut val pses) = do
     return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut val' pses'))
 
 --Funzioni helper per putexpr
-unifyPats :: TypingEnv -> DataType -> [(HLPattern String, HLExpr String)] -> TyperState (Subst, DataType)
+unifyPats :: TypingEnv -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, DataType)
 unifyPats _ t [] = return (nullSubst, t)
 unifyPats env t ((pat, (c, _, _)):branches) = do
     tpat <- typePat env pat
@@ -215,7 +215,7 @@ unifyPats env t ((pat, (c, _, _)):branches) = do
     (s', t') <- unifyPats (substApply s env) (substApply s t) branches
     return (composeSubst s' s, t')
 
-typePutBranches :: TypingEnv -> DataType -> DataType -> [(HLPattern String, HLExpr String)] -> TyperState (Subst, DataType, [(HLPattern String, HLExpr String)])
+typePutBranches :: TypingEnv -> DataType -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, DataType, [(HLPattern, HLExpr)])
 typePutBranches _ _ texpr [] = return (nullSubst, texpr, [])
 typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     env' <- patVarsInEnv (generalize env) env pat tpat
@@ -226,7 +226,7 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
-substApplyExpr :: Subst -> HLExpr String -> HLExpr String
+substApplyExpr :: Subst -> HLExpr -> HLExpr
 substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
 substApplyExpr s (c, dt, ExprApp f a) = (c, substApply s dt, ExprApp (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)

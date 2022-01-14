@@ -59,7 +59,7 @@ patValsInEnvInner c env (SynPatVariant pathlabl@(Path path labl) ps) = do
             (env', ps') <- patsValsInEnv env ps
             return (env', PatVariant nlabl ps')
 
-patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern String)
+patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
     return (env', (c, Nothing, inner'))
