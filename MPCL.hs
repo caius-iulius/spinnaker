@@ -141,7 +141,7 @@ instance Show StdCoord where
     show (Coord file line col) =
         "[" ++ file ++ ":" ++ show line ++ ":" ++ show col ++ "]"
 
-stdcoord_newc (Coord file line col) char =
+stdcoord_newc (Coord file line col) char = --TODO: Come si trattano i caratteri a più celle?
     case char of 
         '\n' -> Coord file (line+1) 1
         _ -> Coord file line (col+1)

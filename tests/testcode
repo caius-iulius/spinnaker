@@ -23,21 +23,21 @@ def calc_max_tests = \k, n{
 
 def composed = (\f,g,x {f(g x)}) (\k{k+1}) (\k{2*k})
 
-# def op_and = \a, b {
-#     put (a, b)
-#     | (true, true) -> true
-#     | _ -> false
-# }
-# def op_or = \a, b {
-#     put (a, b)
-#     | (false, false) -> false
-#     | _ -> true
-# }
-# def op_not = \a {
-#     put a
-#     | false -> true
-#     | true -> false
-# }
+def op_and = \a, b {
+    put (a, b)
+    | (True, True) -> True
+    | _ -> False
+}
+def op_or = \a, b {
+    put (a, b)
+    | (False, False) -> False
+    | _ -> True
+}
+def op_not = \a {
+    put a
+    | False -> True
+    | True -> False
+}
 
 # NOTE: Se si rimuovono le parentesi questo codice diventa ambiguo
 def ambiguous = \n {

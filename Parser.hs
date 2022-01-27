@@ -216,7 +216,7 @@ getTerm = describeError "Expected term" $ do { -- Literal
 getExpr = do {
     (c, _) <- thisSyntaxElem "\\";
     require $ do{
-        curriedargs <- sepBy1 getPatternTerm (skipUseless >> thisChar ','); --[Pattern]
+        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
         skipUseless;
         thisChar '{';
         internal <- getMeta; --Expr
