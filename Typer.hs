@@ -12,7 +12,7 @@ import TypeTyper
 
 --Definizioni builtin per Demod
 builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Char"]
-builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_lesInt", "_greInt", "_putChr", "_getChr"]
+builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt", "_putChr", "_getChr"]
 builtinDemodVars = ["True", "False", "Nil", "Cons"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
@@ -36,7 +36,7 @@ builtinTypingVals =
     ,   ("_divInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
     ,   ("_equInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     ,   ("_neqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_lesInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_leqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     ,   ("_greInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     --TEMPORANEI
     ,   ("_putChr#BI", TyScheme [] (buildFunType charT (buildTupType [])))

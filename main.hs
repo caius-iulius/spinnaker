@@ -6,6 +6,8 @@ import Parser
 import PrettyPrinter
 import Data.Tree
 import Typer
+import Interpreter
+import HLDefs
 
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
     handle <- openFile "core" ReadMode;
@@ -14,7 +16,8 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
         in return coreParsed
 }
 
-main = do {
+testCompile :: IO BlockProgram
+testCompile = do {
     args <- getArgs;
     handle <- openFile (head args) ReadMode;
     contents <- hGetContents handle;
@@ -26,8 +29,17 @@ main = do {
             putStrLn $ drawTree $ Node "Parsed" [toTreeSynMod untyped];
             either <- typeProgram core untyped;
             case either of
-                Left e -> putStrLn $ "Typing error: " ++ e
-                Right typed -> putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeBlockProgram typed]
+                Left e -> error $ "Typing error: " ++ e
+                Right typed -> do {
+                    putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeBlockProgram typed];
+                    return typed
+                }
         }
-        pe -> print pe
+        pe -> error $ show pe
+}
+
+main = do {
+    compiled <- testCompile;
+    result <- evalProgram compiled;
+    putStrLn $ "Result: " ++ (drawTree $ toTreeHLExpr result)
 }

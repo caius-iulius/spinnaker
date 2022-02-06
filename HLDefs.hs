@@ -5,7 +5,7 @@ import TypingDefs
 data Literal
     = LitInteger Int
     | LitFloating Float
-    deriving Show
+    deriving (Show, Eq)
 
 data HLPatternData
     = PatWildcard
