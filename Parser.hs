@@ -161,6 +161,14 @@ getPathCapitalLabel = do {
 -- Analisi semantica
 
 -- Parser vari per pattern
+getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, Nothing, SynPatVariant (Path ["Core"] "Nil") [])) <|| do {
+    es <- sepBy1 getPatternExpr (skipUseless >> thisChar ',');
+    final <- option (c, Nothing, SynPatVariant (Path ["Core"] "Nil") []) (thisSyntaxElem "|" >> require getPatternExpr);
+    skipUseless;
+    thisChar ']';
+    return $ foldr (\myhead@(myc,_,_) mytail -> (myc, Nothing, SynPatVariant (Path ["Core"] "Cons") [myhead, mytail])) final es
+})
+
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getLiteral;
     return (c, Nothing, SynPatLiteral l)
@@ -174,7 +182,8 @@ getPatternTerm = describeError "Expected pattern term" $ do {
     (c, k) <- getKeyword;
     if k == "_" then return (c, Nothing, SynPatWildcard)
     else pfail ""
-} <|| do {
+} <|| getListPat
+  <|| do {
     skipUseless;
     (c, _) <- thisChar '(';
     m <- sepBy getPatternExpr (skipUseless >> thisChar ',');
@@ -193,6 +202,14 @@ getPatternExpr = do{
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
+getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, SynExprConstructor $ Path ["Core"] "Nil")) <|| do {
+    es <- sepBy1 getMeta (skipUseless >> thisChar ',');
+    final <- option (c, SynExprConstructor $ Path ["Core"] "Nil") (thisSyntaxElem "|" >> require getMeta);
+    skipUseless;
+    thisChar ']';
+    return $ foldr (\(myc, myhead) mytail -> (myc, SynExprApp (myc, SynExprApp (myc, SynExprConstructor $ Path ["Core"] "Cons") (myc, myhead)) mytail)) final es
+})
+
 getTerm = describeError "Expected term" $ do { -- Literal
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)
@@ -202,7 +219,8 @@ getTerm = describeError "Expected term" $ do { -- Literal
 } <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
     (c, l) <- getPathCapitalLabel;
     return (c, SynExprConstructor l)
-} <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
+} <|| getListExpr
+  <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
     (c, _) <- thisChar '(';
     m <- sepBy getMeta (skipUseless >> thisChar ',');

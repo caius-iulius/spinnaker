@@ -1,15 +1,11 @@
 # use Core
 
-def halt = \(){halt()}
-
 def head = \l{
     put l
-    | Core.Nil -> halt()
     | Core.Cons x xs -> x
 }
 
 def tail = \l{
     put l
-    | Core.Nil -> halt()
     | Core.Cons x xs -> xs
 }

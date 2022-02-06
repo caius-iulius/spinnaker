@@ -6,9 +6,9 @@ mod pub Sort {
 
     def split = \(curra, currb), lst{
         put lst
-        | Cons x (Cons xp xs) -> split (x :: curra, xp :: currb) xs
-        | Cons x Nil -> (x::curra, currb)
-        | Nil -> (curra, currb)
+        | [x, xp | xs] -> split (x :: curra, xp :: currb) xs
+        | [x] -> (x::curra, currb)
+        | [] -> (curra, currb)
     }
 
     def merge = \compare, lists{
@@ -34,6 +34,6 @@ mod pub Sort {
         | _ -> let (left, right) = split (Nil, Nil) list ->
             merge compare (mergesort compare left, mergesort compare right)
     }
-
-    def mergesortInt = mergesort (<=)
 }
+
+def main = Sort.mergesort (<=) [5, 2, -1, 0]

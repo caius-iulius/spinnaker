@@ -29,14 +29,22 @@ Si può tentare il sistema di tipizzazione di ocaml, permettere solo valori di f
 aggiungi le definizioni inline:
     Sintassi: def inline X = E
 
+prendi una decisione riguardo all'ambiguità sintattica del pattern matching
+
 STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIMO COMPILATORE
 
 DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
 
-Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta 
+Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
 aggiungi una sintassi if-then-else che decade in un put
 
-supporto multifile, moduli, incorpora file preludio
+supporto multifile
+incorpora file core
+implementa caratteri e stringhe
 
-prendi una decisione riguardo all'ambiguità sintattica del pattern matching
+1. monomorfizzazione
+1. K-Normal o A-Normal form
+2. compilazione
+3. typeclass / typerelations
+3. ottimizzazione
