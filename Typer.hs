@@ -11,7 +11,7 @@ import KindTyper
 import TypeTyper
 
 --Definizioni builtin per Demod
-builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Char"]
+builtinDemodTypes = ["->", "Int", "Flt", "Bool"]
 builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt", "_putChr", "_getChr"]
 builtinDemodVars = ["True", "False", "Nil", "Cons"]
 
@@ -27,7 +27,6 @@ builtinTypingTypes =
     ,   ("Flt#BI", KStar)
     ,   ("Bool#BI", KStar)
     --TEMPORANEI
-    ,   ("Char#BI", KStar)
     ]
 builtinTypingVals =
     [   ("_addInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
@@ -39,8 +38,8 @@ builtinTypingVals =
     ,   ("_leqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     ,   ("_greInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
     --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (buildFunType charT (buildTupType [])))
-    ,   ("_getChr#BI", TyScheme [] (buildFunType (buildTupType []) charT))
+    ,   ("_putChr#BI", TyScheme [] (buildFunType intT (buildTupType [])))
+    ,   ("_getChr#BI", TyScheme [] (buildFunType (buildTupType []) intT))
     ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT

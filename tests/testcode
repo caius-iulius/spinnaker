@@ -8,8 +8,6 @@ def tupiden = put tup
     |(a, b) -> (a, b)
     |a -> a
 
-def curry = \f,a,b{f(a,b)}
-def uncurry = \f,(a,b){f a b}
 def curryuncurry = \f {curry(uncurry f)}
 
 def void_fn = \(){10}

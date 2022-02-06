@@ -1,9 +1,2 @@
-def putStr = \s{put s
-    | Prelude.Nil -> ()
-    | Prelude.Cons c cs ->
-        let _ = Prelude._putChr c ->
-        putStr cs
-}
-
 def main =
-    putStr "Hello, World!\n"
+    Core.putStrLn [067, 105, 097, 111, 032, 077, 111, 110, 100, 111, 033]

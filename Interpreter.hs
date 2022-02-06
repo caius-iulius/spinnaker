@@ -1,6 +1,7 @@
 module Interpreter where
 import qualified Data.Map as Map
 import Control.Monad.Reader
+import Data.Char
 import MPCL(StdCoord)
 import TypingDefs
 import HLDefs
@@ -62,6 +63,13 @@ builtinApply "_equInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitI
 builtinApply "_neqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") []
 builtinApply "_leqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") []
 builtinApply "_greInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") []
+builtinApply "_putChr#BI" (_, _, ExprLiteral (LitInteger i)) = do
+    lift $ putChar $ chr i
+    return $ ExprConstructor "()0" []
+builtinApply "_getChr#BI" (_, _, ExprConstructor "()0" []) = do
+    c <- lift $ getChar
+    return $ ExprLiteral $ LitInteger $ ord c
+
 builtinApply l e = error $ "TODO builtinApply: " ++ l
 
 choosePattern :: StdCoord -> HLExpr -> [(HLPattern, HLExpr)] -> InterpState HLExpr
