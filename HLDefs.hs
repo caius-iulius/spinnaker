@@ -19,7 +19,7 @@ data HLExprData
     = ExprLiteral Literal --Valore letterale
     | ExprApp HLExpr HLExpr --Funzione, argomento
     | ExprLabel String --Riferimento a label
-    | ExprConstructor String -- Riferimento a una variante
+    | ExprConstructor String [HLExpr] -- Riferimento a una variante e argomenti "applicati"
     -- | ExprTuple [(HLExpr a)] --Elementi della n-tupla
     | ExprLambda HLPattern HLExpr --Argomento(anche "smontato") e valore interno
     | ExprPut HLExpr [(HLPattern, HLExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti

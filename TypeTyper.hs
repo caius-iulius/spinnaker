@@ -168,11 +168,13 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
         --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
-typeExpr env (c, _, ExprConstructor l) = do
+typeExpr env (c, _, ExprConstructor l []) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
     s <- getInstantiationSubst qs
     let mydt = substApply s (foldr buildFunType dt argts)
-    return (nullSubst, mydt, (c, mydt, ExprConstructor l))
+    return (nullSubst, mydt, (c, mydt, ExprConstructor l []))
+typeExpr env (c, _, ExprConstructor l es) = --TODO: Testa e modifica in modo da non ri-espandere una costruzione già applicata
+    typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
 typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
@@ -230,7 +232,7 @@ substApplyExpr :: Subst -> HLExpr -> HLExpr
 substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
 substApplyExpr s (c, dt, ExprApp f a) = (c, substApply s dt, ExprApp (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
-substApplyExpr s (c, dt, ExprConstructor l) = (c, substApply s dt, ExprConstructor l)
+substApplyExpr s (c, dt, ExprConstructor l es) = (c, substApply s dt, ExprConstructor l (map (substApplyExpr s) es))
 -- substApplyExpr s (c, dt, ExprTuple es) = (c, substApply s dt, ExprTuple $ map (substApplyExpr s) es)
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))

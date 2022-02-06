@@ -85,9 +85,9 @@ demodExpr env (c, SynExprConstructor pathlabl@(Path path labl)) = do
     (DemodEnv _ _ _ cs) <- getPathEnv c env path
     case Map.lookup labl cs of
         Nothing -> throwError $ show c ++ " Unbound constructor: " ++ show pathlabl
-        Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl)
+        Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
 demodExpr env (c, SynExprTuple es) =
-    let buildExprTuple exprs = foldl (\tup ne -> (c, DataNOTHING, ExprApp tup ne)) (c, DataNOTHING, ExprConstructor $ "()" ++ (show $ length exprs)) exprs
+    let buildExprTuple exprs = foldl (\tup ne -> (c, DataNOTHING, ExprApp tup ne)) (c, DataNOTHING, ExprConstructor ("()" ++ (show $ length exprs)) []) exprs
     in do
         es' <- mapM (demodExpr env) es
         return $ buildExprTuple es'
