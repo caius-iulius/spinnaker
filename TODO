@@ -4,30 +4,10 @@ phantom types per determinare se un programma è stato tipizzato?
 
 invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costrazione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli "monomorficamente"
 
-IMPORTANTE
-la grammatica delle lambda può essere:
-    '\'PATTERN ',' ... ',' PATTERN '{' META '}'
-oppure '\' PATTERN_TERMS '{' META '}'
-
-la differenza sta nel problema dei costruttori, nel primo caso dovrei scrivere, per esempio:
-    \f, g, x{f(g x)}
-    \Pair a b{(a,b)}
-nel secondo:
-    \f g x{f(g x)}
-    \(Pair a b){(a, b)}
-la sintassi delle lambda, se promosse a META, si potrebbe modificare in:
-    \f, g, x -> f(g x)
-    \Pair a b -> (a, b)
-oppure:
-    \f g x -> f(g x)
-    \(Pair a b) -> (a, b)
 
 CONTROLLO DELLE DEFINIZIONI RICORSIVE:
 "def x = x" NON DEVE ESSERE PERMESSO
 Si può tentare il sistema di tipizzazione di ocaml, permettere solo valori di funzioni oppure utilizzare un contesto di funzioni già "computate"
-
-aggiungi le definizioni inline:
-    Sintassi: def inline X = E
 
 prendi una decisione riguardo all'ambiguità sintattica del pattern matching
 
@@ -39,9 +19,11 @@ Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri spe
 
 aggiungi una sintassi if-then-else che decade in un put
 
+la sintassi delle lambda va modificata da \a,b,c{E} in \a,b,c->E
+
 supporto multifile
 incorpora file core
-implementa caratteri e stringhe
+implementa caratteri e stringhe creando un nuovo tipo per un carattere oppure lasciando un intero?
 
 1. monomorfizzazione
 1. K-Normal o A-Normal form

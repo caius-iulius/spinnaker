@@ -33,4 +33,4 @@ def verse = \n {
     ++ [32,111,102,32,98,101,101,114,32,111,110,32,116,104,101,32,119,97,108,108,46,10]
 }
 
-def main = let _ = map (putStrLn <| verse) $ reverse [] $ 0..100 -> ()
+def main = foldl (\_{putStrLn <| verse}) () $ reverse [] $ 0..100
