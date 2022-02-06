@@ -28,7 +28,7 @@ toTreeSynExpr (c, SynExprLambda p expr) = Node (show c ++ " Lambda") [Node "arg"
 toTreeSynExpr (c, SynExprPut val branches) = Node (show c ++ " Put") [Node "val" [toTreeSynExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeSynPattern p], Node "expr" [toTreeSynExpr e]]) branches)]
 
 
-toTreeSynValDef (v, SynValDef c s e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s) [toTreeSynExpr e]
+toTreeSynValDef (SynValDef c v s e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s) [toTreeSynExpr e]
 
 toTreeSynTypeExpr :: SyntaxTypeExpr -> Tree String
 toTreeSynTypeExpr te = Node (show te) []

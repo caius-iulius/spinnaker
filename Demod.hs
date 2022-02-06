@@ -104,19 +104,19 @@ demodExpr env (c, SynExprPut val pses) = do
         ) pses
     return (c, DataNOTHING, ExprPut val' pses')
 
-demodValDef env (SynValDef c l e) = do
+demodValDef env (SynValDef c _ l e) = do
     e' <- demodExpr env e
     return (ValDef c l e')
 
-valDefGroupEnv :: DemodEnv -> [(Visibility, SyntaxValDef)] -> DemodState (DemodEnv, [SyntaxValDef])
+valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> DemodState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
-valDefGroupEnv env@(DemodEnv ms vs ts cs) ((v, SynValDef c l e):vvdefs) =
+valDefGroupEnv env@(DemodEnv ms vs ts cs) (SynValDef c v l e:vvdefs) =
     case Map.lookup l vs of
-        Just _ -> throwError $ show c ++ " Value: " ++ show v ++ " already bound"
+        Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already bound"
         Nothing -> do
             suffix <- getUniqueSuffix
             (env', vdefs') <- valDefGroupEnv (DemodEnv ms (Map.union (Map.singleton l (v, l++suffix)) vs) ts cs) vvdefs
-            return (env', SynValDef c (l++suffix) e:vdefs')
+            return (env', SynValDef c v (l++suffix) e:vdefs')
 
 demodModDef :: DemodEnv -> SyntaxModDef -> DemodState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs) (ModMod c v l m) =

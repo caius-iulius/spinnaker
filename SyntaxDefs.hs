@@ -25,7 +25,7 @@ data SyntaxExprData
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
 
-data SyntaxValDef = SynValDef StdCoord String (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
+data SyntaxValDef = SynValDef StdCoord Visibility String (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
     deriving Show
 
 -- TODO Rifai in vista dei tipi higher kinded
@@ -44,7 +44,6 @@ data SyntaxDataVariant =
 data SyntaxDataDef =
     DataDef StdCoord Visibility String [(String, TyQuant)] [SyntaxDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
-type SyntaxDataDefGroup = [SyntaxDataDef]
 
 data Visibility = Public | Private
     deriving Show
@@ -52,8 +51,8 @@ data Visibility = Public | Private
 data SyntaxModDef
     = ModMod StdCoord Visibility String SyntaxModule
     | ModUse StdCoord Visibility Path
-    | ModValGroup [(Visibility, SyntaxValDef)]
-    | ModDataGroup SyntaxDataDefGroup
+    | ModValGroup [SyntaxValDef]
+    | ModDataGroup [SyntaxDataDef]
     deriving Show
 data SyntaxModule = Module [SyntaxModDef]
     deriving Show

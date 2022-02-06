@@ -273,7 +273,7 @@ getValDefinition = do {
     (c, label) <- getLabel;
     thisSyntaxElem "=";
     meta <- getMeta;
-    return $ (visib, SynValDef c label meta)
+    return $ SynValDef c visib label meta
 }
 getValDefinitions = do {
     thisSyntaxElem "def";
