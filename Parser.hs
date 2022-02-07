@@ -166,7 +166,7 @@ getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless 
     final <- option (c, Nothing, SynPatVariant (Path ["Core"] "Nil") []) (thisSyntaxElem "|" >> require getPatternExpr);
     skipUseless;
     thisChar ']';
-    return $ foldr (\myhead@(myc,_,_) mytail -> (myc, Nothing, SynPatVariant (Path ["Core"] "Cons") [myhead, mytail])) final es
+    return $ foldr (\myhead@(myc,_,_) mytail -> (myc, Nothing, SynPatVariant (Path ["Core"] "Cons") [mytail, myhead])) final es
 })
 
 getPatternTerm = describeError "Expected pattern term" $ do {
@@ -198,7 +198,7 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 getPatternExpr = do{
     (c, cons) <- getPathCapitalLabel;
     args <- munch getPatternTerm;
-    return (c, Nothing, SynPatVariant cons args)
+    return (c, Nothing, SynPatVariant cons (reverse args))
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
@@ -338,7 +338,7 @@ getTypeMeta = do {
 getVariant = do {
     (c, label) <- getCapitalLabel;
     tyexprs <- munch getTypeTerm;
-    return $ SynDataVariant c label tyexprs
+    return $ SynDataVariant c label (reverse tyexprs)
 }
 getDataDefinition = do {
     visib <- getVisibility;

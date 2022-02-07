@@ -46,7 +46,7 @@ builtinTypingVars =
     ,   VariantData "False#BI" [] [] boolT
     --TEMPORANEI
     ,   VariantData "Nil#BI" [TyQuant 0 KStar] [] (listT (DataQuant (TyQuant 0 KStar)))
-    ,   VariantData "Cons#BI" [TyQuant 0 KStar] [DataQuant (TyQuant 0 KStar), listT (DataQuant (TyQuant 0 KStar))] (listT (DataQuant (TyQuant 0 KStar)))
+    ,   VariantData "Cons#BI" [TyQuant 0 KStar] [listT (DataQuant (TyQuant 0 KStar)), DataQuant (TyQuant 0 KStar)] (listT (DataQuant (TyQuant 0 KStar)))
     ]
 initTypingEnv = (TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars))
 
@@ -55,6 +55,7 @@ demodProgram core mod = runDemodState $ do
     (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
     (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, coreEnv)) Map.empty Map.empty Map.empty) mod
     lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
+    lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
     lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
     return (modEnv, concatBlockPrograms coreBlock modBlock)
 

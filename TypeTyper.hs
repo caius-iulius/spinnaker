@@ -171,10 +171,10 @@ typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
 typeExpr env (c, _, ExprConstructor l []) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
     s <- getInstantiationSubst qs
-    let mydt = substApply s (foldr buildFunType dt argts)
+    let mydt = substApply s (foldl (flip buildFunType) dt argts)
     return (nullSubst, mydt, (c, mydt, ExprConstructor l []))
 typeExpr env (c, _, ExprConstructor l es) = --TODO: Testa e modifica in modo da non ri-espandere una costruzione già applicata
-    typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
+    typeExpr env (foldr (\e1 e0 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
 typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f

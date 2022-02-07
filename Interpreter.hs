@@ -55,14 +55,14 @@ substApply s (c, dt, ExprPut val pses) =
     in (c, dt, ExprPut (substApply s val) (map peSubstApply pses))
 
 builtinApply :: String -> HLExpr -> InterpState HLExprData
-builtinApply "_addInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprLiteral $ LitInteger (i0 + i1)
-builtinApply "_subInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprLiteral $ LitInteger (i0 - i1)
-builtinApply "_mulInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprLiteral $ LitInteger (i0 * i1)
-builtinApply "_divInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprLiteral $ LitInteger (div i0 i1)
-builtinApply "_equInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 == i1 then "True#BI" else "False#BI") []
-builtinApply "_neqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") []
-builtinApply "_leqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") []
-builtinApply "_greInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") []
+builtinApply "_addInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprLiteral $ LitInteger (i0 + i1)
+builtinApply "_subInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprLiteral $ LitInteger (i0 - i1)
+builtinApply "_mulInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprLiteral $ LitInteger (i0 * i1)
+builtinApply "_divInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprLiteral $ LitInteger (div i0 i1)
+builtinApply "_equInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprConstructor (if i0 == i1 then "True#BI" else "False#BI") []
+builtinApply "_neqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") []
+builtinApply "_leqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") []
+builtinApply "_greInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i1)):(_, _, ExprLiteral (LitInteger i0)):[])) = return $ ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") []
 builtinApply "_putChr#BI" (_, _, ExprLiteral (LitInteger i)) = do
     lift $ putChar $ chr i
     return $ ExprConstructor "()0" []
@@ -85,7 +85,7 @@ eval (_, _, ExprApp f a) = do
     f' <- eval f
     a' <- eval a
     case f' of
-        (c, DataTypeApp _ at, ExprConstructor v es) -> return (c, at, ExprConstructor v (es++[a']))
+        (c, DataTypeApp _ at, ExprConstructor v es) -> return (c, at, ExprConstructor v (a':es))
         (c, DataTypeApp _ at, ExprLabel bilab) -> do
             bicall <- builtinApply bilab a'
             return (c, at, bicall)
