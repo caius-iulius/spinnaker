@@ -58,12 +58,12 @@ demodProgram core mod = runDemodState $ do
     lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
     return (modEnv, concatBlockPrograms coreBlock modBlock)
 
-typeBlockProgram (BlockProgram {-ddefs-} vdefgroups) = do
+typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
     (s, e, vdefgroups') <- typeValDefGroups initTypingEnv vdefgroups
     lift $ lift $ putStrLn $ "Final substitution: " ++ show s
     lift $ lift $ putStrLn $ "Final env: " ++ show e
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e)
-    return (BlockProgram vdefgroups')
+    return (BlockProgram ddefgroups vdefgroups')
 
 typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String BlockProgram)
 typeProgram core program = do

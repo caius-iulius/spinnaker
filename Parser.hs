@@ -338,7 +338,7 @@ getTypeMeta = do {
 getVariant = do {
     (c, label) <- getCapitalLabel;
     tyexprs <- munch getTypeTerm;
-    return $ DataVariant c label (map (\e->(DataNOTHING,e)) tyexprs)
+    return $ SynDataVariant c label tyexprs
 }
 getDataDefinition = do {
     visib <- getVisibility;
@@ -346,7 +346,7 @@ getDataDefinition = do {
     typevars <- munch getTypeVar; -- TODO 
     thisSyntaxElem "=";
     variants <- sepBy getVariant $ thisSyntaxElem "|";
-    return $ DataDef c visib label (map (\(c, tv)->(tv, (TyQuant 0 KindNOTHING))) typevars) variants --TODO quantificatore iniziale?
+    return $  SynDataDef c visib label (map snd typevars) variants --TODO quantificatore iniziale?
 }
 
 getDataDefinitions = do {

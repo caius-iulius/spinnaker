@@ -104,9 +104,9 @@ eval e@(c, dt, ExprPut val pses) = do
     choosePattern c val' pses
 
 evalProgram :: BlockProgram -> IO HLExpr
-evalProgram (BlockProgram groups) =
+evalProgram (BlockProgram datagroups valgroups) =
     let
-        binds = join groups
+        binds = join valgroups
         env = Map.fromList $ map (\(ValDef _ l e)->(l, e)) binds
         entryPoint = (\(ValDef _ _ e)->e) $ last binds
     in runReaderT (eval entryPoint) env

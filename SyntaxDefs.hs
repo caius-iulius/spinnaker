@@ -38,11 +38,11 @@ data SyntaxTypeExprData
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
 
 data SyntaxDataVariant =
-    DataVariant StdCoord String [(DataType, SyntaxTypeExpr)] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi
+    SynDataVariant StdCoord String [SyntaxTypeExpr] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi
     deriving Show
 
 data SyntaxDataDef =
-    DataDef StdCoord Visibility String [(String, TyQuant)] [SyntaxDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
+    SynDataDef StdCoord Visibility String [String] [SyntaxDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
 data Visibility = Public | Private

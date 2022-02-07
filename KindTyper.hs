@@ -4,7 +4,7 @@ import qualified Data.Set as Set
 import Control.Monad.Except
 import MPCL(StdCoord)
 import TypingDefs
-import SyntaxDefs
+import HLDefs
 
 type KindSubst = Map.Map KindQuant Kind
 nullKSubst :: KindSubst
@@ -43,7 +43,7 @@ instance Kinds DataType where
 
 --substApplyKindEnv s (TypingEnv ts ks vs) = TypingEnv ts (Map.map (kindSubstApply s) ks) vs
 substApplyQmap s qmap = Map.map (\(TyQuant q k)->TyQuant q (kindSubstApply s k)) qmap
-substApplyVariant s (DataVariant c l tses) = DataVariant c l (map (\(t,e)->(kindSubstApply s t, e)) tses)
+substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (kindSubstApply s) ts)
 
 composeKSubst s1 s2 = Map.union (Map.map (kindSubstApply s1) s2) s1
 

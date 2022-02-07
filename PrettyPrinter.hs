@@ -33,12 +33,17 @@ toTreeSynValDef (SynValDef c v s e) = Node (show c ++ " Defining " ++ show v ++ 
 toTreeSynTypeExpr :: SyntaxTypeExpr -> Tree String
 toTreeSynTypeExpr te = Node (show te) []
 
-toTreeSynDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(dt, te) -> Node "arg" [Node (show dt) [], toTreeSynTypeExpr te]) args)
+toTreeSynDataVariant (SynDataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map toTreeSynTypeExpr args)
 
-toTreeSynDataDef (DataDef c v labl quants variants) = Node (show c ++ " Defining " ++ show v ++ " data: " ++ show labl ++ " with quantifiers: " ++ show quants)
+toTreeSynDataDef (SynDataDef c v labl quants variants) = Node (show c ++ " Defining " ++ show v ++ " data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeSynDataVariant variants)
 
-toTreeBlockProgram (BlockProgram valgroups) = Node "BlockProgram" [
+toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\t->Node (show t) []) args)
+toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
+    (map toTreeHLDataVariant variants)
+
+toTreeBlockProgram (BlockProgram datagroups valgroups) = Node "BlockProgram" [
+        Node "Datas" (map (\group->Node "Group of datas" (map toTreeHLDataDef group)) datagroups),
         Node "Vals" (map (\group->Node "Group of vals" (map toTreeHLValDef group)) valgroups)
     ]
 
