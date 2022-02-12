@@ -1,8 +1,0 @@
-use Core
-
-def myfunction = \a->
-    put a
-    | Cons x Nil -> x
-    | Nil -> 1
-    | Cons x (Cons x' xs) -> 2
-    | _ -> 4

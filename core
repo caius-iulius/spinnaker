@@ -84,4 +84,22 @@ mod pub List {
 
 use pub IO
 use pub List
+
+mod pub Utility {
+    def writeDigit = \i -> 48 + i
+
+    def writeNonNeg = \i ->
+        put i < 10
+        | True -> Cons (writeDigit i) Nil
+        | _ ->
+            let div10 = i/10 ->
+            let prev = writeNonNeg div10 ->
+            prev ++ Cons (writeDigit $ i - div10*10) Nil
+
+    def pub writeInt = \i ->
+        put i < 0
+        | True -> Cons 45 (writeNonNeg (0-i))
+        | _ -> writeNonNeg i
+}
+
 # NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...

@@ -1,0 +1,12 @@
+use Core
+
+def writeListInternal = \f, l -> put l
+    | [] -> "]"
+    | [x] -> f x ++ "]"
+    | [x|xs] -> f x ++ ", " ++ writeListInternal f xs
+
+def putList = \f, l -> putStrLn $ "[" ++ writeListInternal f l
+
+def putListInt = putList Utility.writeInt
+
+def main = putListInt (0..10)

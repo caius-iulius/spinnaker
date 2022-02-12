@@ -1,6 +1,0 @@
-use Core
-
-def map = \f, l ->
-    put l
-    | Nil -> Nil
-    | Cons x xs -> Cons (f x) (map f xs)

@@ -1,23 +1,10 @@
 use Core
 
-def writeDigit = \i -> 48 + i
-def writeNonNeg = \i ->
-    put i < 10
-    | True -> [writeDigit i]
-    | _ ->
-        let div10 = i/10 ->
-        let prev = writeNonNeg div10 ->
-        prev ++ [writeDigit $ i - div10*10]
-def writeInt = \i ->
-    put i < 0
-    | True -> Cons 45 (writeNonNeg (0-i))
-    | _ -> writeNonNeg i
-
 def bottles = \n ->
     put n
     | 0 -> "no more bottles"
     | 1 -> "1 bottle"
-    | _ -> writeInt n ++ " bottles"
+    | _ -> Utility.writeInt n ++ " bottles"
 
 def verse = \n ->
     put n

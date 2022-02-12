@@ -1,3 +1,0 @@
-use Core
-
-def composed = (\f,g,x->f(g x)) (\x->x+1) (\x->x*2)
