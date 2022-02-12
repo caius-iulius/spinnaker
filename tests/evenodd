@@ -1,12 +1,13 @@
 use Core
 
-def even = \n{
+def even = \n ->
     put n
     | 0 -> True
     | _ -> odd (n - 1)
-}
-and odd = \n{
+
+and odd = \n ->
     put n
     | 0 -> False
     | _ -> even (n - 1)
-}
+
+def evenoroddlist = (0..9) |-> map (\n->(even n, odd n))

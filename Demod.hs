@@ -83,7 +83,7 @@ patValsInEnvInner c env (SynPatListConss ps final) = do
         Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Cons"
         Just (_, nlabl) -> do
             (env', ps') <- patsValsInEnv env ps
-            (env'', final') <- patValsInEnv env final
+            (env'', final') <- patValsInEnv env' final
             return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [tail, head])) final' ps'
 
 patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern)

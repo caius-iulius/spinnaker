@@ -1,10 +1,9 @@
 use Core
 
-def fibInternal = \(seed0, seed1), n {
+def fibInternal = \(seed0, seed1), n ->
     put n
     | 0 -> seed0
     | _ -> fibInternal (seed1, seed0+seed1) (n - 1)
-}
 
 def fib = fibInternal (0, 1)
 

@@ -4,14 +4,13 @@ use Core
 mod pub Sort {
     def (::) = Cons
 
-    def split = \(curra, currb), lst{
+    def split = \(curra, currb), lst ->
         put lst
         | [x, xp | xs] -> split (x :: curra, xp :: currb) xs
         | [x] -> (x::curra, currb)
         | [] -> (curra, currb)
-    }
 
-    def merge = \compare, lists{
+    def merge = \compare, lists ->
         put lists
         | (l, Nil) -> l
         | (Nil, l) -> l
@@ -20,20 +19,17 @@ mod pub Sort {
             | True -> xa :: merge compare (xsa, (xb::xsb))
             | _ -> xb :: merge compare ((xa::xsa), xsb)
         )
-    }
 
-    def mytest = \lists{
+    def mytest = \lists ->
         put lists
         | (Cons xa xsa, Cons xb xsb) -> (xa::xsb, xb::xsa)
-    }
 
-    def pub mergesort = \compare, list{
+    def pub mergesort = \compare, list ->
         put list
         | Nil -> Nil
         | Cons x Nil -> list
         | _ -> let (left, right) = split (Nil, Nil) list ->
             merge compare (mergesort compare left, mergesort compare right)
-    }
 }
 
 def main = Sort.mergesort (<=) [5, 2, -1, 0]

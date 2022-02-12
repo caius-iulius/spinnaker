@@ -1,1 +1,1 @@
-def fix = \f, x{f (fix f) x}
+def fix = \f, x -> f (fix f) x

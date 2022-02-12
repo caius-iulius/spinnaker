@@ -1,6 +1,6 @@
-def (<|) = \f, g, x{f(g x)}
-def flip = \f, x, y{f y x}
-def id = \x{x}
+def (<|) = \f, g, x->f(g x)
+def flip = \f, x, y->f y x
+def id = \x->x
 
 def noargs = (<|)
 def fstarg = (<|) id

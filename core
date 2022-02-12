@@ -1,16 +1,16 @@
 # TODO:Questo file andrà copiato in una stringa in defs.rs
 
 # operatori di base
-def pub (+) = \a,b{_addInt(a,b)}
-def pub (-) = \a,b{_subInt(a,b)}
-def pub (*) = \a,b{_mulInt(a,b)}
-def pub (/) = \a,b{_divInt(a,b)}
-def pub (<) = \a,b{_greInt(b,a)}
-def pub (>) = \a,b{_greInt(a,b)}
-def pub (=) = \a,b{_equInt(a,b)}
-def pub (!=)= \a,b{_neqInt(a,b)}
-def pub (<=)= \a,b{_leqInt(a,b)}
-def pub (>=)= \a,b{_leqInt(b,a)}
+def pub (+) = \a,b->_addInt(a,b)
+def pub (-) = \a,b->_subInt(a,b)
+def pub (*) = \a,b->_mulInt(a,b)
+def pub (/) = \a,b->_divInt(a,b)
+def pub (<) = \a,b->_greInt(b,a)
+def pub (>) = \a,b->_greInt(a,b)
+def pub (=) = \a,b->_equInt(a,b)
+def pub (!=)= \a,b->_neqInt(a,b)
+def pub (<=)= \a,b->_leqInt(a,b)
+def pub (>=)= \a,b->_leqInt(b,a)
 
 # operatori funzionali
 # NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).
@@ -19,76 +19,67 @@ def pub (>=)= \a,b{_leqInt(b,a)}
 #   def (|>) = \x,f{f x}
 # In molti casi la composizione è rappresentata da un punto,ma al momento sto pensando di usarlo per i namespace e le struct
 
-def pub (|>) = \f,g,x{g(f x)}
-def pub (<|) = \f,g,x{f(g x)}
+def pub (|>) = \f,g,x->g(f x)
+def pub (<|) = \f,g,x->f(g x)
 
 # questi in forse
-def pub (|->) = \x,f{f x}
+def pub (|->) = \x,f->f x
 
 # altra roba utile
-def pub ($) = \a,b{a b}
-def pub flip = \f,x,y{f y x}
-def pub curry = \f,x,y{f(x,y)}
-def pub uncurry = \f,(x,y){f x y}
+def pub ($) = \a,b->a b
+def pub flip = \f,x,y->f y x
+def pub curry = \f,x,y->f(x,y)
+def pub uncurry = \f,(x,y)->f x y
 
 mod pub IO {
     def pub putChr = _putChr
     def pub getChr = _getChr
-    def pub putStr = \s {
+    def pub putStr = \s ->
         put s
         | Nil -> ()
         | Cons c cs ->
             let _ = (putChr c, putStr cs) -> ()
-    }
-    def pub putStrLn = \s {
+    def pub putStrLn = \s ->
         let _ = (putStr s, putChr 10) -> ()
-    }
 }
 
 mod pub List {
-    def pub reverse = \acc, l {
+    def pub reverse = \acc, l ->
         put l
         | Nil -> acc
         | Cons x xs -> reverse (Cons x acc) xs
-    }
 
-    def pub head = \Cons x xs {x}
-    def pub tail = \Cons x xs {xs}
-    def pub last = \l {
+    def pub head = \Cons x xs -> x
+    def pub tail = \Cons x xs -> xs
+    def pub last = \l ->
         put l
         | Cons x Nil -> x
         | Cons x xs -> last xs
-    }
 
-    def pub map = \f, l {
+    def pub map = \f, l ->
         put l
         | Nil -> Nil
         | Cons x xs -> Cons (f x) (map f xs)
-    }
 
-    def pub foldl = \f, s, l {
+    def pub foldl = \f, s, l ->
         put l
         | Nil -> s
         | Cons x xs -> foldl f (f s x) xs
-    }
 
-    def pub foldr = \f, s, l {
+    def pub foldr = \f, s, l ->
         put l
         | Nil -> s
         | Cons x xs -> f x (foldr f s xs)
-    }
 
-    def pub (++) = \l, l' {
+    def pub (++) = \l, l' ->
         put l
         | Nil -> l'
         | Cons x xs -> Cons x (xs ++ l')
-    }
 
-    def pub (..) = \from, to {
+    def pub (..) = \from, to ->
         put from >= to
         | True -> Nil
         | _ -> Cons from ((from+1)..to)
-    }
 }
 
 use pub IO

@@ -1,4 +1,3 @@
-def intint = \a, b{put (a,b)
+def intint = \a, b->put (a,b)
     | (0, x) -> x
     | (x, _) -> x
-}

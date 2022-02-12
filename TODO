@@ -19,11 +19,9 @@ Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri spe
 
 aggiungi una sintassi if-then-else che decade in un put
 
-la sintassi delle lambda va modificata da \a,b,c{E} in \a,b,c->E
-
 supporto multifile
 incorpora file core
-implementa caratteri e stringhe creando un nuovo tipo per un carattere oppure lasciando un intero?
+implementa caratteri e completa le stringhe
 
 1. monomorfizzazione
 1. K-Normal o A-Normal form

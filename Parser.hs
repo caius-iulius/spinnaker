@@ -235,24 +235,25 @@ getTerm = describeError "Expected term" $ do { --String
     else return (c, SynExprTuple m)
 }
 
-getExpr = do {
-    (c, _) <- thisSyntaxElem "\\";
-    require $ do{
-        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
-        skipUseless;
-        thisChar '{';
-        internal <- getMeta; --Expr
-        skipUseless;
-        thisChar '}';
-        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
-    }
-} <|| do { --FCall e Label nel caso che ce ne sia una
+getExpr = do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
     return $ let (c,_) = head terms in
         foldl1 (\t1 t2 -> (c, SynExprApp t1 t2)) terms
 }
 
-getMeta = getLet <|| getPut <|| do { --EXPR OP META
+getLambda = do {
+    (c, _) <- thisSyntaxElem "\\";
+    require $ do{
+        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
+        skipUseless;
+        thisSyntaxElem "->";
+        internal <- getMeta; --Expr
+        skipUseless;
+        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
+    }
+}
+
+getMeta = getLambda <|| getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;
