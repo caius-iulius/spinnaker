@@ -23,69 +23,74 @@ def pub (|>) = \f,g,x{g(f x)}
 def pub (<|) = \f,g,x{f(g x)}
 
 # questi in forse
-def pub ($) = \a,b{a b}
 def pub (|->) = \x,f{f x}
 
 # altra roba utile
+def pub ($) = \a,b{a b}
 def pub flip = \f,x,y{f y x}
 def pub curry = \f,x,y{f(x,y)}
 def pub uncurry = \f,(x,y){f x y}
 
-def pub putChr = _putChr
-def pub getChr = _getChr
-def pub putStr = \s {
-    put s
-    | Nil -> ()
-    | Cons c cs ->
-        let _ = (putChr c, putStr cs) -> ()
-}
-def pub putStrLn = \s {
-    let _ = (putStr s, putChr 10) -> ()
-}
-
-
-def reverse = \acc, l {
-    put l
-    | Nil -> acc
-    | Cons x xs -> reverse (Cons x acc) xs
+mod pub IO {
+    def pub putChr = _putChr
+    def pub getChr = _getChr
+    def pub putStr = \s {
+        put s
+        | Nil -> ()
+        | Cons c cs ->
+            let _ = (putChr c, putStr cs) -> ()
+    }
+    def pub putStrLn = \s {
+        let _ = (putStr s, putChr 10) -> ()
+    }
 }
 
-def head = \Cons x xs {x}
-def tail = \Cons x xs {xs}
-def last = \l {
-    put l
-    | Cons x Nil -> x
-    | Cons x xs -> last xs
+mod pub List {
+    def pub reverse = \acc, l {
+        put l
+        | Nil -> acc
+        | Cons x xs -> reverse (Cons x acc) xs
+    }
+
+    def pub head = \Cons x xs {x}
+    def pub tail = \Cons x xs {xs}
+    def pub last = \l {
+        put l
+        | Cons x Nil -> x
+        | Cons x xs -> last xs
+    }
+
+    def pub map = \f, l {
+        put l
+        | Nil -> Nil
+        | Cons x xs -> Cons (f x) (map f xs)
+    }
+
+    def pub foldl = \f, s, l {
+        put l
+        | Nil -> s
+        | Cons x xs -> foldl f (f s x) xs
+    }
+
+    def pub foldr = \f, s, l {
+        put l
+        | Nil -> s
+        | Cons x xs -> f x (foldr f s xs)
+    }
+
+    def pub (++) = \l, l' {
+        put l
+        | Nil -> l'
+        | Cons x xs -> Cons x (xs ++ l')
+    }
+
+    def pub (..) = \from, to {
+        put from >= to
+        | True -> Nil
+        | _ -> Cons from ((from+1)..to)
+    }
 }
 
-def map = \f, l {
-    put l
-    | Nil -> Nil
-    | Cons x xs -> Cons (f x) (map f xs)
-}
-
-def foldl = \f, s, l {
-    put l
-    | Nil -> s
-    | Cons x xs -> foldl f (f s x) xs
-}
-
-def foldr = \f, s, l {
-    put l
-    | Nil -> s
-    | Cons x xs -> f x (foldr f s xs)
-}
-
-def (++) = \l, l' {
-    put l
-    | Nil -> l'
-    | Cons x xs -> Cons x (xs ++ l')
-}
-
-def (..) = \from, to {
-    put from >= to
-    | True -> Nil
-    | _ -> Cons from ((from+1)..to)
-}
-
+use pub IO
+use pub List
 # NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...

@@ -51,13 +51,6 @@ builtinTypingVars =
 initTypingEnv = (TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars))
 
 --Programma typer
-demodProgram core mod = runDemodState $ do
-    (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
-    (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, coreEnv)) Map.empty Map.empty Map.empty) mod
-    lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
-    lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
-    lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
-    return (modEnv, concatBlockPrograms coreBlock modBlock)
 
 typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
     (s, e, vdefgroups') <- typeValDefGroups initTypingEnv vdefgroups
@@ -68,7 +61,7 @@ typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
 
 typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String BlockProgram)
 typeProgram core program = do
-    eitherBlock <- demodProgram core program
+    eitherBlock <- demodProgram initCoreDemodEnv core program
     case eitherBlock of
         Left e -> return $ Left e
         Right (_, block) -> (runTyperState $ typeBlockProgram block) >>= return . fst

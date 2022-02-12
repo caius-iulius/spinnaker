@@ -1,4 +1,4 @@
-module Demod (DemodEnv(..), demodModule, runDemodState, concatBlockPrograms) where
+module Demod (DemodEnv(..), demodProgram, runDemodState) where
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
@@ -241,3 +241,11 @@ runDemodState :: DemodState t -> IO (Either String t)
 runDemodState t = do
     (either, state) <- runStateT (runExceptT t) (0,0,0) --TODO: kindquant e tyquant serviranno al typer, vanno restituiti
     return either
+
+demodProgram initCoreDemodEnv core mod = runDemodState $ do
+    (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
+    (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, envGetPubs coreEnv)) Map.empty Map.empty Map.empty) mod
+    lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
+    --lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
+    --lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
+    return (modEnv, concatBlockPrograms coreBlock modBlock)
