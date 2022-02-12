@@ -64,7 +64,7 @@ patValsInEnvInner _ env SynPatWildcard = return (env, PatWildcard)
 patValsInEnvInner _ env (SynPatLiteral l) = return (env, PatLiteral l)
 patValsInEnvInner _ env (SynPatTuple ps) = do
     (env', ps') <- patsValsInEnv env ps
-    return (env', PatVariant ("()"++ (show $ length ps')) ps')
+    return (env', PatVariant ("()"++ (show $ length ps')) (reverse ps'))
 patValsInEnvInner c env (SynPatVariant pathlabl@(Path path labl) ps) = do
     (DemodEnv _ _ _ cs) <- getPathEnv c env path
     case Map.lookup labl cs of
@@ -72,6 +72,19 @@ patValsInEnvInner c env (SynPatVariant pathlabl@(Path path labl) ps) = do
         Just (_, nlabl) -> do
             (env', ps') <- patsValsInEnv env ps
             return (env', PatVariant nlabl ps')
+patValsInEnvInner c env SynPatListNil = do
+    (DemodEnv _ _ _ cs) <- getPathEnv c env ["Core"]
+    case Map.lookup "Nil" cs of
+        Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Nil"
+        Just (_, nlabl) -> return (env, PatVariant nlabl [])
+patValsInEnvInner c env (SynPatListConss ps final) = do
+    (DemodEnv _ _ _ cs) <- getPathEnv c env ["Core"]
+    case Map.lookup "Cons" cs of
+        Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Cons"
+        Just (_, nlabl) -> do
+            (env', ps') <- patsValsInEnv env ps
+            (env'', final') <- patValsInEnv env final
+            return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [tail, head])) final' ps'
 
 patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
@@ -101,11 +114,9 @@ demodExpr env (c, SynExprConstructor pathlabl@(Path path labl)) = do
     case Map.lookup labl cs of
         Nothing -> throwError $ show c ++ " Unbound constructor: " ++ show pathlabl
         Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
-demodExpr env (c, SynExprTuple es) =
-    let buildExprTuple exprs = foldl (\tup ne -> (c, DataNOTHING, ExprApp tup ne)) (c, DataNOTHING, ExprConstructor ("()" ++ (show $ length exprs)) []) exprs
-    in do
+demodExpr env (c, SynExprTuple es) = do
         es' <- mapM (demodExpr env) es
-        return $ buildExprTuple es'
+        return (c, DataNOTHING, ExprConstructor ("()"++(show $ length es')) (reverse es'))
 demodExpr env (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
     expr' <- demodExpr env' expr
@@ -118,6 +129,19 @@ demodExpr env (c, SynExprPut val pses) = do
         return (pat', e')
         ) pses
     return (c, DataNOTHING, ExprPut val' pses')
+demodExpr env (c, SynExprListNil) = do
+    (DemodEnv _ _ _ cs) <- getPathEnv c env ["Core"]
+    case Map.lookup "Nil" cs of
+        Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Nil"
+        Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
+demodExpr env (c, SynExprListConss es final) = do
+    (DemodEnv _ _ _ cs) <- getPathEnv c env ["Core"]
+    case Map.lookup "Cons" cs of
+        Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Cons"
+        Just (_, nlabl) -> do
+            demodes <- mapM (demodExpr env) es
+            demodfinal <- demodExpr env final
+            return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [tail, head])) demodfinal demodes
 
 -- definizioni dei valori globali
 demodValDef env (SynValDef c _ l e) = do

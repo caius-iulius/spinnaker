@@ -11,6 +11,8 @@ data SyntaxPatternData
     | SynPatLiteral Literal --Il literal rappresentato
     | SynPatTuple [SyntaxPattern] --Lista di elementi della n-tupla
     | SynPatVariant Path [SyntaxPattern] --Nome della variante, lista di argomenti di questo
+    | SynPatListNil -- lista vuota
+    | SynPatListConss [SyntaxPattern] SyntaxPattern -- primi elementi della lista, continuazione
     deriving Show
 type SyntaxPattern = (StdCoord, Maybe String, SyntaxPatternData) -- coordinate, eventuale assegnazione del valore (tipo haskell labl@pat) e pattern vero e proprio
 
@@ -22,6 +24,8 @@ data SyntaxExprData
     | SynExprTuple [SyntaxExpr] --Elementi della n-tupla
     | SynExprLambda SyntaxPattern SyntaxExpr --Argomento(anche "smontato") e valore interno
     | SynExprPut SyntaxExpr [(SyntaxPattern, SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
+    | SynExprListNil -- lista vuota
+    | SynExprListConss [SyntaxExpr] SyntaxExpr -- primi elementi della lista, continuazione
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
 

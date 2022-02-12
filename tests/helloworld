@@ -1,2 +1,2 @@
 def main =
-    Core.putStrLn [067, 105, 097, 111, 032, 077, 111, 110, 100, 111, 033]
+    Core.putStrLn "Ciao Mondo!"

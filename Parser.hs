@@ -1,6 +1,7 @@
 -- TODO FORSE: Parsing dei commenti multilinea
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
 module Parser where
+import Data.Char
 import GHC.Unicode
 import MPCL
 import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
@@ -161,12 +162,12 @@ getPathCapitalLabel = do {
 -- Analisi semantica
 
 -- Parser vari per pattern
-getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, Nothing, SynPatVariant (Path ["Core"] "Nil") [])) <|| do {
+getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
     es <- sepBy1 getPatternExpr (skipUseless >> thisChar ',');
-    final <- option (c, Nothing, SynPatVariant (Path ["Core"] "Nil") []) (thisSyntaxElem "|" >> require getPatternExpr);
+    final <- option (c, Nothing, SynPatListNil) (thisSyntaxElem "|" >> require getPatternExpr);
     skipUseless;
     thisChar ']';
-    return $ foldr (\myhead@(myc,_,_) mytail -> (myc, Nothing, SynPatVariant (Path ["Core"] "Cons") [mytail, myhead])) final es
+    return (c, Nothing, SynPatListConss es final)
 })
 
 getPatternTerm = describeError "Expected pattern term" $ do {
@@ -202,15 +203,18 @@ getPatternExpr = do{
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
-getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, SynExprConstructor $ Path ["Core"] "Nil")) <|| do {
+getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, SynExprListNil)) <|| do {
     es <- sepBy1 getMeta (skipUseless >> thisChar ',');
-    final <- option (c, SynExprConstructor $ Path ["Core"] "Nil") (thisSyntaxElem "|" >> require getMeta);
+    final <- option (c, SynExprListNil) (thisSyntaxElem "|" >> require getMeta);
     skipUseless;
     thisChar ']';
-    return $ foldr (\(myc, myhead) mytail -> (myc, SynExprApp (myc, SynExprApp (myc, SynExprConstructor $ Path ["Core"] "Cons") (myc, myhead)) mytail)) final es
+    return (c, SynExprListConss es final)
 })
 
-getTerm = describeError "Expected term" $ do { -- Literal
+getTerm = describeError "Expected term" $ do { --String
+    (c, s) <- getString;
+    return (c, SynExprListConss (map (\char->(c, SynExprLiteral $ LitInteger $ ord char)) s) (c, SynExprListNil))
+} <|| do { -- Literal
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)
 } <|| do { -- Label

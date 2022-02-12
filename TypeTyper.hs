@@ -166,7 +166,9 @@ typeExpr _ (c, _, ExprLiteral lit) = do
 typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
-        Just scheme -> do t <- instantiate scheme
+        Just scheme -> do 
+                          lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
+                          t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
 typeExpr env (c, _, ExprConstructor l []) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
@@ -206,6 +208,7 @@ typeExpr env (c, _, ExprPut val pses) = do
     (s', tval') <- unifyPats (substApply s env) tval pses
     tempt <- freshType KStar--TODO GIUSTO IL FRESH?
     (s'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) tval' tempt pses
+    lift $ lift $ putStrLn $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tval' ++ " texpr:"++show texpr
     return (composeSubst s'' (composeSubst s' s), texpr, (c, texpr, ExprPut val' pses'))
 
 --Funzioni helper per putexpr
@@ -220,11 +223,14 @@ unifyPats env t ((pat, (c, _, _)):branches) = do
 typePutBranches :: TypingEnv -> DataType -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, DataType, [(HLPattern, HLExpr)])
 typePutBranches _ _ texpr [] = return (nullSubst, texpr, [])
 typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
+    lift $ lift $ putStrLn $ " PUTBRANCH_SRT tpat:" ++ show tpat ++ " texpr:" ++ show texpr
     env' <- patVarsInEnv (generalize env) env pat tpat
     (s, texpr', expr') <- typeExpr env' expr
-    s' <- mgu c texpr texpr'
+    lift $ lift $ putStrLn $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
+    s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?
     mys <- return $ composeSubst s' s
     (s'', tfinal, others) <- typePutBranches (substApply mys env) (substApply mys tpat) (substApply s' texpr) branches
+    lift $ lift $ putStrLn $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
