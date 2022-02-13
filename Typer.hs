@@ -11,9 +11,9 @@ import KindTyper
 import TypeTyper
 
 --Definizioni builtin per Demod
-builtinDemodTypes = ["->", "Int", "Flt", "Bool"]
+builtinDemodTypes = ["->", "Int", "Flt", "Bool"]--, "List"]
 builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt", "_putChr", "_getChr"]
-builtinDemodVars = ["True", "False", "Nil", "Cons"]
+builtinDemodVars = ["True", "False"]--, "Nil", "Cons"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
 buildBIDemodMap = Map.fromList . map buildBIDemod
@@ -45,8 +45,8 @@ builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT
     ,   VariantData "False#BI" [] [] boolT
     --TEMPORANEI
-    ,   VariantData "Nil#BI" [TyQuant 0 KStar] [] (listT (DataQuant (TyQuant 0 KStar)))
-    ,   VariantData "Cons#BI" [TyQuant 0 KStar] [listT (DataQuant (TyQuant 0 KStar)), DataQuant (TyQuant 0 KStar)] (listT (DataQuant (TyQuant 0 KStar)))
+    --,   VariantData "Nil#BI" [TyQuant 0 KStar] [] (listT (DataQuant (TyQuant 0 KStar)))
+    --,   VariantData "Cons#BI" [TyQuant 0 KStar] [listT (DataQuant (TyQuant 0 KStar)), DataQuant (TyQuant 0 KStar)] (listT (DataQuant (TyQuant 0 KStar)))
     ]
 initTypingEnv = (TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars))
 

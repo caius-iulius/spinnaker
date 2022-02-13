@@ -31,19 +31,11 @@ def pub flip = \f,x,y->f y x
 def pub curry = \f,x,y->f(x,y)
 def pub uncurry = \f,(x,y)->f x y
 
-mod pub IO {
-    def pub putChr = _putChr
-    def pub getChr = _getChr
-    def pub putStr = \s ->
-        put s
-        | Nil -> ()
-        | Cons c cs ->
-            let _ = (putChr c, putStr cs) -> ()
-    def pub putStrLn = \s ->
-        let _ = (putStr s, putChr 10) -> ()
-}
-
 mod pub List {
+    data pub List a
+        = Nil
+        | Cons a (List a)
+
     def pub reverse = \acc, l ->
         put l
         | Nil -> acc
@@ -81,9 +73,20 @@ mod pub List {
         | True -> Nil
         | _ -> Cons from ((from+1)..to)
 }
-
-use pub IO
 use pub List
+
+mod pub IO {
+    def pub putChr = _putChr
+    def pub getChr = _getChr
+    def pub putStr = \s ->
+        put s
+        | Nil -> ()
+        | Cons c cs ->
+            let _ = (putChr c, putStr cs) -> ()
+    def pub putStrLn = \s ->
+        let _ = (putStr s, putChr 10) -> ()
+}
+use pub IO
 
 mod pub Utility {
     def writeDigit = \i -> 48 + i

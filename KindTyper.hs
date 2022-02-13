@@ -130,9 +130,15 @@ typeDataDefsLoop env (ddef:ddefs) = do
 qstokind qs = foldr KFun KStar $ map (kind . snd) qs
 
 addDataDefsEnv :: TypingEnv -> [HLDataDef] -> TypingEnv
-addDataDefsEnv env ddefs = foldl
-    (\(TypingEnv ts ks vs) (DataDef c l qs _)->
-            (TypingEnv ts (Map.union ks (Map.singleton l (qstokind qs))) vs)
+addDataDefsEnv env ddefs =
+    let datadeftotype (DataDef _ l qs vs) =
+            foldl DataTypeApp (DataTypeName l (qstokind qs)) (map (DataQuant . snd) qs)
+        varianttovdata t qs (DataVariant _ l ests) =
+            Map.singleton l (VariantData l (map snd qs) (map snd ests) t)
+        getvariantdatas ddef@(DataDef _ l qs vs) =
+            Map.unions $ map (varianttovdata (datadeftotype ddef) qs) vs
+    in foldl (\(TypingEnv ts ks vs) ddef@(DataDef c l qs _)->
+            (TypingEnv ts (Map.union ks (Map.singleton l (qstokind qs))) (Map.union vs (getvariantdatas ddef)))
         ) env ddefs
 
 unionDataDefEnv (TypingEnv _ ks _) (DataDef c l qs _) = 
