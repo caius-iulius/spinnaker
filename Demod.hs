@@ -53,6 +53,13 @@ newTyQuant k = do
     put (u, kq, tq+1)
     return $ TyQuant tq k
 
+runDemodState :: DemodState t -> IO (Either String (KindQuant, TyQuantId, t))
+runDemodState t = do
+    (either, (_, kq, tq)) <- runStateT (runExceptT t) (0,0,0) --TODO: kindquant e tyquant serviranno al typer, vanno restituiti
+    return $ do
+        res <- either
+        return (kq, tq, res)
+
 -- Roba per i pattern
 patsValsInEnv env [] = return (env, [])
 patsValsInEnv env (p:ps) = do
@@ -159,13 +166,28 @@ valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l e:vvdefs) =
             return (env', SynValDef c v (l++suffix) e:vdefs')
 
 -- definizioni dei datatype
-demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> DemodState DataType
-demodTypeExpr = error "TODO"
+demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> DemodState HLTypeExpr
+demodTypeExpr env qmap (c, SynTypeExprQuantifier l) =
+    case Map.lookup l qmap of
+        Nothing -> throwError $ show c ++ " Type quantifier: " ++ show l ++ " not bound"
+        Just q -> return (c, TypeExprQuant q)
+demodTypeExpr env qmap (c, SynTypeExprTuple stes) = do
+    tes <- mapM (demodTypeExpr env qmap) stes
+    return $ foldl (\tef tea -> (c, TypeExprApp tef tea)) (c, TypeExprName $ "()" ++ (show $ length tes)) tes
+demodTypeExpr env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
+    (DemodEnv _ _ ts _) <- getPathEnv c env path
+    case Map.lookup labl ts of
+        Nothing -> throwError $ show c ++ " Type label: " ++ show pathlabl ++ " not bound"
+        Just (_, nlabl) -> return (c, TypeExprName nlabl)
+demodTypeExpr env qmap (c, SynTypeExprApp stef stea) = do
+    tef <- demodTypeExpr env qmap stef
+    tea <- demodTypeExpr env qmap stea
+    return (c, TypeExprApp tef tea)
 
 demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> DemodState HLDataVariant
-demodDataVar env qmap (SynDataVariant c l tes) = do
-    ts <- mapM (demodTypeExpr env qmap) tes
-    return $ DataVariant c l ts
+demodDataVar env qmap (SynDataVariant c l stes) = do
+    tes <- mapM (demodTypeExpr env qmap) stes
+    return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
 
 demodDataDef :: DemodEnv -> SyntaxDataDef -> DemodState HLDataDef
 demodDataDef env (SynDataDef c _ l qls vars) = do
@@ -178,7 +200,7 @@ demodDataDef env (SynDataDef c _ l qls vars) = do
             Nothing -> return $ Map.union qmap (Map.singleton ql newq)
         ) (return Map.empty) qls
     vars' <- mapM (demodDataVar env qmap) vars
-    return (DataDef c l (map snd $ Map.toList qmap) vars')
+    return (DataDef c l (Map.toList qmap) vars')
 
 dataVarsEnv :: Visibility -> DemodEnv -> [SyntaxDataVariant] -> DemodState (DemodEnv, [SyntaxDataVariant])
 dataVarsEnv _ env [] = return (env, [])
@@ -237,13 +259,9 @@ demodModDefs env (def:defs) = do
 demodModule :: DemodEnv -> SyntaxModule -> DemodState (DemodEnv, BlockProgram)
 demodModule env (Module defs) = demodModDefs env defs
 
-runDemodState :: DemodState t -> IO (Either String t)
-runDemodState t = do
-    (either, state) <- runStateT (runExceptT t) (0,0,0) --TODO: kindquant e tyquant serviranno al typer, vanno restituiti
-    return either
-
 demodProgram initCoreDemodEnv core mod = runDemodState $ do
     (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
+    lift $ lift $ putStrLn $ "coreEnv: " ++ show coreEnv
     (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, envGetPubs coreEnv)) Map.empty Map.empty Map.empty) mod
     lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
     --lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)

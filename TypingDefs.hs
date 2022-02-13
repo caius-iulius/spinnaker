@@ -96,6 +96,6 @@ freshKind = do
     q <- newKindQuant
     return $ KindQuant q
 
-runTyperState :: TyperState t -> IO (Either String t, TIState)
-runTyperState t =
-    runStateT (runExceptT t) (TIState 0 0)
+runTyperState :: TIState -> TyperState t -> IO (Either String t, TIState)
+runTyperState state t =
+    runStateT (runExceptT t) state

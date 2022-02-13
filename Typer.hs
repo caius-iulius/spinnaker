@@ -16,7 +16,7 @@ builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neq
 builtinDemodVars = ["True", "False", "Nil", "Cons"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
-buildBIDemodMap list = Map.fromList $ map buildBIDemod list
+buildBIDemodMap = Map.fromList . map buildBIDemod
 
 initCoreDemodEnv = DemodEnv Map.empty (buildBIDemodMap builtinDemodVals) (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars)
 
@@ -64,5 +64,5 @@ typeProgram core program = do
     eitherBlock <- demodProgram initCoreDemodEnv core program
     case eitherBlock of
         Left e -> return $ Left e
-        Right (_, block) -> (runTyperState $ typeBlockProgram block) >>= return . fst
+        Right (kq, tq, (_, block)) -> (runTyperState (TIState kq tq) $ typeBlockProgram block) >>= return . fst
     --eitherBlock >>= \(_,block) -> runTyperState $ typeBlockProgram block
