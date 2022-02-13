@@ -76,13 +76,14 @@ instance Types TyScheme where
 
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
-tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TyperState TypingEnv
+tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
 tyBindAdd c (TypingEnv ts ks vs) labl scheme =
     case Map.lookup labl ts of
         --Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
-        Nothing -> do
-            lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
-            return $ TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
+        Nothing -> --do
+            --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
+            --return $
+            TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
 
 getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
 getVariantData _ _ l@('(':')':slen) =
@@ -155,9 +156,9 @@ innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
 
 patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HLPattern -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
-patVarsInEnv gf env (c, Just labl, pdata) dt = do
-    env' <- tyBindAdd c env labl (gf dt)
-    innerPatVarsInEnv gf c env' pdata dt
+patVarsInEnv gf env (c, Just labl, pdata) dt =
+    let env' = tyBindAdd c env labl (gf dt)
+    in innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
 typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, DataType, HLExpr)
@@ -254,7 +255,7 @@ typeValDef env (ValDef c l e) = do
 quantifiedValDefEnv init_env [] = return init_env
 quantifiedValDefEnv env (ValDef c s _:vdefs) = do
     t <- freshType KStar
-    env' <- tyBindAdd c env s (TyScheme [] t)
+    env' <- return $ tyBindAdd c env s (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
 typeValDefsLoop _ [] = return (nullSubst, [])
@@ -267,7 +268,10 @@ typeValDefsLoop env (vdef:vdefs) = do
 addValDefsEnv env (ValDef c l (_, t, _):vdefs) = do
     env' <- tyBindAdd c env l (generalize env t)
     addValDefsEnv env' vdefs-}
-addValDefsEnv env vdefs = foldl (\me (ValDef c l (_, t, _))->do{e<-me; tyBindAdd c e l (generalize e t)}) (return env) vdefs
+addValDefsEnv env vdefs = foldl
+    (\e (ValDef c l (_, t, _))->
+            tyBindAdd c e l (generalize e t)
+        ) env vdefs
 
 unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
     tFromEnv <- case Map.lookup l ts of
@@ -282,11 +286,11 @@ typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
-    s' <- return $ foldl (flip composeSubst) s substs
-    vdefs'' <- return $ map (substApplyValDef s') vdefs'
-    env' <- addValDefsEnv (substApply s' env) vdefs''
-    if (0 == (length $ freetyvars env')) then return (s', env', vdefs'')
-    else throwError $ show ((\(ValDef c _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la dipizzazione di un gruppo di valdef"
+    let s' = foldl (flip composeSubst) s substs
+        vdefs'' = map (substApplyValDef s') vdefs'
+        env' = addValDefsEnv (substApply s' env) vdefs''
+        in if (0 == (length $ freetyvars env')) then return (s', env', vdefs'')
+        else throwError $ show ((\(ValDef c _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])
 typeValDefGroups env (vdefs:vdefss) = do

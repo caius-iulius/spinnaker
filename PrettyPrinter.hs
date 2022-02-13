@@ -40,7 +40,7 @@ toTreeSynDataVariant (SynDataVariant c labl args) = Node (show c ++ " DataVarian
 toTreeSynDataDef (SynDataDef c v labl quants variants) = Node (show c ++ " Defining " ++ show v ++ " data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeSynDataVariant variants)
 
-toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\t->Node (show t) []) args)
+toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(e, t)->Node "Arg" [Node (show e) [], Node (show t) []]) args)
 toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHLDataVariant variants)
 

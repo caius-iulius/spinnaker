@@ -53,11 +53,13 @@ initTypingEnv = (TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builti
 --Programma typer
 
 typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
-    (s, e, vdefgroups') <- typeValDefGroups initTypingEnv vdefgroups
-    lift $ lift $ putStrLn $ "Final substitution: " ++ show s
-    lift $ lift $ putStrLn $ "Final env: " ++ show e
-    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e)
-    return (BlockProgram ddefgroups vdefgroups')
+    (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
+    (ts, e', vdefgroups') <- typeValDefGroups e vdefgroups
+    lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
+    lift $ lift $ putStrLn $ "Final kind substitution: " ++ show ks
+    lift $ lift $ putStrLn $ "Final env: " ++ show e'
+    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e')
+    return (BlockProgram ddefgroups' vdefgroups')
 
 typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String BlockProgram)
 typeProgram core program = do
