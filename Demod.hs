@@ -179,10 +179,10 @@ demodTypeExpr env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     case Map.lookup labl ts of
         Nothing -> throwError $ show c ++ " Type label: " ++ show pathlabl ++ " not bound"
         Just (_, nlabl) -> return (c, TypeExprName nlabl)
-demodTypeExpr env qmap (c, SynTypeExprApp stef stea) = do
+demodTypeExpr env qmap (c, SynTypeExprApp stef steas) = do
     tef <- demodTypeExpr env qmap stef
-    tea <- demodTypeExpr env qmap stea
-    return (c, TypeExprApp tef tea)
+    teas <- mapM (demodTypeExpr env qmap) steas
+    return $ foldl (\f a -> (c, TypeExprApp f a)) tef teas --TODO: Le applicazioni di typesyn vanno gestite diversamente
 
 demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> DemodState HLDataVariant
 demodDataVar env qmap (SynDataVariant c l stes) = do
@@ -247,6 +247,7 @@ demodModDef env (ModDataGroup ddefs) = do
     (env', ddefs') <- dataDefGroupEnv env ddefs
     ddefs'' <- mapM (demodDataDef env') ddefs'
     return (env', BlockProgram [ddefs''] [])
+demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
 
 concatBlockPrograms (BlockProgram datagroups valgroups) (BlockProgram datagroups' valgroups') = BlockProgram (datagroups++datagroups') (valgroups++valgroups')
 

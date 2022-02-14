@@ -51,6 +51,7 @@ toTreeBlockProgram (BlockProgram datagroups valgroups) = Node "BlockProgram" [
 
 toTreeSynModDef (ModMod c v l m) = Node (show c ++ " Defining " ++ show v ++ " module: " ++ show l) [toTreeSynMod m]
 toTreeSynModDef (ModUse c v p) = Node (show c ++ " Using " ++ show v ++ " module: " ++ show p) []
+toTreeSynModDef (ModTypeSyn c v l qs e) = Node (show c ++ " " ++ show v ++ " type synonym: " ++ show l ++ " tyargs: " ++ show qs) [toTreeSynTypeExpr e]
 toTreeSynModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeSynValDef vvdefs)
 toTreeSynModDef (ModDataGroup group) = Node "Group of datas" (map toTreeSynDataDef group)
 

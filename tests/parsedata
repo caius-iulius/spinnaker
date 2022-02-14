@@ -1,10 +1,13 @@
 use Core
 
+typesyn String = List Int
+typesyn ErrTy = String
+
 data ParseResult coord t
-    = POk t (coord, List Int)
-    | PFail coord (List Int)
-    | PFatal coord (List Int)
+    = POk t (coord, String)
+    | PFail coord ErrTy
+    | PFatal coord ErrTy
 
 data Parser coord t
     = PValue t
-    | PParse ((coord, (List Int)) -> ParseResult coord t)
+    | PParse ((coord, String) -> ParseResult coord t)

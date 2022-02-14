@@ -37,7 +37,7 @@ data SyntaxTypeExprData
     = SynTypeExprQuantifier String -- Nome del quantifier, forse va incorporato con SynTypeExprName?
     | SynTypeExprTuple [SyntaxTypeExpr] --Lista di tipi della n-tupla
     | SynTypeExprName Path -- Nome del tipo
-    | SynTypeExprApp SyntaxTypeExpr SyntaxTypeExpr --Tipo funzione, tipo argomento
+    | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
 
@@ -55,6 +55,7 @@ data Visibility = Public | Private
 data SyntaxModDef
     = ModMod StdCoord Visibility String SyntaxModule
     | ModUse StdCoord Visibility Path
+    | ModTypeSyn StdCoord Visibility String [String] SyntaxTypeExpr
     | ModValGroup [SyntaxValDef]
     | ModDataGroup [SyntaxDataDef]
     deriving Show

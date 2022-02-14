@@ -22,7 +22,7 @@ fieldDot = "."
 
 validSymbols = [inArrow, putSeparator, lambdaInit, fieldDot]
 
-keywords = ["_", "put", "let", "pub", "and", "def", "data", "use", "mod"]
+keywords = ["_", "put", "let", "pub", "and", "def", "data", "typesyn", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -327,8 +327,8 @@ getTypeTerm = do { --Tipo quantifier
 
 getTypeExpr = do {
     terms <- munch1 getTypeTerm;
-    return $ let (c,_) = head terms in
-        foldl1 (\t1 t2 -> (c, SynTypeExprApp t1 t2)) terms
+    return $ let f@(c,_) = head terms in
+        (c, SynTypeExprApp f (tail terms))
 } <|| getTypeTerm
 
 
@@ -336,7 +336,7 @@ getTypeMeta = do {
     e <- getTypeExpr;
     (c, _) <- thisSyntaxElem "->";
     m <- require getTypeMeta;
-    return (c, SynTypeExprApp (c, SynTypeExprApp (c, SynTypeExprName $ Path [] "->") e) m)
+    return (c, SynTypeExprApp (c, SynTypeExprName $ Path [] "->") [e, m])
 } <|| getTypeExpr
 
 -- Parser vari per datatype
@@ -383,8 +383,19 @@ getModuleDef = do {
     }
 }
 
+getTypeSyn = do {
+    (c, _) <- thisSyntaxElem "typesyn";
+    require $ do {
+        visib <- getVisibility;
+        (_, label) <- getCapitalLabel;
+        qs <- munch getLabel;
+        thisSyntaxElem "=";
+        te <- getTypeMeta;
+        return $ ModTypeSyn c visib label (map snd qs) te
+    }
+}
 getModuleInnerDefs = do {
-    res <- munch (getValDefinitions <|| getDataDefinitions <|| getUse <|| getModuleDef);
+    res <- munch (getValDefinitions <|| getDataDefinitions <|| getTypeSyn <|| getUse <|| getModuleDef);
     return $ Module res
 }
 --Entry point (da modificare)
