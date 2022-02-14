@@ -1,0 +1,5 @@
+use Core
+
+def main =
+    let list = [0, 123, 13, 5, 523] ->
+    putStrLn $ Utility.writeListInt $ zipWith (+) (0..length list) list

@@ -71,7 +71,7 @@ patValsInEnvInner _ env SynPatWildcard = return (env, PatWildcard)
 patValsInEnvInner _ env (SynPatLiteral l) = return (env, PatLiteral l)
 patValsInEnvInner _ env (SynPatTuple ps) = do
     (env', ps') <- patsValsInEnv env ps
-    return (env', PatVariant ("()"++ (show $ length ps')) (reverse ps'))
+    return (env', PatVariant ("()"++ (show $ length ps')) ps')
 patValsInEnvInner c env (SynPatVariant pathlabl@(Path path labl) ps) = do
     (DemodEnv _ _ _ cs) <- getPathEnv c env path
     case Map.lookup labl cs of
@@ -91,7 +91,7 @@ patValsInEnvInner c env (SynPatListConss ps final) = do
         Just (_, nlabl) -> do
             (env', ps') <- patsValsInEnv env ps
             (env'', final') <- patValsInEnv env' final
-            return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [tail, head])) final' ps'
+            return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [head, tail])) final' ps'
 
 patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
@@ -123,7 +123,7 @@ demodExpr env (c, SynExprConstructor pathlabl@(Path path labl)) = do
         Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
 demodExpr env (c, SynExprTuple es) = do
         es' <- mapM (demodExpr env) es
-        return (c, DataNOTHING, ExprConstructor ("()"++(show $ length es')) (reverse es'))
+        return (c, DataNOTHING, ExprConstructor ("()"++(show $ length es')) es')
 demodExpr env (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
     expr' <- demodExpr env' expr
@@ -148,7 +148,7 @@ demodExpr env (c, SynExprListConss es final) = do
         Just (_, nlabl) -> do
             demodes <- mapM (demodExpr env) es
             demodfinal <- demodExpr env final
-            return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [tail, head])) demodfinal demodes
+            return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [head, tail])) demodfinal demodes
 
 -- definizioni dei valori globali
 demodValDef env (SynValDef c _ l e) = do
@@ -190,17 +190,17 @@ demodDataVar env qmap (SynDataVariant c l stes) = do
     return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
 
 demodDataDef :: DemodEnv -> SyntaxDataDef -> DemodState HLDataDef
-demodDataDef env (SynDataDef c _ l qls vars) = do
-    qmap <- foldl (\mqmap ql -> do
-        qmap <- mqmap
+demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagare
+    (qmap, qlist) <- foldl (\mqmapqlist ql -> do
+        (qmap, qlist) <- mqmapqlist
         newk <- freshKind
         newq <- newTyQuant newk
         case Map.lookup ql qmap of
             Just _ -> throwError $ show c ++ " Type quantifier: " ++ show ql ++ " already bound"
-            Nothing -> return $ Map.union qmap (Map.singleton ql newq)
-        ) (return Map.empty) qls
+            Nothing -> return $ (Map.union qmap (Map.singleton ql newq), qlist ++ [(ql, newq)])
+        ) (return (Map.empty, [])) qls
     vars' <- mapM (demodDataVar env qmap) vars
-    return (DataDef c l (Map.toList qmap) vars')
+    return (DataDef c l qlist vars')
 
 dataVarsEnv :: Visibility -> DemodEnv -> [SyntaxDataVariant] -> DemodState (DemodEnv, [SyntaxDataVariant])
 dataVarsEnv _ env [] = return (env, [])

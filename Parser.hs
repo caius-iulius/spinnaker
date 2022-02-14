@@ -199,7 +199,7 @@ getPatternTerm = describeError "Expected pattern term" $ do {
 getPatternExpr = do{
     (c, cons) <- getPathCapitalLabel;
     args <- munch getPatternTerm;
-    return (c, Nothing, SynPatVariant cons (reverse args))
+    return (c, Nothing, SynPatVariant cons args)
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
@@ -343,7 +343,7 @@ getTypeMeta = do {
 getVariant = do {
     (c, label) <- getCapitalLabel;
     tyexprs <- munch getTypeTerm;
-    return $ SynDataVariant c label (reverse tyexprs)
+    return $ SynDataVariant c label tyexprs
 }
 getDataDefinition = do {
     visib <- getVisibility;

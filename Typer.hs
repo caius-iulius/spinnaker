@@ -63,11 +63,13 @@ typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
 
 typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String (String, BlockProgram))
 typeProgram core program = do
+    putStrLn $ "Init typing env: " ++ show initTypingEnv
     eitherBlock <- demodProgram initCoreDemodEnv core program
     case eitherBlock of
         Left e -> return $ Left e
         Right (kq, tq, ((DemodEnv _ vs _ _), block)) -> case Map.lookup "main" vs of
             Nothing -> return $ Left "Entry point \"main\" is not defined"
             Just (_, entryPoint) -> do
+                putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
                 res <- (runTyperState (TIState kq tq) $ typeBlockProgram block)
                 return $ fst res >>= (return . ((,) entryPoint))

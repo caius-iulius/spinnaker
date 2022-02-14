@@ -95,7 +95,10 @@ getVariantData _ _ l@('(':')':slen) =
 getVariantData c (TypingEnv _ _ vs) l =
     case Map.lookup l vs of
         --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
-        Just vdata -> return vdata
+        Just vdata -> do
+            lift $ lift $ putStrLn $ "VDATA " ++ show l ++ show vdata
+            return vdata
+
 instance Types TypingEnv where
     freetyvars (TypingEnv ts ks vs) = Set.unions $ map freetyvars (Map.elems ts)
     substApply s (TypingEnv ts ks vs) = TypingEnv (Map.map (substApply s) ts) ks vs
@@ -167,17 +170,18 @@ typeExpr _ (c, _, ExprLiteral lit) = do
 typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
-        Just scheme -> do 
+        Just scheme -> do
                           lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
                           t <- instantiate scheme
                           return (nullSubst, t, (c, t, ExprLabel labl))
 typeExpr env (c, _, ExprConstructor l []) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
     s <- getInstantiationSubst qs
-    let mydt = substApply s (foldl (flip buildFunType) dt argts)
+    let mydt = substApply s (foldr buildFunType dt argts)
+    lift $ lift $ putStrLn $ "CONSTRUCTOR DT " ++ show l ++ show mydt
     return (nullSubst, mydt, (c, mydt, ExprConstructor l []))
 typeExpr env (c, _, ExprConstructor l es) = --TODO: Testa e modifica in modo da non ri-espandere una costruzione già applicata
-    typeExpr env (foldr (\e1 e0 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
+    typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
 typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f

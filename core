@@ -63,6 +63,23 @@ mod pub List {
         | Nil -> s
         | Cons x xs -> f x (foldr f s xs)
 
+    def pub length = \l ->
+        put l
+        | Nil -> 0
+        | Cons _ xs -> 1 + length xs
+
+    def pub zip = \l, l' ->
+        put (l, l')
+        | (Nil, _) -> Nil
+        | (_, Nil) -> Nil
+        | (Cons x xs, Cons x' xs') -> Cons (x, x') (zip xs xs')
+
+    def pub zipWith = \f, l, l' ->
+        put (l, l')
+        | (Nil, _) -> Nil
+        | (_, Nil) -> Nil
+        | (Cons x xs, Cons x' xs') -> Cons (f x x') (zipWith f xs xs')
+
     def pub (++) = \l, l' ->
         put l
         | Nil -> l'
@@ -103,6 +120,14 @@ mod pub Utility {
         put i < 0
         | True -> Cons 45 (writeNonNeg (0-i))
         | _ -> writeNonNeg i
+
+    def writeListIntInternal = \l ->
+        put l
+        | Nil -> Cons 93 Nil
+        | Cons x Nil -> writeInt x ++ Cons 93 Nil
+        | Cons x xs -> writeInt x ++ Cons 44 (Cons 32 Nil) ++ writeListIntInternal xs
+
+    def pub writeListInt = \l -> Cons 91 (writeListIntInternal l)
 }
 
 # NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...

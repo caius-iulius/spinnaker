@@ -1,0 +1,18 @@
+use Core
+
+mod State {
+    data pub State s a =
+        State (s -> (a, s))
+
+    def pub get = State (\s -> (s, s))
+    def pub set = \news -> State (\_ -> ((), news))
+
+    def pub return = \a -> State(\s -> (a, s))
+    def pub bind = \State sf, mfun -> State (\s ->
+        let (a, s') = sf s ->
+        let State sf' = mfun a ->
+        sf' s'
+    )
+}
+
+def main = (10, 1.1)

@@ -26,6 +26,7 @@ testCompile = do {
     case parse getProgram (Coord (head args) 1 1, contents) of
         POk untyped _ -> do {
             core <- coreModule;
+            putStrLn $ drawTree $ Node "Parsed Core" [toTreeSynMod core];
             putStrLn $ drawTree $ Node "Parsed" [toTreeSynMod untyped];
             either <- typeProgram core untyped;
             case either of
