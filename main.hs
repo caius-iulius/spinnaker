@@ -16,7 +16,7 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
         in return coreParsed
 }
 
-testCompile :: IO BlockProgram
+testCompile :: IO (String, BlockProgram)
 testCompile = do {
     args <- getArgs;
     handle <- openFile (head args) ReadMode;
@@ -31,7 +31,7 @@ testCompile = do {
             case either of
                 Left e -> error $ "Typing error: " ++ e
                 Right typed -> do {
-                    putStrLn $ drawTree $ Node "Typed TEMPORARY" [toTreeBlockProgram typed];
+                    putStrLn $ drawTree $ Node ("Typed TEMPORARY, entryPoint: " ++ fst typed) [toTreeBlockProgram $ snd typed];
                     return typed
                 }
         }

@@ -2,7 +2,7 @@ module Interpreter where
 import qualified Data.Map as Map
 import Control.Monad.Reader
 import Data.Char
-import MPCL(StdCoord)
+import MPCL(StdCoord(..))
 import TypingDefs
 import HLDefs
 
@@ -103,10 +103,9 @@ eval e@(c, dt, ExprPut val pses) = do
     val' <- eval val
     choosePattern c val' pses
 
-evalProgram :: BlockProgram -> IO HLExpr
-evalProgram (BlockProgram datagroups valgroups) =
+evalProgram :: (String, BlockProgram) -> IO HLExpr
+evalProgram (entryPoint, BlockProgram datagroups valgroups) =
     let
         binds = join valgroups
         env = Map.fromList $ map (\(ValDef _ l e)->(l, e)) binds
-        entryPoint = (\(ValDef _ _ e)->e) $ last binds
-    in runReaderT (eval entryPoint) env
+    in runReaderT (eval (Coord "interpreter" 0 0, DataNOTHING, ExprLabel entryPoint)) env

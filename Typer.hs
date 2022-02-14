@@ -61,10 +61,13 @@ typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e')
     return (BlockProgram ddefgroups' vdefgroups')
 
-typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String BlockProgram)
+typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String (String, BlockProgram))
 typeProgram core program = do
     eitherBlock <- demodProgram initCoreDemodEnv core program
     case eitherBlock of
         Left e -> return $ Left e
-        Right (kq, tq, (_, block)) -> (runTyperState (TIState kq tq) $ typeBlockProgram block) >>= return . fst
-    --eitherBlock >>= \(_,block) -> runTyperState $ typeBlockProgram block
+        Right (kq, tq, ((DemodEnv _ vs _ _), block)) -> case Map.lookup "main" vs of
+            Nothing -> return $ Left "Entry point \"main\" is not defined"
+            Just (_, entryPoint) -> do
+                res <- (runTyperState (TIState kq tq) $ typeBlockProgram block)
+                return $ fst res >>= (return . ((,) entryPoint))
