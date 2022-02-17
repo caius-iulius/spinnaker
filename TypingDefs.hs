@@ -69,15 +69,20 @@ boolT = DataTypeName "Bool#BI" KType
 charT = DataTypeName "Char#BI" KType
 
 -- Infrastruttura monadica
-data TIState = TIState KindQuant TyQuantId
-    deriving Show
+type TyperStateData = (Int, KindQuant, TyQuantId)
 
-type TyperState t = ExceptT String (StateT TIState IO) t
+type TyperState t = ExceptT String (StateT TyperStateData IO) t
+
+newUniqueSuffix :: TyperState String
+newUniqueSuffix = do
+    (u, k, t) <- get
+    put (u+1, k, t)
+    return ('#':show u)
 
 newTyQuant :: Kind -> TyperState TyQuant
 newTyQuant k = do
-    (TIState kq tq) <- get
-    put $ TIState kq (tq+1)
+    (u, kq, tq) <- get
+    put (u, kq, (tq+1))
     return $ TyQuant tq k
 
 freshType k = do
@@ -86,8 +91,8 @@ freshType k = do
 
 newKindQuant :: TyperState KindQuant
 newKindQuant = do
-    (TIState k t) <- get
-    put $ TIState (k+1) t
+    (u, k, t) <- get
+    put (u, (k+1), t)
     return k
 
 freshKind :: TyperState Kind
@@ -95,6 +100,6 @@ freshKind = do
     q <- newKindQuant
     return $ KindQuant q
 
-runTyperState :: TIState -> TyperState t -> IO (Either String t, TIState)
+runTyperState :: TyperStateData -> TyperState t -> IO (Either String t, TyperStateData)
 runTyperState state t =
     runStateT (runExceptT t) state

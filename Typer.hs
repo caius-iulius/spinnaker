@@ -1,6 +1,7 @@
-module Typer (typeProgram) where
+module Typer (typeBlockProgram, typeProgram) where
 import qualified Data.Map as Map
 import Control.Monad.Trans
+import Control.Monad.Except
 import Data.Tree
 import PrettyPrinter
 import HLDefs
@@ -57,17 +58,13 @@ typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e')
     return (e', BlockProgram ddefgroups' vdefgroups')
 
-typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))
+typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, String, BlockProgram)
 typeProgram core program = do
-    putStrLn $ "Init typing env: " ++ show initTypingEnv
-    eitherBlock <- demodProgram initCoreDemodEnv core program
-    case eitherBlock of
-        Left e -> return $ Left e
-        Right (kq, tq, ((DemodEnv _ vs _ _), block)) -> case Map.lookup "main" vs of
-            Nothing -> return $ Left "Entry point \"main\" is not defined"
-            Just (_, entryPoint) -> do
-                putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
-                res <- (runTyperState (TIState kq tq) $ typeBlockProgram block)
-                return $ do
-                    (env, tyblock) <- fst res
-                    return (env, entryPoint, tyblock)
+    lift $ lift $ putStrLn $ "Init typing env: " ++ show initTypingEnv
+    (DemodEnv _ vs _ _, block) <- demodProgram initCoreDemodEnv core program
+    case Map.lookup "main" vs of
+        Nothing -> throwError "Entry point \"main\" is not defined"
+        Just (_, entryPoint) -> do
+            lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
+            (env, tyblock) <- typeBlockProgram block
+            return (env, entryPoint, tyblock)

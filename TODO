@@ -23,7 +23,7 @@ supporto multifile
 incorpora file core
 implementa caratteri e completa le stringhe
 
-1. cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
+1. [OK?] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typeclass / typerel
 3. monomorfizzazione e scelta dei typeclass
 4. defunzionalizzazione in supercombinatori

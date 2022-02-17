@@ -9,6 +9,8 @@ import Typer
 import Interpreter
 import HLDefs
 import TypingDefs
+import SyntaxDefs
+import VariantComplete
 
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
     handle <- openFile "core" ReadMode;
@@ -16,6 +18,13 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
     let POk coreParsed _ = parse getProgram (Coord "Core" 1 1, contents)
         in return coreParsed
 }
+
+frontendCompile :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))
+frontendCompile core program = (>>= return . fst) $ runTyperState (0, 0, 0) $ do
+    (env, entryPoint, block) <- typeProgram core program
+    block' <- completeVariantProgram env block
+    (env', block'') <- typeBlockProgram block'
+    return (env, entryPoint, block'')
 
 testCompile :: IO (TypingEnv, String, BlockProgram)
 testCompile = do {
@@ -29,7 +38,7 @@ testCompile = do {
             core <- coreModule;
             putStrLn $ drawTree $ Node "Parsed Core" [toTreeSynMod core];
             putStrLn $ drawTree $ Node "Parsed" [toTreeSynMod untyped];
-            either <- typeProgram core untyped;
+            either <- frontendCompile core untyped;
             case either of
                 Left e -> error $ "Typing error: " ++ e
                 Right (env, entryPoint, block) -> do {

@@ -1,9 +1,10 @@
-module Demod (DemodEnv(..), demodProgram, runDemodState) where
+module Demod (DemodEnv(..), demodProgram) where
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
 import MPCL(StdCoord)
-import TypingDefs (KindQuant, Kind(..), TyQuantId, TyQuant(..), Kind, DataType(DataNOTHING))
+import TypingDefs
+-- (KindQuant, Kind(..), TyQuantId, TyQuant(..), Kind, DataType(DataNOTHING))
 import HLDefs
 import SyntaxDefs
 
@@ -26,39 +27,11 @@ envSetPrivate (DemodEnv m v t c) = (DemodEnv (setpriv m) (setpriv v) (setpriv t)
 envsUnion :: DemodEnv -> DemodEnv -> DemodEnv
 envsUnion (DemodEnv m v t c) (DemodEnv m' v' t' c') = DemodEnv (Map.union m m') (Map.union v v') (Map.union t t') (Map.union c c')
 
-type DemodStateData = (Int, KindQuant, TyQuantId)
-type DemodState t = ExceptT String (StateT DemodStateData IO) t
-
-getPathEnv :: StdCoord -> DemodEnv -> [String] -> DemodState DemodEnv
+getPathEnv :: StdCoord -> DemodEnv -> [String] -> TyperState DemodEnv
 getPathEnv _ env [] = return env
 getPathEnv c (DemodEnv envs _ _ _) (entry:path) = case Map.lookup entry envs of
     Nothing -> throwError $ show c ++ " Could not find module: " ++ show entry
     Just (_, env) -> getPathEnv c env path
-
-getUniqueSuffix :: DemodState String
-getUniqueSuffix = do
-    (u, k, t) <- get
-    put (u+1, k, t)
-    return ('#':show u)
-
-freshKind :: DemodState Kind
-freshKind = do
-    (u, k, t) <- get
-    put (u, k+1, t)
-    return $ KindQuant k
-
-newTyQuant :: Kind -> DemodState TyQuant
-newTyQuant k = do
-    (u, kq, tq) <- get
-    put (u, kq, tq+1)
-    return $ TyQuant tq k
-
-runDemodState :: DemodState t -> IO (Either String (KindQuant, TyQuantId, t))
-runDemodState t = do
-    (either, (_, kq, tq)) <- runStateT (runExceptT t) (0,0,0) --TODO: kindquant e tyquant serviranno al typer, vanno restituiti
-    return $ do
-        res <- either
-        return (kq, tq, res)
 
 -- Roba per i pattern
 patsValsInEnv env [] = return (env, [])
@@ -93,7 +66,7 @@ patValsInEnvInner c env (SynPatListConss ps final) = do
             (env'', final') <- patValsInEnv env' final
             return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [head, tail])) final' ps'
 
-patValsInEnv :: DemodEnv -> SyntaxPattern -> DemodState (DemodEnv, HLPattern)
+patValsInEnv :: DemodEnv -> SyntaxPattern -> TyperState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
     return (env', (c, Nothing, inner'))
@@ -101,7 +74,7 @@ patValsInEnv (DemodEnv ms vs ts cs) (c, Just l, inner) =
     case Map.lookup l vs of
         Just _ -> throwError $ show c ++ " Label: " ++ show l ++ " is already bound"
         Nothing -> do
-            suffix <- getUniqueSuffix
+            suffix <- newUniqueSuffix
             (env', inner') <- patValsInEnvInner c (DemodEnv ms (Map.union vs (Map.singleton l (Private, l++suffix))) ts cs) inner
             return (env', (c, Just $ l++suffix, inner'))
 
@@ -155,18 +128,18 @@ demodValDef env (SynValDef c _ l e) = do
     e' <- demodExpr env e
     return (ValDef c l e')
 
-valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> DemodState (DemodEnv, [SyntaxValDef])
+valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> TyperState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
 valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l e:vvdefs) =
     case Map.lookup l vs of
         Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already bound"
         Nothing -> do
-            suffix <- getUniqueSuffix
+            suffix <- newUniqueSuffix
             (env', vdefs') <- valDefGroupEnv (envsUnion env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) vvdefs
             return (env', SynValDef c v (l++suffix) e:vdefs')
 
 -- definizioni dei datatype
-demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> DemodState HLTypeExpr
+demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState HLTypeExpr
 demodTypeExpr env qmap (c, SynTypeExprQuantifier l) =
     case Map.lookup l qmap of
         Nothing -> throwError $ show c ++ " Type quantifier: " ++ show l ++ " not bound"
@@ -184,12 +157,12 @@ demodTypeExpr env qmap (c, SynTypeExprApp stef steas) = do
     teas <- mapM (demodTypeExpr env qmap) steas
     return $ foldl (\f a -> (c, TypeExprApp f a)) tef teas --TODO: Le applicazioni di typesyn vanno gestite diversamente
 
-demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> DemodState HLDataVariant
+demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
 demodDataVar env qmap (SynDataVariant c l stes) = do
     tes <- mapM (demodTypeExpr env qmap) stes
     return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
 
-demodDataDef :: DemodEnv -> SyntaxDataDef -> DemodState HLDataDef
+demodDataDef :: DemodEnv -> SyntaxDataDef -> TyperState HLDataDef
 demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagare
     (qmap, qlist) <- foldl (\mqmapqlist ql -> do
         (qmap, qlist) <- mqmapqlist
@@ -202,29 +175,29 @@ demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagar
     vars' <- mapM (demodDataVar env qmap) vars
     return (DataDef c l qlist vars')
 
-dataVarsEnv :: Visibility -> DemodEnv -> [SyntaxDataVariant] -> DemodState (DemodEnv, [SyntaxDataVariant])
+dataVarsEnv :: Visibility -> DemodEnv -> [SyntaxDataVariant] -> TyperState (DemodEnv, [SyntaxDataVariant])
 dataVarsEnv _ env [] = return (env, [])
 dataVarsEnv v env@(DemodEnv _ _ _ cs) (SynDataVariant c l tes:vardefs) =
     case Map.lookup l cs of
         Just _ -> throwError $ show c ++ " Constructor: " ++ show l ++ " already bound"
         Nothing -> do
-            suffix <- getUniqueSuffix
+            suffix <- newUniqueSuffix
             (env', vardefs') <- dataVarsEnv v (envsUnion env (DemodEnv Map.empty Map.empty Map.empty (Map.singleton l (v, l++suffix)))) vardefs
             return (env', SynDataVariant c (l++suffix) tes:vardefs')
 
-dataDefGroupEnv :: DemodEnv -> [SyntaxDataDef] -> DemodState (DemodEnv, [SyntaxDataDef])
+dataDefGroupEnv :: DemodEnv -> [SyntaxDataDef] -> TyperState (DemodEnv, [SyntaxDataDef])
 dataDefGroupEnv env [] = return (env, [])
 dataDefGroupEnv env@(DemodEnv _ _ ts _) (SynDataDef c v l qs vars:ddefs) =
     case Map.lookup l ts of
         Just _ -> throwError $ show c ++ " Data: " ++ show l ++ " already bound"
         Nothing -> do
-            suffix <- getUniqueSuffix
+            suffix <- newUniqueSuffix
             (env', vars') <- dataVarsEnv v env vars
             (env'', ddefs') <- dataDefGroupEnv (envsUnion env' (DemodEnv Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty)) ddefs
             return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
 
 -- moduli
-demodModDef :: DemodEnv -> SyntaxModDef -> DemodState (DemodEnv, BlockProgram)
+demodModDef :: DemodEnv -> SyntaxModDef -> TyperState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs) (ModMod c v l m) =
     case Map.lookup l ms of
         Just _ -> throwError $ show c ++ " Module: " ++ show l ++ " already defined"
@@ -257,10 +230,11 @@ demodModDefs env (def:defs) = do
     (env'', block') <- demodModDefs env' defs
     return (env'', concatBlockPrograms block block')
 
-demodModule :: DemodEnv -> SyntaxModule -> DemodState (DemodEnv, BlockProgram)
+demodModule :: DemodEnv -> SyntaxModule -> TyperState (DemodEnv, BlockProgram)
 demodModule env (Module defs) = demodModDefs env defs
 
-demodProgram initCoreDemodEnv core mod = runDemodState $ do
+demodProgram :: DemodEnv -> SyntaxModule -> SyntaxModule -> TyperState (DemodEnv, BlockProgram)
+demodProgram initCoreDemodEnv core mod = do
     (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
     lift $ lift $ putStrLn $ "coreEnv: " ++ show coreEnv
     (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, envGetPubs coreEnv)) Map.empty Map.empty Map.empty) mod
