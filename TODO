@@ -23,8 +23,11 @@ supporto multifile
 incorpora file core
 implementa caratteri e completa le stringhe
 
-1. monomorfizzazione
-1. K-Normal o A-Normal form
-2. compilazione
-3. typeclass / typerelations
-3. ottimizzazione
+1. cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
+2. typing typeclass / typerel
+3. monomorfizzazione e scelta dei typeclass
+4. defunzionalizzazione in supercombinatori
+    K-Normal o A-Normal form
+    Semplificazione a un branch per putexpr
+5. compilazione a C
+6. ottimizzazioni su HLExpr

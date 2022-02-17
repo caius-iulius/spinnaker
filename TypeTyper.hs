@@ -180,8 +180,10 @@ typeExpr env (c, _, ExprConstructor l []) = do
     let mydt = substApply s (foldr buildFunType dt argts)
     lift $ lift $ putStrLn $ "CONSTRUCTOR DT " ++ show l ++ show mydt
     return (nullSubst, mydt, (c, mydt, ExprConstructor l []))
-typeExpr env (c, _, ExprConstructor l es) = --TODO: Testa e modifica in modo da non ri-espandere una costruzione già applicata
-    typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
+typeExpr env (c, _, ExprConstructor l es) = do --TODO: Testa
+    (s, t, (_, _, ExprApp (_, _, ExprConstructor l' es') e')) <- typeExpr env (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprConstructor l (init es)) (last es))
+    return (s, t, (c, t, ExprConstructor l' (es' ++ [e'])))
+    --typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
 typeExpr env (c, _, ExprApp f a) = do
     q <- freshType KStar
     (s1, t1, f') <- typeExpr env f
