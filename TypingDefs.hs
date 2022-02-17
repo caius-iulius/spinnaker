@@ -7,14 +7,14 @@ type KindQuant = Int
 
 data Kind
     = KindNOTHING --Kind temporaneo generato dal parser
-    | KStar
+    | KType
     | KindQuant KindQuant --Questo l'ho tolto perché alla fine dell'inferenza tutti i kind liberi diventano *
     | KFun Kind Kind
     deriving Eq
 
 instance Show Kind where
     show KindNOTHING = "NOTHING"
-    show KStar = "*"
+    show KType = "T"
     show (KindQuant q) = "k" ++ show q
     show (KFun a r) = "(" ++ show a ++ "->" ++ show r ++ ")"
 
@@ -55,19 +55,18 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
     deriving Show
 
 --Definizioni utili
-buildTupKind len = foldr (\_ ret -> KFun KStar ret) KStar [1..len]
+buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
 buildTupType ts =
     let len = length ts
         labl = "()" ++ show len
     in foldl DataTypeApp (DataTypeName labl $ buildTupKind len) ts
 
 buildFunType a r =
-    DataTypeApp (DataTypeApp (DataTypeName "->#BI" (KFun KStar (KFun KStar KStar))) a) r
-intT = DataTypeName "Int#BI" KStar
-fltT = DataTypeName "Flt#BI" KStar
-boolT = DataTypeName "Bool#BI" KStar
-charT = DataTypeName "Char#BI" KStar
-listT t = DataTypeApp (DataTypeName "List#BI" (KFun KStar KStar)) t
+    DataTypeApp (DataTypeApp (DataTypeName "->#BI" (KFun KType (KFun KType KType))) a) r
+intT = DataTypeName "Int#BI" KType
+fltT = DataTypeName "Flt#BI" KType
+boolT = DataTypeName "Bool#BI" KType
+charT = DataTypeName "Char#BI" KType
 
 -- Infrastruttura monadica
 data TIState = TIState KindQuant TyQuantId

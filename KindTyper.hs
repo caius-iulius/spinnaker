@@ -10,7 +10,7 @@ type KindSubst = Map.Map KindQuant Kind
 nullKSubst :: KindSubst
 nullKSubst = Map.empty
 
-freeKindQuants KStar = Set.empty
+freeKindQuants KType = Set.empty
 freeKindQuants (KindQuant q) = Set.singleton q
 freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
 
@@ -21,7 +21,7 @@ class Kinds t where
 
 instance Kinds Kind where
     kind = id
-    kSubstApply _ KStar = KStar
+    kSubstApply _ KType = KType
     kSubstApply s (KindQuant q) = case Map.lookup q s of
         Nothing -> KindQuant q
         Just k -> k
@@ -33,7 +33,7 @@ instance Kinds TyQuant where
 
 instance Kinds DataType where
     kind (DataQuant q) = kind q
-    --kind (DataTuple _) = KStar
+    --kind (DataTuple _) = KType
     kind (DataTypeName _ k) = k
     kind (DataTypeApp t _) = let (KFun _ k) = kind t in k
     kSubstApply s (DataQuant q) = DataQuant (kSubstApply s q)
@@ -62,7 +62,7 @@ kindBindAdd c (TypingEnv ts ks vs) labl kind =
 kindmgu :: StdCoord -> Kind -> Kind -> TyperState KindSubst
 kindmgu c (KindQuant kq) t = kindQBind c kq t
 kindmgu c t (KindQuant kq) = kindQBind c kq t
-kindmgu _ KStar KStar = return nullKSubst
+kindmgu _ KType KType = return nullKSubst
 kindmgu c (KFun a r) (KFun a' r') = do
     s1 <- kindmgu c a a'
     s2 <- kindmgu c (kSubstApply s1 r) (kSubstApply s1 r')
@@ -75,7 +75,7 @@ getTyData _ _ l@('(':')':slen) =
     let len::Int
         len = read slen
     in return $
-        foldr (\_->KFun KStar) KStar [0..len - 1]
+        foldr (\_->KFun KType) KType [0..len - 1]
 getTyData c (TypingEnv _ ts _) l =
     case Map.lookup l ts of
         Nothing -> throwError $ show c ++ " Unbound typename: " ++ l
@@ -86,7 +86,7 @@ typeTyExpr _ (c, TypeExprQuant q) =
     return (nullKSubst, kind q, DataQuant q)
 {-typeTyExpr env qmap (c, TypeExprTuple exprs) = do
     (s, ts) <- typeTyExprsStar env qmap exprs
-    return $ (s, KStar, DataTuple ts)-}
+    return $ (s, KType, DataTuple ts)-}
 typeTyExpr env (c, TypeExprName l) = do
     k <- getTyData c env l
     return (nullKSubst, k, DataTypeName l k)
@@ -102,7 +102,7 @@ typeTyExpr env (c, TypeExprApp f a) = do
 typeTyExprsStar env [] = return (nullKSubst, [])
 typeTyExprsStar env (e@(c,_):es) = do
     (s, k, t) <- typeTyExpr env e
-    s1 <- kindmgu c k KStar
+    s1 <- kindmgu c k KType
     (s2, ts) <- typeTyExprsStar env es
     return (composeKSubst s2 (composeKSubst s1 s), (kSubstApply s2 t):ts)
 
@@ -127,7 +127,7 @@ typeDataDefsLoop env (ddef:ddefs) = do
     (s', ddefs') <- typeDataDefsLoop (substApplyKindEnv s env) ddefs
     return (composeKSubst s' s, ddef':ddefs')
 
-qstokind qs = foldr KFun KStar $ map (kind . snd) qs
+qstokind qs = foldr KFun KType $ map (kind . snd) qs
 
 addDataDefsEnv :: TypingEnv -> [HLDataDef] -> TypingEnv
 addDataDefsEnv env ddefs =
@@ -148,7 +148,7 @@ unionDataDefEnv (TypingEnv _ ks _) (DataDef c l qs _) =
             return s
 
 kindMonomorphize :: Kind -> KindSubst
-kindMonomorphize = Map.fromList . map (flip (,) KStar) . Set.toList . freeKindQuants
+kindMonomorphize = Map.fromList . map (flip (,) KType) . Set.toList . freeKindQuants
 
 dataMonomorphize (DataDef _ _ qs _) = Map.unions $ map (kindMonomorphize . kind . snd) qs
 
