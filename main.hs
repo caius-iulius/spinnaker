@@ -8,6 +8,7 @@ import Data.Tree
 import Typer
 import Interpreter
 import HLDefs
+import TypingDefs
 
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
     handle <- openFile "core" ReadMode;
@@ -16,7 +17,7 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
         in return coreParsed
 }
 
-testCompile :: IO (String, BlockProgram)
+testCompile :: IO (TypingEnv, String, BlockProgram)
 testCompile = do {
     args <- getArgs;
     handle <- openFile (head args) ReadMode;
@@ -31,16 +32,17 @@ testCompile = do {
             either <- typeProgram core untyped;
             case either of
                 Left e -> error $ "Typing error: " ++ e
-                Right typed -> do {
-                    putStrLn $ drawTree $ Node ("Typed TEMPORARY, entryPoint: " ++ fst typed) [toTreeBlockProgram $ snd typed];
-                    return typed
+                Right (env, entryPoint, block) -> do {
+                    putStrLn $ drawTree $ Node ("Typed TEMPORARY, entryPoint: " ++ entryPoint) [toTreeBlockProgram $ block];
+                    putStrLn $ "Final typingEnv: " ++ show env;
+                    return (env, entryPoint, block)
                 }
         }
         pe -> error $ show pe
 }
 
 main = do {
-    compiled <- testCompile;
-    result <- evalProgram compiled;
+    (_, ep, b) <- testCompile;
+    result <- evalProgram (ep, b);
     putStrLn $ "Result: " ++ (drawTree $ toTreeHLExpr result)
 }

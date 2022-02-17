@@ -97,7 +97,9 @@ eval e@(c, dt, ExprLabel l) = do
     case Map.lookup l env of
         Just expr -> eval expr
         Nothing -> return e
-eval e@(_, _, ExprConstructor _ _) = return e
+eval e@(c, dt, ExprConstructor l es) = do
+    es' <- mapM eval es
+    return (c, dt, ExprConstructor l es')
 eval e@(_, _, ExprLambda _ _) = return e
 eval e@(c, dt, ExprPut val pses) = do
     val' <- eval val

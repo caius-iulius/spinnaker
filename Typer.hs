@@ -55,9 +55,9 @@ typeBlockProgram (BlockProgram ddefgroups vdefgroups) = do
     lift $ lift $ putStrLn $ "Final kind substitution: " ++ show ks
     lift $ lift $ putStrLn $ "Final env: " ++ show e'
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e')
-    return (BlockProgram ddefgroups' vdefgroups')
+    return (e', BlockProgram ddefgroups' vdefgroups')
 
-typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String (String, BlockProgram))
+typeProgram :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))
 typeProgram core program = do
     putStrLn $ "Init typing env: " ++ show initTypingEnv
     eitherBlock <- demodProgram initCoreDemodEnv core program
@@ -68,4 +68,6 @@ typeProgram core program = do
             Just (_, entryPoint) -> do
                 putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
                 res <- (runTyperState (TIState kq tq) $ typeBlockProgram block)
-                return $ fst res >>= (return . ((,) entryPoint))
+                return $ do
+                    (env, tyblock) <- fst res
+                    return (env, entryPoint, tyblock)
