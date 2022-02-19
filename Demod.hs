@@ -109,7 +109,7 @@ demodExpr env (c, SynExprPut val pses) = do
         return (pat', e')
         ) pses
     return (c, DataNOTHING, ExprPut val' pses')
-demodExpr env (c, SynExprListNil) = do
+demodExpr env (c, SynExprListNil) = do --TODO: Forse questo si può ridurre a un demodExpr di un SynExprConstructor
     (DemodEnv _ _ _ cs) <- getPathEnv c env ["Core"]
     case Map.lookup "Nil" cs of
         Nothing -> throwError $ show c ++ " The Core module does not provide a definition for Nil"
@@ -122,6 +122,11 @@ demodExpr env (c, SynExprListConss es final) = do
             demodes <- mapM (demodExpr env) es
             demodfinal <- demodExpr env final
             return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [head, tail])) demodfinal demodes
+demodExpr env (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env (c, --TODO: Forse questo va "specializzato" come le implementazioni di synexprlistnil etc...
+    SynExprPut cond [
+        ((c, Nothing, SynPatVariant (Path ["Core"] "True") []), iftrue),
+        ((c, Nothing, SynPatVariant (Path ["Core"] "False") []), iffalse)
+    ])
 
 -- definizioni dei valori globali
 demodValDef env (SynValDef c _ l e) = do

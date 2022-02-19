@@ -1,8 +1,7 @@
 use Core
 
 def fac = \n ->
-    put n
-    | 0 -> 1
-    | _ -> n * fac (n - 1)
+    if n = 0 then 1
+    else n * fac (n - 1)
 
 def main = fac 5

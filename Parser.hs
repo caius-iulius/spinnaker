@@ -22,7 +22,7 @@ fieldDot = "."
 
 validSymbols = [inArrow, putSeparator, lambdaInit, fieldDot]
 
-keywords = ["_", "put", "let", "pub", "and", "def", "data", "typesyn", "use", "mod"]
+keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "def", "data", "typesyn", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -253,7 +253,19 @@ getLambda = do {
     }
 }
 
-getMeta = getLambda <|| getLet <|| getPut <|| do { --EXPR OP META
+getIfThenElse = do {
+    (c, _) <- thisSyntaxElem "if";
+    require $ do {
+        cond <- getMeta;
+        thisSyntaxElem "then";
+        iftrue <- getMeta;
+        thisSyntaxElem "else";
+        iffalse <- getMeta;
+        return (c, SynExprIfThenElse cond iftrue iffalse)
+    }
+}
+
+getMeta = getLambda <|| getIfThenElse <|| getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;

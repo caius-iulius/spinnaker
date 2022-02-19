@@ -26,6 +26,7 @@ data SyntaxExprData
     | SynExprPut SyntaxExpr [(SyntaxPattern, SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
     | SynExprListNil -- lista vuota
     | SynExprListConss [SyntaxExpr] SyntaxExpr -- primi elementi della lista, continuazione
+    | SynExprIfThenElse SyntaxExpr SyntaxExpr SyntaxExpr
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
 
