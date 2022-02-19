@@ -24,7 +24,7 @@ frontendCompile core program = (>>= return . fst) $ runTyperState (0, 0, 0) $ do
     (env, entryPoint, block) <- typeProgram core program
     block' <- completeVariantProgram env block
     (env', block'') <- typeBlockProgram block'
-    return (env, entryPoint, block'')
+    return (env', entryPoint, block'')
 
 testCompile :: IO (TypingEnv, String, BlockProgram)
 testCompile = do {

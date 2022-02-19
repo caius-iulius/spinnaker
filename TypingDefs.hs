@@ -29,7 +29,6 @@ instance Show TyQuant where
 data DataType
     = DataNOTHING --Tipo temporaneo generato dal parser
     | DataQuant TyQuant --Quantificatore
-    -- | DataTuple [DataType] --Lista dei tipi interni alla n-tupla
     | DataTypeName String Kind -- Nome del tipo, kind del tipo
     | DataTypeApp DataType DataType --Funzione di tipi, argomento
     deriving Eq
@@ -38,7 +37,6 @@ data DataType
 instance Show DataType where
     show DataNOTHING = "NOTHING"
     show (DataQuant q) = show q
-    -- show (DataTuple types) = "(" ++ foldr ((++) . (++ ",")) "" (map show types) ++ ")"
     show (DataTypeName s k) = s++":"++show k
     show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"

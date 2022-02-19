@@ -24,27 +24,6 @@ quantBind c q t
     | kind q /= kind t = throwError $ show c ++ " Kinds do not match in substitution: " ++ show q ++ "into " ++ show t
     | otherwise = return (Map.singleton q t)
 
---Algoritmo MGU
-listMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
-listMgu c tts =
-    foldl (\m_subst (dta, dtb) -> do{
-        s <- m_subst;
-        s' <- mgu c (substApply s dta) (substApply s dtb);
-        return $ composeSubst s' s
-    }) (return nullSubst) tts
-
-mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
-mgu c (DataQuant q) t = quantBind c q t
-mgu c t (DataQuant q) = quantBind c q t
-mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
-    if s == s'  && k == k' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
-mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
-    s <- mgu c f f'
-    s' <- mgu c (substApply s a) (substApply s a')
-    return (composeSubst s' s)
-mgu c t t' =
-    throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
-
 -- Classe Types e altre funzioni utili
 
 class Types t where
@@ -67,6 +46,39 @@ instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
+--Algoritmo MGU
+listMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
+listMgu c tts =
+    foldl (\m_subst (dta, dtb) -> do{
+        s <- m_subst;
+        s' <- mgu c (substApply s dta) (substApply s dtb);
+        return $ composeSubst s' s
+    }) (return nullSubst) tts
+
+mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
+mgu c (DataQuant q) t = quantBind c q t
+mgu c t (DataQuant q) = quantBind c q t
+mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
+    if s == s'  && k == k' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
+mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
+    s <- mgu c f f'
+    s' <- mgu c (substApply s a) (substApply s a')
+    return (composeSubst s' s)
+mgu c t t' =
+    throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
+
+{-
+--TODO: Da testare
+mergeInto c src tgt = do
+    s <- mgu c src tgt
+    let
+        keyss = Set.fromList $ map fst $ Map.toList s
+        frees = freetyvars tgt
+        transformsInTgt = Set.intersection keyss frees
+        in if length transformsInTgt /= 0
+        then throwError $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
+        else return s
+-}
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv

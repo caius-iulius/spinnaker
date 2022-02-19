@@ -15,7 +15,7 @@ completeVariant env (c, t, ExprConstructor l es) = do
     zerotoadde <- return [0..length vts - length es -1]
     addesuffixes <- mapM (\_->newUniqueSuffix) zerotoadde
     return $ let
-            addenames = map ("ce"++) addesuffixes
+            addenames = map ("_v"++) addesuffixes
             addees = map (\myl -> (c, DataNOTHING, ExprLabel myl)) addenames
         in foldr (\myl e -> (c, DataNOTHING, ExprLambda (c, Just myl, PatWildcard) e)) (c, DataNOTHING, ExprConstructor l (es ++ addees)) addenames
 completeVariant env (c, t, ExprLambda p e) = do
