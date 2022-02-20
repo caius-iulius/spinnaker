@@ -42,6 +42,7 @@ instance Kinds DataType where
     kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
 
 substApplyKindEnv s (TypingEnv ts ks vs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs
+--TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
 substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(e,t)->(e, kSubstApply s t)) ts)
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (map (\(l,q)->(l, kSubstApply s q)) qs) (map (substApplyVariant s) vs)
 

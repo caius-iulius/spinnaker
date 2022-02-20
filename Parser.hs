@@ -13,7 +13,7 @@ capitalLabelFirst = asciiAlphaUpper
 labelChar = thisChar '_' <|| asciiAlphaNumeric
 tailDigit = thisChar '_' <|| digit
 
-opChar = anyChar ":!$%&*+/-<=>?@\\^|."
+opChar = anyChar ":!$%&*+/-<=>?@\\^|~."
 
 inArrow = "->"
 putSeparator = "|"
