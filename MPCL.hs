@@ -98,7 +98,7 @@ reachedEof = PParse(\(c, s) ->
 --Elabora uno o più elementi del parser specificato
 munch1 p = do {
     e <- p;
-    es <- (munch1 p <|| return []);
+    es <- munch1 p <|| return [];
     return (e:es)
 }
 

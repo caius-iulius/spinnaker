@@ -10,4 +10,4 @@ and odd = \n ->
     | 0 -> False
     | _ -> even (n - 1)
 
-def evenoroddlist = (0..9) |-> map (\n->(even n, odd n))
+def main = (0..9) |-> map $ \n->(even n, odd n)

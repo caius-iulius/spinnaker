@@ -85,7 +85,7 @@ eval (_, _, ExprApp f a) = do
     f' <- eval f
     a' <- eval a
     case f' of
-        (c, DataTypeApp _ at, ExprConstructor v es) -> return (c, at, ExprConstructor v (es++[a']))
+        --(c, DataTypeApp _ at, ExprConstructor v es) -> return (c, at, ExprConstructor v (es++[a']))
         (c, DataTypeApp _ at, ExprLabel bilab) -> do
             bicall <- builtinApply bilab a'
             return (c, at, bicall)

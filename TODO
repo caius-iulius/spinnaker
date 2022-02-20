@@ -1,8 +1,7 @@
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
-migliori messaggi di errore quando le definizioni (di valore e di tipi) sono vuote/non sono complete ecc (quindi serve require dopo i def...)
 phantom types per determinare se un programma è stato tipizzato?
 
-invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costrazione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli "monomorficamente"
+invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costrazione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli monomorficamente
 
 
 CONTROLLO DELLE DEFINIZIONI RICORSIVE:
@@ -17,13 +16,11 @@ DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
 
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
-aggiungi una sintassi if-then-else che decade in un put
-
 supporto multifile
 incorpora file core
 implementa caratteri e completa le stringhe
 
-1. [OK?] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
+1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typeclass / typerel
 3. monomorfizzazione e scelta dei typeclass
 4. defunzionalizzazione in supercombinatori

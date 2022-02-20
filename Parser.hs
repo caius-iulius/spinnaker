@@ -303,7 +303,7 @@ getPut = do
 -- Parser globali
 getVisibility = option Private (thisSyntaxElem "pub" >> return Public)
 -- Parser per le definizioni
-getValDefinition = do {
+getValDefinition = require $ do {
     visib <- getVisibility;
     (c, label) <- getLabel;
     thisSyntaxElem "=";
@@ -357,7 +357,7 @@ getVariant = do {
     tyexprs <- munch getTypeTerm;
     return $ SynDataVariant c label tyexprs
 }
-getDataDefinition = do {
+getDataDefinition = require $ do {
     visib <- getVisibility;
     (c, label) <- getCapitalLabel;
     typevars <- munch getTypeVar; -- TODO 
