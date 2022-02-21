@@ -24,8 +24,8 @@ envGetPubs (DemodEnv m v t c) = (DemodEnv (filterpub m) (filterpub v) (filterpub
 envSetPrivate (DemodEnv m v t c) = (DemodEnv (setpriv m) (setpriv v) (setpriv t) (setpriv c))
     where setpriv = Map.map (\(_, e)->(Private, e))
 --Al momento questo sceglie automaticamente l'elemento di sinistra quando c'è un'ambiguità. Bisogna considerare una scelta a destra o vincolare a contesti disgiunti
-envsUnion :: DemodEnv -> DemodEnv -> DemodEnv
-envsUnion (DemodEnv m v t c) (DemodEnv m' v' t' c') = DemodEnv (Map.union m m') (Map.union v v') (Map.union t t') (Map.union c c')
+envsUnionLeft :: DemodEnv -> DemodEnv -> DemodEnv
+envsUnionLeft (DemodEnv m v t c) (DemodEnv m' v' t' c') = DemodEnv (Map.union m m') (Map.union v v') (Map.union t t') (Map.union c c')
 
 getPathEnv :: StdCoord -> DemodEnv -> [String] -> TyperState DemodEnv
 getPathEnv _ env [] = return env
@@ -127,6 +127,9 @@ demodExpr env (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env (c, --T
         ((c, Nothing, SynPatVariant (Path ["Core"] "True") []), iftrue),
         ((c, Nothing, SynPatVariant (Path ["Core"] "False") []), iffalse)
     ])
+demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
+    env' <- getPathEnv c env (path ++ [labl])
+    demodExpr (envsUnionLeft env' env) e
 
 -- definizioni dei valori globali
 demodValDef env (SynValDef c _ l e) = do
@@ -140,7 +143,7 @@ valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l e:vvdefs) =
         Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already bound"
         Nothing -> do
             suffix <- newUniqueSuffix
-            (env', vdefs') <- valDefGroupEnv (envsUnion env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) vvdefs
+            (env', vdefs') <- valDefGroupEnv (envsUnionLeft env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) vvdefs
             return (env', SynValDef c v (l++suffix) e:vdefs')
 
 -- definizioni dei datatype
@@ -187,7 +190,7 @@ dataVarsEnv v env@(DemodEnv _ _ _ cs) (SynDataVariant c l tes:vardefs) =
         Just _ -> throwError $ show c ++ " Constructor: " ++ show l ++ " already bound"
         Nothing -> do
             suffix <- newUniqueSuffix
-            (env', vardefs') <- dataVarsEnv v (envsUnion env (DemodEnv Map.empty Map.empty Map.empty (Map.singleton l (v, l++suffix)))) vardefs
+            (env', vardefs') <- dataVarsEnv v (envsUnionLeft env (DemodEnv Map.empty Map.empty Map.empty (Map.singleton l (v, l++suffix)))) vardefs
             return (env', SynDataVariant c (l++suffix) tes:vardefs')
 
 dataDefGroupEnv :: DemodEnv -> [SyntaxDataDef] -> TyperState (DemodEnv, [SyntaxDataDef])
@@ -198,7 +201,7 @@ dataDefGroupEnv env@(DemodEnv _ _ ts _) (SynDataDef c v l qs vars:ddefs) =
         Nothing -> do
             suffix <- newUniqueSuffix
             (env', vars') <- dataVarsEnv v env vars
-            (env'', ddefs') <- dataDefGroupEnv (envsUnion env' (DemodEnv Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty)) ddefs
+            (env'', ddefs') <- dataDefGroupEnv (envsUnionLeft env' (DemodEnv Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty)) ddefs
             return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
 
 -- moduli
@@ -216,7 +219,7 @@ demodModDef env (ModUse c v (Path p l)) =
             Private -> envSetPrivate
     in do
         useEnv <- getPathEnv c env (p++[l])
-        return $ (envsUnion (setVisib useEnv) env, BlockProgram [] [])
+        return $ (envsUnionLeft (setVisib useEnv) env, BlockProgram [] [])
 demodModDef env (ModValGroup vvdefs) = do
     (env', vdefs) <- valDefGroupEnv env vvdefs
     vdefs' <- mapM (demodValDef env') vdefs

@@ -224,6 +224,7 @@ getTerm = describeError "Expected term" $ do { --String
     (c, l) <- getPathCapitalLabel;
     return (c, SynExprConstructor l)
 } <|| getListExpr
+  <|| getInlineUse
   <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
     skipUseless;
     (c, _) <- thisChar '(';
@@ -239,30 +240,6 @@ getExpr = do { --FCall e Label nel caso che ce ne sia una
     terms <- munch1 getTerm;
     return $ let (c,_) = head terms in
         foldl1 (\t1 t2 -> (c, SynExprApp t1 t2)) terms
-}
-
-getLambda = do {
-    (c, _) <- thisSyntaxElem "\\";
-    require $ do{
-        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
-        skipUseless;
-        thisSyntaxElem "->";
-        internal <- getMeta; --Expr
-        skipUseless;
-        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
-    }
-}
-
-getIfThenElse = do {
-    (c, _) <- thisSyntaxElem "if";
-    require $ do {
-        cond <- getMeta;
-        thisSyntaxElem "then";
-        iftrue <- getMeta;
-        thisSyntaxElem "else";
-        iffalse <- getMeta;
-        return (c, SynExprIfThenElse cond iftrue iffalse)
-    }
 }
 
 getMeta = getLambda <|| getIfThenElse <|| getLet <|| getPut <|| do { --EXPR OP META
@@ -299,6 +276,42 @@ getPut = do
         branches <- munch1 getBranch;
         return (c, SynExprPut val branches)
     }
+
+getLambda = do {
+    (c, _) <- thisSyntaxElem "\\";
+    require $ do{
+        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
+        skipUseless;
+        thisSyntaxElem "->";
+        internal <- getMeta; --Expr
+        skipUseless;
+        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
+    }
+}
+
+getIfThenElse = do {
+    (c, _) <- thisSyntaxElem "if";
+    require $ do {
+        cond <- getMeta;
+        thisSyntaxElem "then";
+        iftrue <- getMeta;
+        thisSyntaxElem "else";
+        iffalse <- getMeta;
+        return (c, SynExprIfThenElse cond iftrue iffalse)
+    }
+}
+
+getInlineUse = do {
+    path <- getPath;
+    if length path == 0 then pfail "Expected at least a module name" else return ();
+    skipUseless;
+    thisChar '(';
+    m <- require getMeta;
+    skipUseless;
+    require $ thisChar ')';
+    let lablonlypath = map snd path in
+        return $ (fst $ head path, SynExprInlineUse (Path (init lablonlypath) (last lablonlypath)) m)
+}
 
 -- Parser globali
 getVisibility = option Private (thisSyntaxElem "pub" >> return Public)

@@ -28,6 +28,7 @@ toTreeSynExpr (c, SynExprPut val branches) = Node (show c ++ " Put") [Node "val"
 toTreeSynExpr (c, SynExprListNil) = Node (show c ++ " Empty List") []
 toTreeSynExpr (c, SynExprListConss es final) = Node (show c ++ " List") (map toTreeSynExpr es ++ [Node "With final elems" [toTreeSynExpr final]])
 toTreeSynExpr (c, SynExprIfThenElse cond iftrue iffalse) = Node (show c ++ " IfThenElse") [Node "Condition" [toTreeSynExpr cond], Node "If True" [toTreeSynExpr iftrue], Node "If False" [toTreeSynExpr iffalse]]
+toTreeSynExpr (c, SynExprInlineUse path e) = Node (show c ++ "Inline use: " ++ show path) [toTreeSynExpr e]
 
 
 toTreeSynValDef (SynValDef c v s e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s) [toTreeSynExpr e]
