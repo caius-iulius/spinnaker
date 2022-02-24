@@ -109,5 +109,5 @@ evalProgram :: (String, BlockProgram) -> IO HLExpr
 evalProgram (entryPoint, BlockProgram datagroups valgroups) =
     let
         binds = join valgroups
-        env = Map.fromList $ map (\(ValDef _ l e)->(l, e)) binds
+        env = Map.fromList $ map (\(ValDef _ l _ e)->(l, e)) binds
     in runReaderT (eval (Coord "interpreter" 0 0, DataNOTHING, ExprLabel entryPoint)) env

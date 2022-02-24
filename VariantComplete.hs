@@ -27,5 +27,5 @@ completeVariant env (c, t, ExprPut v pses) = do
     return (c, t, ExprPut v' pses')
 
 completeVariantProgram env (BlockProgram datadefs valdefs) = do
-    valdefs' <- mapM (mapM (\(ValDef c l e)-> completeVariant env e >>= (return . ValDef c l)))valdefs
+    valdefs' <- mapM (mapM (\(ValDef c l t e)-> completeVariant env e >>= (return . ValDef c l t))) valdefs
     return (BlockProgram datadefs valdefs')

@@ -4,11 +4,15 @@ use Core
 mod pub Sort {
     def (::) = Cons
 
-    def split = \(curra, currb), lst ->
+    def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
+    = \(curra, currb), lst ->
         put lst
-        | [x, xp | xs] -> split (x :: curra, xp :: currb) xs
+        | [x, xp | xs] -> split_internal (x :: curra, xp :: currb) xs
         | [x] -> (x::curra, currb)
         | [] -> (curra, currb)
+
+    def split : forall a . List a -> (List a, List a)
+    = \lst -> split_internal ([], []) (reverse lst)
 
     def merge = \compare, lists ->
         put lists
@@ -28,8 +32,8 @@ mod pub Sort {
         put list
         | Nil -> Nil
         | Cons x Nil -> list
-        | _ -> let (left, right) = split (Nil, Nil) list ->
+        | _ -> let (left, right) = split list ->
             merge compare (mergesort compare left, mergesort compare right)
 }
 
-def main = Sort.mergesort (<=) [5, 2, -1, 0]
+def main = putStrLn $ Utility.showListInt $ Sort.mergesort (<=) (reverse $ -5..10)

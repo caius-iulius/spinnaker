@@ -44,7 +44,8 @@ instance Kinds DataType where
 substApplyKindEnv s (TypingEnv ts ks vs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
 substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(e,t)->(e, kSubstApply s t)) ts)
-substApplyDataDef s (DataDef c l qs vs) = DataDef c l (map (\(l,q)->(l, kSubstApply s q)) qs) (map (substApplyVariant s) vs)
+substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
+substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
 
 composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
 
@@ -171,3 +172,16 @@ typeDataDefGroups env (ddefs:ddefss) = do
     (s, env', ddefs') <- typeDataDefGroup env ddefs
     (s', env'', ddefss') <- typeDataDefGroups env' ddefss
     return (composeKSubst s' s, env'', map (substApplyDataDef s') ddefs':ddefss') --TODO: è necessaro? se non sbaglio l'env è senza variabili
+
+
+-- Typing degli hint
+typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
+typeValDefHint env vdef@(ValDef _ _ Nothing _) = return vdef
+typeValDefHint env (ValDef c l (Just (tyscheme, _)) e) = do
+    (_, _, dt) <- typeTyExpr env tyscheme
+    lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show dt
+    s <- kindmgu c (kind dt) KType
+    return $ ValDef c l (Just (tyscheme, kSubstApply s dt)) e
+
+typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
+typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

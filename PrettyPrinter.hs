@@ -13,7 +13,7 @@ toTreeHLExpr (c, dt, ExprConstructor l es) = Node (show c ++ " DT:" ++ show dt +
 toTreeHLExpr (c, dt, ExprLambda p expr) = Node (show c ++ " DT:" ++ show dt ++ " Lambda") [Node "arg" [toTreeHLPattern p], Node "expr" [toTreeHLExpr expr]]
 toTreeHLExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "val" [toTreeHLExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHLPattern p], Node "expr" [toTreeHLExpr e]]) branches)]
 
-toTreeHLValDef (ValDef c s e) = Node (show c ++ " Defining val: " ++ show s) [toTreeHLExpr e]
+toTreeHLValDef (ValDef c s t e) = Node (show c ++ " Defining val: " ++ show s ++ " typehint: " ++ show t) [toTreeHLExpr e]
 
 --Roba per Syn
 toTreeSynPattern p = Node (show p) []
@@ -31,7 +31,7 @@ toTreeSynExpr (c, SynExprIfThenElse cond iftrue iffalse) = Node (show c ++ " IfT
 toTreeSynExpr (c, SynExprInlineUse path e) = Node (show c ++ "Inline use: " ++ show path) [toTreeSynExpr e]
 
 
-toTreeSynValDef (SynValDef c v s e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s) [toTreeSynExpr e]
+toTreeSynValDef (SynValDef c v s te e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s ++ " typehint: " ++ show te) [toTreeSynExpr e]
 
 toTreeSynTypeExpr :: SyntaxTypeExpr -> Tree String
 toTreeSynTypeExpr te = Node (show te) []

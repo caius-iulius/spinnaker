@@ -14,5 +14,3 @@ mod State {
         sf' s'
     )
 }
-
-def main = (10, 1.1)

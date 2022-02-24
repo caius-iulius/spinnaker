@@ -36,10 +36,11 @@ mod pub List {
         = Nil
         | Cons a (List a)
 
-    def pub reverse = \acc, l ->
+    def reverse_internal = \acc, l ->
         put l
         | Nil -> acc
-        | Cons x xs -> reverse (Cons x acc) xs
+        | Cons x xs -> reverse_internal (Cons x acc) xs
+    def pub reverse = reverse_internal Nil
 
     def pub head = \Cons x xs -> x
     def pub tail = \Cons x xs -> xs
@@ -106,28 +107,29 @@ mod pub IO {
 use pub IO
 
 mod pub Utility {
-    def writeDigit = \i -> 48 + i
+    def showDigit = \i -> 48 + i
 
-    def writeNonNeg = \i ->
+    def showNonNeg = \i ->
         put i < 10
-        | True -> Cons (writeDigit i) Nil
+        | True -> Cons (showDigit i) Nil
         | _ ->
             let div10 = i/10 ->
-            let prev = writeNonNeg div10 ->
-            prev ++ Cons (writeDigit $ i - div10*10) Nil
+            let prev = showNonNeg div10 ->
+            prev ++ Cons (showDigit $ i - div10*10) Nil
 
-    def pub writeInt = \i ->
+    def pub showInt = \i ->
         put i < 0
-        | True -> Cons 45 (writeNonNeg (0-i))
-        | _ -> writeNonNeg i
+        | True -> Cons 45 (showNonNeg (0-i))
+        | _ -> showNonNeg i
 
-    def writeListIntInternal = \l ->
+    def showListInternal = \f, l ->
         put l
         | Nil -> Cons 93 Nil
-        | Cons x Nil -> writeInt x ++ Cons 93 Nil
-        | Cons x xs -> writeInt x ++ Cons 44 (Cons 32 Nil) ++ writeListIntInternal xs
+        | Cons x Nil -> f x ++ Cons 93 Nil
+        | Cons x xs -> f x ++ Cons 44 (Cons 32 Nil) ++ showListInternal f xs
 
-    def pub writeListInt = \l -> Cons 91 (writeListIntInternal l)
+    def pub showList = \f, l -> Cons 91 (showListInternal f l)
+    def pub showListInt = showList showInt
 }
 
 # NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...

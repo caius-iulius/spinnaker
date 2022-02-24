@@ -10,7 +10,7 @@ endif
 syn keyword mylangTopDef mod data def and
 syn keyword mylangTopKeyword use
 syn keyword mylangTopAccess pub
-syn keyword mylangKeyword let put
+syn keyword mylangKeyword let put forall
 syn keyword mylangConditional if then else
 syn match mylangOperator "\v[:!$%&\*\+/\-<=>\?@\\^|~.]+"
 " syn match haskellChar "\<'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'\>"

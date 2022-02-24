@@ -15,8 +15,9 @@ import VariantComplete
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
     handle <- openFile "core" ReadMode;
     contents <- hGetContents handle;
-    let POk coreParsed _ = parse getProgram (Coord "Core" 1 1, contents)
-        in return coreParsed
+    case parse getProgram (Coord "Core" 1 1, contents) of
+        POk coreParsed _ -> return coreParsed
+        err -> error $ show err
 }
 
 frontendCompile :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))

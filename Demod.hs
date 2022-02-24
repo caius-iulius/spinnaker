@@ -132,19 +132,29 @@ demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
     demodExpr (envsUnionLeft env' env) e
 
 -- definizioni dei valori globali
-demodValDef env (SynValDef c _ l e) = do
+demodTySchemeExpr :: DemodEnv -> SyntaxTySchemeExpr -> TyperState HLTySchemeExpr
+demodTySchemeExpr env (c, qls, te) = do --TODO: Questo codice fa cagare ed è duplicato
+    (qmap, _) <- buildQmapQlist c qls
+    demodTypeExpr env qmap te
+
+demodValDef env (SynValDef c _ l t e) = do
+    t' <- case t of
+        Nothing -> return $ Nothing
+        Just te -> do
+            te' <- demodTySchemeExpr env te
+            return $ Just (te', DataNOTHING)
     e' <- demodExpr env e
-    return (ValDef c l e')
+    return (ValDef c l t' e')
 
 valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> TyperState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
-valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l e:vvdefs) =
+valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l t e:vvdefs) =
     case Map.lookup l vs of
         Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already bound"
         Nothing -> do
             suffix <- newUniqueSuffix
             (env', vdefs') <- valDefGroupEnv (envsUnionLeft env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) vvdefs
-            return (env', SynValDef c v (l++suffix) e:vdefs')
+            return (env', SynValDef c v (l++suffix) t e:vdefs')
 
 -- definizioni dei datatype
 demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState HLTypeExpr
@@ -165,14 +175,8 @@ demodTypeExpr env qmap (c, SynTypeExprApp stef steas) = do
     teas <- mapM (demodTypeExpr env qmap) steas
     return $ foldl (\f a -> (c, TypeExprApp f a)) tef teas --TODO: Le applicazioni di typesyn vanno gestite diversamente
 
-demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
-demodDataVar env qmap (SynDataVariant c l stes) = do
-    tes <- mapM (demodTypeExpr env qmap) stes
-    return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
-
-demodDataDef :: DemodEnv -> SyntaxDataDef -> TyperState HLDataDef
-demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagare
-    (qmap, qlist) <- foldl (\mqmapqlist ql -> do
+buildQmapQlist c qls =
+    foldl (\mqmapqlist ql -> do
         (qmap, qlist) <- mqmapqlist
         newk <- freshKind
         newq <- newTyQuant newk
@@ -180,6 +184,15 @@ demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagar
             Just _ -> throwError $ show c ++ " Type quantifier: " ++ show ql ++ " already bound"
             Nothing -> return $ (Map.union qmap (Map.singleton ql newq), qlist ++ [(ql, newq)])
         ) (return (Map.empty, [])) qls
+
+demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
+demodDataVar env qmap (SynDataVariant c l stes) = do
+    tes <- mapM (demodTypeExpr env qmap) stes
+    return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
+
+demodDataDef :: DemodEnv -> SyntaxDataDef -> TyperState HLDataDef
+demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagare
+    (qmap, qlist) <- buildQmapQlist c qls
     vars' <- mapM (demodDataVar env qmap) vars
     return (DataDef c l qlist vars')
 

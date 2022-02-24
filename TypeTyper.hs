@@ -67,7 +67,6 @@ mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
 mgu c t t' =
     throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
 
-{-
 --TODO: Da testare
 mergeInto c src tgt = do
     s <- mgu c src tgt
@@ -78,7 +77,6 @@ mergeInto c src tgt = do
         in if length transformsInTgt /= 0
         then throwError $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
         else return s
--}
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
@@ -233,16 +231,16 @@ substApplyExpr s (c, dt, ExprConstructor l es) = (c, substApply s dt, ExprConstr
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
 
-substApplyValDef s (ValDef c l e) = ValDef c l (substApplyExpr s e)
+substApplyValDef s (ValDef c l t e) = ValDef c l t (substApplyExpr s e)
 
 --Funzioni per le definizioni globali
-typeValDef env (ValDef c l e) = do
+typeValDef env (ValDef c l t e) = do
     (s, dt, e') <- typeExpr env e
     lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show dt ++ " and subst: " ++ show s
-    return (s, ValDef c l e')
+    return (s, ValDef c l t e')
 
 quantifiedValDefEnv init_env [] = return init_env
-quantifiedValDefEnv env (ValDef c s _:vdefs) = do
+quantifiedValDefEnv env (ValDef c s _ _:vdefs) = do
     t <- freshType KType
     env' <- return $ tyBindAdd c env s (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
@@ -254,16 +252,25 @@ typeValDefsLoop env (vdef:vdefs) = do
     return (composeSubst s' s, vdef':vdefs')
 
 addValDefsEnv env vdefs = foldl
-    (\e (ValDef c l (_, t, _))->
+    (\e (ValDef c l _ (_, t, _))->
             tyBindAdd c e l (generalize e t)
         ) env vdefs
 
-unionValDefEnv (TypingEnv ts _ _) (ValDef c l (_, t, _)) = do
+unionValDefEnv (TypingEnv ts _ _) (ValDef c l _ (_, t, _)) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
     s <- mgu c t tFromEnv
     lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
     return s
+
+checkValDefsHint _ [] = return nullSubst
+checkValDefsHint env (ValDef c l Nothing _:vdefs) = checkValDefsHint env vdefs
+checkValDefsHint env@(TypingEnv ts _ _) (ValDef c l (Just (_, hint)) _:vdefs) = do
+    tFromEnv <- case Map.lookup l ts of
+        Just scheme -> instantiate scheme
+    s <- mergeInto c tFromEnv hint
+    s' <- checkValDefsHint (substApply s env) vdefs
+    return (composeSubst s' s)
 
 -- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
 -- TODO: Mi sa che questa funzione non dovrebbe restituire una sostituzione
@@ -271,11 +278,14 @@ typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
-    let s' = foldl (flip composeSubst) s substs
-        vdefs'' = map (substApplyValDef s') vdefs'
-        env' = addValDefsEnv (substApply s' env) vdefs''
-        in if (0 == (length $ freetyvars env')) then return (s', env', vdefs'')
-        else throwError $ show ((\(ValDef c _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
+    s' <- return $ foldl (flip composeSubst) s substs
+    s'' <- checkValDefsHint (substApply s' vars_env) vdefs' --TODO: La posizione è giusta?
+    let
+        sfinal = composeSubst s'' s'
+        vdefs'' = map (substApplyValDef sfinal) vdefs'
+        env' = addValDefsEnv (substApply sfinal env) vdefs''
+        in if (0 == (length $ freetyvars env')) then return (sfinal, env', vdefs'')
+        else throwError $ show ((\(ValDef c _ _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])
 typeValDefGroups env (vdefs:vdefss) = do

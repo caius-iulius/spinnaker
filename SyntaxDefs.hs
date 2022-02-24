@@ -31,10 +31,6 @@ data SyntaxExprData
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
 
-data SyntaxValDef = SynValDef StdCoord Visibility String (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
-    deriving Show
-
--- TODO Rifai in vista dei tipi higher kinded
 data SyntaxTypeExprData
     = SynTypeExprQuantifier String -- Nome del quantifier, forse va incorporato con SynTypeExprName?
     | SynTypeExprTuple [SyntaxTypeExpr] --Lista di tipi della n-tupla
@@ -42,6 +38,10 @@ data SyntaxTypeExprData
     | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
+type SyntaxTySchemeExpr = (StdCoord, [String], SyntaxTypeExpr)
+
+data SyntaxValDef = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
+    deriving Show
 
 data SyntaxDataVariant =
     SynDataVariant StdCoord String [SyntaxTypeExpr] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi

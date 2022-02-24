@@ -15,14 +15,9 @@ tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":!$%&*+/-<=>?@\\^|~."
 
-inArrow = "->"
-putSeparator = "|"
-lambdaInit = "\\"
-fieldDot = "."
+validSymbols = ["->", "|", "\\", "."]
 
-validSymbols = [inArrow, putSeparator, lambdaInit, fieldDot]
-
-keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "def", "data", "typesyn", "use", "mod"]
+keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "forall", "def", "data", "typesyn", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -315,19 +310,6 @@ getInlineUse = do {
 
 -- Parser globali
 getVisibility = option Private (thisSyntaxElem "pub" >> return Public)
--- Parser per le definizioni
-getValDefinition = require $ do {
-    visib <- getVisibility;
-    (c, label) <- getLabel;
-    thisSyntaxElem "=";
-    meta <- getMeta;
-    return $ SynValDef c visib label meta
-}
-getValDefinitions = do {
-    thisSyntaxElem "def";
-    defs <- sepBy1 getValDefinition (thisSyntaxElem "and");
-    return $ ModValGroup defs
-}
 
 -- Parser per i tipi
 getTypeVar = getLabel --TODO: Anche i tipi higher-order? magari è sintassi diversa
@@ -363,6 +345,34 @@ getTypeMeta = do {
     m <- require getTypeMeta;
     return (c, SynTypeExprApp (c, SynTypeExprName $ Path [] "->") [e, m])
 } <|| getTypeExpr
+
+getTyScheme = do {
+    (c, _) <- thisSyntaxElem "forall";
+    require $ do {
+        typevars <- munch getTypeVar; -- TODO
+        thisSyntaxElem ".";
+        m <- getTypeMeta;
+        return (c, map snd typevars, m)
+    }
+} <|| do {
+    m <- getTypeMeta;
+    return (fst m, [], m)
+}
+
+-- Parser per le definizioni
+getValDefinition = require $ do {
+    visib <- getVisibility;
+    (c, label) <- getLabel;
+    typehint <- option Nothing (thisSyntaxElem ":" >> (require $ getTyScheme >>= return . Just));
+    thisSyntaxElem "=";
+    meta <- getMeta;
+    return $ SynValDef c visib label typehint meta
+}
+getValDefinitions = do {
+    thisSyntaxElem "def";
+    defs <- sepBy1 getValDefinition (thisSyntaxElem "and");
+    return $ ModValGroup defs
+}
 
 -- Parser vari per datatype
 getVariant = do {
