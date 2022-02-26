@@ -80,7 +80,7 @@ describeError s p = PParse(\cs ->
     let resp = parse p cs in case resp of
         POk _ _ -> resp
         PFatal _ _ -> resp
-        PFail c preve -> PFail (fst cs) s --parse (PPFail (fst cs, s)) cs
+        PFail c preve -> PFail (fst cs) s
     )
 
 --Messaggio di errore in caso di fallimento "soft"
@@ -107,8 +107,8 @@ munch p = munch1 p <|| return []
 
 --Elabora uno o più p separati da sep
 sepBy1 p sep = do {
-    e <- {-detailError "Expected at least one element in the sequence: "-} p;
-    es <- munch (sep >> require p); -- In questo modo se c'è il separatore è necessario l'elemento
+    e <- p;
+    es <- munch (sep >> require p); -- se c'è il separatore è necessario l'elemento
     return (e:es)
 }
 

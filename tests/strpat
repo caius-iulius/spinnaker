@@ -1,0 +1,13 @@
+use Core
+
+def strtonum = \s -> put s
+    | "uno" -> 1
+    | "due" -> 2
+    | "tre" -> 3
+    | _     -> -1
+
+def main =
+    putStrLn $
+    Utility.showListInt $
+    map strtonum
+        ["uno", "due", "tre", "nonvalido", "un", "ue"]

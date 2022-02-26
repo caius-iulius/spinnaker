@@ -2,7 +2,6 @@
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
 module Parser where
 import Data.Char
-import GHC.Unicode
 import MPCL
 import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
 import HLDefs
@@ -100,10 +99,7 @@ getLiteral = describeError "Expected literal" $ do {
 } <|| do {
     (c, i) <- getInteger;
     return $ (c, LitInteger i)
-} {- <|| do {
-    (c, s) <- getString;
-    return $ (c, LitString s)
-} -}
+}
 
 getOperatorText = do {
     skipUseless;
@@ -166,6 +162,9 @@ getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless 
 })
 
 getPatternTerm = describeError "Expected pattern term" $ do {
+    (c, s) <- getString;
+    return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitInteger $ ord char)) s) (c, Nothing, SynPatListNil))
+} <|| do {
     (c, l) <- getLiteral;
     return (c, Nothing, SynPatLiteral l)
 } <|| do {
@@ -312,9 +311,8 @@ getInlineUse = do {
 getVisibility = option Private (thisSyntaxElem "pub" >> return Public)
 
 -- Parser per i tipi
-getTypeVar = getLabel --TODO: Anche i tipi higher-order? magari è sintassi diversa
+getTypeVar = getLabel
 
--- TODO: TypeMeta, test typeexpr
 getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
     return (c, SynTypeExprQuantifier l)
@@ -383,10 +381,10 @@ getVariant = do {
 getDataDefinition = require $ do {
     visib <- getVisibility;
     (c, label) <- getCapitalLabel;
-    typevars <- munch getTypeVar; -- TODO 
+    typevars <- munch getTypeVar; -- TODO
     thisSyntaxElem "=";
     variants <- sepBy getVariant $ thisSyntaxElem "|";
-    return $  SynDataDef c visib label (map snd typevars) variants --TODO quantificatore iniziale?
+    return $  SynDataDef c visib label (map snd typevars) variants
 }
 
 getDataDefinitions = do {

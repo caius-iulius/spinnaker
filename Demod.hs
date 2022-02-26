@@ -133,7 +133,7 @@ demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
 
 -- definizioni dei valori globali
 demodTySchemeExpr :: DemodEnv -> SyntaxTySchemeExpr -> TyperState HLTySchemeExpr
-demodTySchemeExpr env (c, qls, te) = do --TODO: Questo codice fa cagare ed è duplicato
+demodTySchemeExpr env (c, qls, te) = do
     (qmap, _) <- buildQmapQlist c qls
     demodTypeExpr env qmap te
 
