@@ -23,8 +23,9 @@ implementa caratteri e completa le stringhe
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typeclass / typerel
 3. monomorfizzazione e scelta dei typeclass
-4. defunzionalizzazione in supercombinatori
+4. notazione do
+5. defunzionalizzazione in supercombinatori
     K-Normal o A-Normal form
     Semplificazione a un branch per putexpr
-5. compilazione a C
-6. ottimizzazioni su HLExpr
+6. compilazione a C
+7. ottimizzazioni su HLExpr
