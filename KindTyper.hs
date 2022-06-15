@@ -43,7 +43,7 @@ instance Kinds DataType where
 
 substApplyKindEnv s (TypingEnv ts ks vs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
-substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(e,t)->(e, kSubstApply s t)) ts)
+substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(c,t)->(c, kSubstApply s t)) ts)
 substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
 
@@ -83,34 +83,36 @@ getTyData c (TypingEnv _ ts _) l =
         Nothing -> throwError $ show c ++ " Unbound typename: " ++ l
         Just k -> return k
 
-typeTyExpr :: TypingEnv -> HLTypeExpr -> TyperState (KindSubst, Kind, DataType)
-typeTyExpr _ (c, TypeExprQuant q) =
+typeTyExpr :: StdCoord -> TypingEnv -> DataType -> TyperState (KindSubst, Kind, DataType)
+typeTyExpr _ env (DataCOORD c dt) = typeTyExpr c env dt
+typeTyExpr c _ (DataQuant q) =
     return (nullKSubst, kind q, DataQuant q)
 {-typeTyExpr env qmap (c, TypeExprTuple exprs) = do
     (s, ts) <- typeTyExprsStar env qmap exprs
     return $ (s, KType, DataTuple ts)-}
-typeTyExpr env (c, TypeExprName l) = do
-    k <- getTyData c env l
-    return (nullKSubst, k, DataTypeName l k)
-typeTyExpr env (c, TypeExprApp f a) = do
+typeTyExpr c env (DataTypeName l k) = do
+    k' <- getTyData c env l
+    return (nullKSubst, k', DataTypeName l k')
+typeTyExpr c env (DataTypeApp f a) = do
     q <- freshKind
-    (s1, k1, tf) <- typeTyExpr env f
-    (s2, k2, ta) <- typeTyExpr env a
+    (s1, k1, tf) <- typeTyExpr c env f
+    (s2, k2, ta) <- typeTyExpr c env a
     s3 <- kindmgu c (kSubstApply s2 k1) (KFun k2 q)
     let finals = composeKSubst s3 (composeKSubst s2 s1)
         finalk = kSubstApply s3 q in
             return (finals, finalk, DataTypeApp (kSubstApply finals tf) (kSubstApply finals ta))
 
+typeTyExprsStar :: TypingEnv -> [(StdCoord, DataType)] -> TyperState (KindSubst, [(StdCoord, DataType)])
 typeTyExprsStar env [] = return (nullKSubst, [])
-typeTyExprsStar env (e@(c,_):es) = do
-    (s, k, t) <- typeTyExpr env e
+typeTyExprsStar env ((c,e):es) = do
+    (s, k, t) <- typeTyExpr c env e
     s1 <- kindmgu c k KType
     (s2, ts) <- typeTyExprsStar env es
-    return (composeKSubst s2 (composeKSubst s1 s), (kSubstApply s2 t):ts)
+    return (composeKSubst s2 (composeKSubst s1 s), (c, kSubstApply s2 t):ts)
 
-typeDataVariant env (DataVariant c l ests) = let es = map fst ests in do
+typeDataVariant env (DataVariant c l es) = do
     (s, ts) <- typeTyExprsStar env es
-    return (s, DataVariant c l (zip es ts))
+    return (s, DataVariant c l ts)
 
 typeDataVariants env [] = return (nullKSubst, [])
 typeDataVariants env (v:vs) = do
@@ -135,8 +137,8 @@ addDataDefsEnv :: TypingEnv -> [HLDataDef] -> TypingEnv
 addDataDefsEnv env ddefs =
     let datadeftotype (DataDef _ l qs vs) =
             foldl DataTypeApp (DataTypeName l (qstokind qs)) (map (DataQuant . snd) qs)
-        varianttovdata t qs (DataVariant _ l ests) =
-            Map.singleton l (VariantData l (map snd qs) (map snd ests) t)
+        varianttovdata t qs (DataVariant _ l ts) =
+            Map.singleton l (VariantData l (map snd qs) (map snd ts) t)
         getvariantdatas ddef@(DataDef _ l qs vs) =
             Map.unions $ map (varianttovdata (datadeftotype ddef) qs) vs
     in foldl (\(TypingEnv ts ks vs) ddef@(DataDef c l qs _)->
@@ -177,11 +179,11 @@ typeDataDefGroups env (ddefs:ddefss) = do
 -- Typing degli hint
 typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
 typeValDefHint env vdef@(ValDef _ _ Nothing _) = return vdef
-typeValDefHint env (ValDef c l (Just (tyscheme, _)) e) = do
-    (_, _, dt) <- typeTyExpr env tyscheme
+typeValDefHint env (ValDef c l (Just tyscheme) e) = do
+    (_, _, dt) <- typeTyExpr c env tyscheme
     lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show dt
     s <- kindmgu c (kind dt) KType
-    return $ ValDef c l (Just (tyscheme, kSubstApply s dt)) e
+    return $ ValDef c l (Just (kSubstApply s dt)) e
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

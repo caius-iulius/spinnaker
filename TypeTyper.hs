@@ -19,7 +19,9 @@ composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
 
 quantBind :: StdCoord -> TyQuant -> DataType -> TyperState Subst
 quantBind c q t
-    | t == DataQuant q = return nullSubst
+    | (case t of
+        DataQuant q' -> q' == q
+        _ -> False) = return nullSubst
     | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show q ++ " into " ++ show t
     | kind q /= kind t = throwError $ show c ++ " Kinds do not match in substitution: " ++ show q ++ "into " ++ show t
     | otherwise = return (Map.singleton q t)
@@ -265,7 +267,7 @@ unionValDefEnv (TypingEnv ts _ _) (ValDef c l _ (_, t, _)) = do
 
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _:vdefs) = checkValDefsHint env vdefs
-checkValDefsHint env@(TypingEnv ts _ _) (ValDef c l (Just (_, hint)) _:vdefs) = do
+checkValDefsHint env@(TypingEnv ts _ _) (ValDef c l (Just hint) _:vdefs) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
     s <- mergeInto c tFromEnv hint

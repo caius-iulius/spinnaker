@@ -15,7 +15,7 @@ toTreeHLExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt +
 
 toTreeHLValDef (ValDef c s t e) = Node (show c ++ " Defining val: " ++ show s ++ " typehint: " ++ show t) [toTreeHLExpr e]
 
-toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\(e, t)->Node "Arg" [Node (show e) [], Node (show t) []]) args)
+toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\t->Node ("Arg: " ++ show t) []) args)
 toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHLDataVariant variants)
 

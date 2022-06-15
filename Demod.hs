@@ -132,7 +132,7 @@ demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
     demodExpr (envsUnionLeft env' env) e
 
 -- definizioni dei valori globali
-demodTySchemeExpr :: DemodEnv -> SyntaxTySchemeExpr -> TyperState HLTySchemeExpr
+demodTySchemeExpr :: DemodEnv -> SyntaxTySchemeExpr -> TyperState DataType
 demodTySchemeExpr env (c, qls, te) = do
     (qmap, _) <- buildQmapQlist c qls
     demodTypeExpr env qmap te
@@ -142,7 +142,7 @@ demodValDef env (SynValDef c _ l t e) = do
         Nothing -> return $ Nothing
         Just te -> do
             te' <- demodTySchemeExpr env te
-            return $ Just (te', DataNOTHING)
+            return $ Just te'
     e' <- demodExpr env e
     return (ValDef c l t' e')
 
@@ -157,23 +157,23 @@ valDefGroupEnv env@(DemodEnv _ vs _ _) (SynValDef c v l t e:vvdefs) =
             return (env', SynValDef c v (l++suffix) t e:vdefs')
 
 -- definizioni dei datatype
-demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState HLTypeExpr
+demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState DataType
 demodTypeExpr env qmap (c, SynTypeExprQuantifier l) =
     case Map.lookup l qmap of
         Nothing -> throwError $ show c ++ " Type quantifier: " ++ show l ++ " not bound"
-        Just q -> return (c, TypeExprQuant q)
+        Just q -> return $ DataCOORD c (DataQuant q)
 demodTypeExpr env qmap (c, SynTypeExprTuple stes) = do
     tes <- mapM (demodTypeExpr env qmap) stes
-    return $ foldl (\tef tea -> (c, TypeExprApp tef tea)) (c, TypeExprName $ "()" ++ (show $ length tes)) tes
+    return $ foldl (\tef tea -> DataCOORD c (DataTypeApp tef tea)) (DataCOORD c (DataTypeName ("()" ++ (show $ length tes)) KindNOTHING)) tes
 demodTypeExpr env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     (DemodEnv _ _ ts _) <- getPathEnv c env path
     case Map.lookup labl ts of
         Nothing -> throwError $ show c ++ " Type label: " ++ show pathlabl ++ " not bound"
-        Just (_, nlabl) -> return (c, TypeExprName nlabl)
+        Just (_, nlabl) -> return $ DataCOORD c (DataTypeName nlabl KindNOTHING)
 demodTypeExpr env qmap (c, SynTypeExprApp stef steas) = do
     tef <- demodTypeExpr env qmap stef
     teas <- mapM (demodTypeExpr env qmap) steas
-    return $ foldl (\f a -> (c, TypeExprApp f a)) tef teas --TODO: Le applicazioni di typesyn vanno gestite diversamente
+    return $ foldl (\f a -> DataCOORD c (DataTypeApp f a)) tef teas --TODO: Le applicazioni di typesyn vanno gestite diversamente
 
 buildQmapQlist c qls =
     foldl (\mqmapqlist ql -> do
@@ -188,7 +188,7 @@ buildQmapQlist c qls =
 demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
 demodDataVar env qmap (SynDataVariant c l stes) = do
     tes <- mapM (demodTypeExpr env qmap) stes
-    return $ DataVariant c l (map (\te->(te,DataNOTHING)) tes)
+    return $ DataVariant c l (map (\(DataCOORD c t)->(c, DataCOORD c t)) tes)
 
 demodDataDef :: DemodEnv -> SyntaxDataDef -> TyperState HLDataDef
 demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagare

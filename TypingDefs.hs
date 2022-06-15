@@ -2,6 +2,7 @@ module TypingDefs where
 import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
+import MPCL(StdCoord)
 
 type KindQuant = Int
 
@@ -28,14 +29,15 @@ instance Show TyQuant where
 
 data DataType
     = DataNOTHING --Tipo temporaneo generato dal parser
+    | DataCOORD StdCoord DataType --Tipo temporaneo generato dal parser, serve per migliorare i messaggi di errore nel kind inference, dopodiché vengono eliminati.
     | DataQuant TyQuant --Quantificatore
     | DataTypeName String Kind -- Nome del tipo, kind del tipo
     | DataTypeApp DataType DataType --Funzione di tipi, argomento
-    deriving Eq
 
 -- TODO: Miglior debug per tipi tupla (o tipi-nome)
 instance Show DataType where
     show DataNOTHING = "NOTHING"
+    show (DataCOORD c dt) = "AT("++show c ++ ", " ++ show dt ++ ")"
     show (DataQuant q) = show q
     show (DataTypeName s k) = s++":"++show k
     show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni

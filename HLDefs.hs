@@ -24,20 +24,12 @@ data HLExprData
     deriving Show
 type HLExpr = (StdCoord, DataType, HLExprData)
 
-data HLTypeExprData
-    = TypeExprQuant TyQuant
-    | TypeExprName String
-    | TypeExprApp HLTypeExpr HLTypeExpr
-    deriving Show
-type HLTypeExpr = (StdCoord, HLTypeExprData)
-type HLTySchemeExpr = HLTypeExpr
-
 data HLValDef
-    = ValDef StdCoord String (Maybe (HLTySchemeExpr, DataType)) HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
+    = ValDef StdCoord String (Maybe DataType) HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
 data HLDataVariant
-    = DataVariant StdCoord String [(HLTypeExpr, DataType)]
+    = DataVariant StdCoord String [(StdCoord, DataType)]
     deriving Show
 
 data HLDataDef
