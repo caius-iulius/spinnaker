@@ -32,15 +32,16 @@ data HLTypeExprData
 type HLTypeExpr = (StdCoord, HLTypeExprData)
 type HLTySchemeExpr = HLTypeExpr
 
-data HLValDef = ValDef StdCoord String (Maybe (HLTySchemeExpr, DataType)) HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
+data HLValDef
+    = ValDef StdCoord String (Maybe (HLTySchemeExpr, DataType)) HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
-data HLDataVariant =
-    DataVariant StdCoord String [(HLTypeExpr, DataType)]
+data HLDataVariant
+    = DataVariant StdCoord String [(HLTypeExpr, DataType)]
     deriving Show
 
-data HLDataDef =
-    DataDef StdCoord String [(String, TyQuant)] [HLDataVariant]
+data HLDataDef
+    = DataDef StdCoord String [(String, TyQuant)] [HLDataVariant]
     deriving Show
 
 data BlockProgram = BlockProgram [[HLDataDef]] [[HLValDef]]

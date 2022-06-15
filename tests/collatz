@@ -1,0 +1,13 @@
+use Core
+
+def collatz = \l, n ->
+    if n = 1 then Cons 1 l else
+    collatz (Cons n l) (
+        put (n = 2 * n / 2)
+        | True -> (n / 2)
+        | False -> (1 + 3*n))
+
+def main = IO.putStrLn
+         $ Utility.showListInt
+         $ List.reverse
+         $ collatz [] 42

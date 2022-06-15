@@ -242,6 +242,7 @@ demodModDef env (ModDataGroup ddefs) = do
     ddefs'' <- mapM (demodDataDef env') ddefs'
     return (env', BlockProgram [ddefs''] [])
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
+demodModDef env (ModRel _ _ _ _ _ _) = error "TODO demod dei RelDef"
 
 concatBlockPrograms (BlockProgram datagroups valgroups) (BlockProgram datagroups' valgroups') = BlockProgram (datagroups++datagroups') (valgroups++valgroups')
 

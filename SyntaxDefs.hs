@@ -38,28 +38,34 @@ data SyntaxTypeExprData
     | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
-type SyntaxTySchemeExpr = (StdCoord, [String], SyntaxTypeExpr)
+type SyntaxTyConstraint = (StdCoord, Path, [SyntaxTypeExpr])
+type SyntaxTySchemeExpr = (StdCoord, [String], {-[SyntaxTyConstraint],-} SyntaxTypeExpr)
 
-data SyntaxValDef = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
+data SyntaxValDef
+    = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
     deriving Show
 
-data SyntaxDataVariant =
-    SynDataVariant StdCoord String [SyntaxTypeExpr] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi
+data SyntaxDataVariant
+    = SynDataVariant StdCoord String [SyntaxTypeExpr] --Coordinate della definizione, nome della variante, lista di argomenti sia come tipo concreto (da assegnare in fase di tipizzazione), sia come espressione di tipi
     deriving Show
 
-data SyntaxDataDef =
-    SynDataDef StdCoord Visibility String [String] [SyntaxDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
+data SyntaxDataDef
+    = SynDataDef StdCoord Visibility String [String] [SyntaxDataVariant] --Coordinate della definizione, nome del tipo, lista di tipi argomento e quantificatori corrispondenti (da assegnare in fase di tipizzazione), varianti del tipo
     deriving Show
 
 data Visibility = Public | Private
     deriving Show
 
+type SyntaxModRelValDecl = (StdCoord, String, SyntaxTySchemeExpr)
 data SyntaxModDef
     = ModMod StdCoord Visibility String SyntaxModule
     | ModUse StdCoord Visibility Path
     | ModTypeSyn StdCoord Visibility String [String] SyntaxTypeExpr
     | ModValGroup [SyntaxValDef]
     | ModDataGroup [SyntaxDataDef]
+    | ModRel StdCoord Visibility [SyntaxTyConstraint] String [String] [SyntaxModRelValDecl] --visibilità, condizioni (superclassi), nome, tyvars, corpo
+    | ModInst StdCoord ([String], [SyntaxTyConstraint], SyntaxTyConstraint) [(StdCoord, String, SyntaxExpr)]-- visibilità, predicato quantificato da constraints con forall, definizioni
+    -- TODO: ModInst
     deriving Show
 data SyntaxModule = Module [SyntaxModDef]
     deriving Show

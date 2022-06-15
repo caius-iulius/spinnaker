@@ -1,0 +1,35 @@
+rel pub Show a =
+    show : a -> String
+
+rel Functor f =
+    fmap : forall a b . (a -> b) -> f a -> f b
+
+rel {Functor m} => Monad m =
+    return : forall a . a -> m a,
+    bind : forall a b . m a -> (a -> m b) -> m b
+
+rel Num a =
+    (+) : a -> a -> a,
+    (-) : a -> a -> a,
+    (*) : a -> a -> a,
+    (/) : a -> a -> a
+
+def double : forall a . {Num a} => a -> a
+           = \x -> x + x
+
+inst Functor Maybe {
+    def fmap = \f, m -> put m
+        | None -> None
+        | Some x -> Some (f x)
+}
+
+inst Monad Maybe {
+    def return = \x -> Just x
+    def bind = \m, f -> put m
+        | None -> None
+        | Some x -> f x
+}
+
+inst forall a b. {Show a, Show b} => Show (a, b) {
+    def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
+}

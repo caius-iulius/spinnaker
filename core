@@ -1,4 +1,4 @@
-# TODO:Questo file andrà copiato in una stringa in defs.rs
+# TODO:Questo file andrà copiato in una stringa nel compilatore
 
 # operatori di base
 def pub (+) = \a,b->_addInt(a,b)

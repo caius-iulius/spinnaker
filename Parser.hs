@@ -14,9 +14,9 @@ tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":!$%&*+/-<=>?@\\^|~."
 
-validSymbols = ["->", "|", "\\", "."]
+validSymbols = ["->", "|", "\\", ".", "=>"]
 
-keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "forall", "def", "data", "typesyn", "use", "mod"]
+keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "forall", "def", "data", "typesyn", "rel", "inst", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -26,6 +26,9 @@ lineComment = do {
 skipUseless = do {
     munch (discard whiteSpace <|| discard lineComment);
 }
+
+thisUsefulChar c = skipUseless >> thisChar c
+
 getLabelText = do {
     skipUseless;
     (c, f) <- labelFirst;
@@ -117,11 +120,9 @@ getOperator = do {
 }
 
 getLabel = do {
-    skipUseless;
-    thisChar '(';
+    thisUsefulChar '(';
     op <- getOperator;
-    skipUseless;
-    require $ describeError "Expected closing paren after operator section" $ thisChar ')';
+    require $ describeError "Expected closing paren after operator section" $ thisUsefulChar ')';
     return op
 } <|| do {
     (c, s) <- getLabelText;
@@ -155,11 +156,10 @@ getPathCapitalLabel = do {
 -- Analisi semantica
 
 -- Parser vari per pattern
-getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
-    es <- sepBy1 getPatternExpr (skipUseless >> thisChar ',');
+getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
+    es <- sepBy1 getPatternExpr (thisUsefulChar ',');
     final <- option (c, Nothing, SynPatListNil) (thisSyntaxElem "|" >> require getPatternExpr);
-    skipUseless;
-    thisChar ']';
+    thisUsefulChar ']';
     return (c, Nothing, SynPatListConss es final)
 })
 
@@ -181,11 +181,9 @@ getPatternTerm = describeError "Expected pattern term" $ do {
     else pfail ""
 } <|| getListPat
   <|| do {
-    skipUseless;
-    (c, _) <- thisChar '(';
-    m <- sepBy getPatternExpr (skipUseless >> thisChar ',');
-    skipUseless;
-    require $ thisChar ')';
+    (c, _) <- thisUsefulChar '(';
+    m <- sepBy getPatternExpr (thisUsefulChar ',');
+    require $ thisUsefulChar ')';
 
     if length m == 1
     then return $ head m
@@ -199,11 +197,10 @@ getPatternExpr = do{
 } <|| getPatternTerm
 
 -- Parser vari per le espressioni
-getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (skipUseless >> thisChar ']' >> return (c, SynExprListNil)) <|| do {
-    es <- sepBy1 getMeta (skipUseless >> thisChar ',');
+getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulChar ']' >> return (c, SynExprListNil)) <|| do {
+    es <- sepBy1 getMeta (thisUsefulChar ',');
     final <- option (c, SynExprListNil) (thisSyntaxElem "|" >> require getMeta);
-    skipUseless;
-    thisChar ']';
+    thisUsefulChar ']';
     return (c, SynExprListConss es final)
 })
 
@@ -222,11 +219,9 @@ getTerm = describeError "Expected term" $ do { --String
 } <|| getListExpr
   <|| getInlineUse
   <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
-    skipUseless;
-    (c, _) <- thisChar '(';
-    m <- sepBy getMeta (skipUseless >> thisChar ',');
-    skipUseless;
-    require $ thisChar ')';
+    (c, _) <- thisUsefulChar '(';
+    m <- sepBy getMeta (thisUsefulChar ',');
+    require $ thisUsefulChar ')';
     if length m == 1
     then return $ head m
     else return (c, SynExprTuple m)
@@ -276,11 +271,9 @@ getPut = do
 getLambda = do {
     (c, _) <- thisSyntaxElem "\\";
     require $ do{
-        curriedargs <- sepBy1 getPatternExpr (skipUseless >> thisChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
-        skipUseless;
+        curriedargs <- sepBy1 getPatternExpr (thisUsefulChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
         thisSyntaxElem "->";
         internal <- getMeta; --Expr
-        skipUseless;
         return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
     }
 }
@@ -300,11 +293,9 @@ getIfThenElse = do {
 getInlineUse = do {
     path <- getPath;
     if length path == 0 then pfail "Expected at least a module name" else return ();
-    skipUseless;
-    thisChar '(';
+    thisUsefulChar '(';
     m <- require getMeta;
-    skipUseless;
-    require $ thisChar ')';
+    require $ thisUsefulChar ')';
     let lablonlypath = map snd path in
         return $ (fst $ head path, SynExprInlineUse (Path (init lablonlypath) (last lablonlypath)) m)
 }
@@ -322,11 +313,9 @@ getTypeTerm = do { --Tipo quantifier
     (c, l) <- getPathCapitalLabel;
     return (c, SynTypeExprName l)
 } <|| do {
-    skipUseless;
-    (c, _) <- thisChar '(';
-    types <- sepBy getTypeMeta (skipUseless >> thisChar ',');
-    skipUseless;
-    require $ thisChar ')';
+    (c, _) <- thisUsefulChar '(';
+    types <- sepBy getTypeMeta (thisUsefulChar ',');
+    require $ thisUsefulChar ')';
     if length types == 1
     then return $ head types
     else return (c, SynTypeExprTuple types)
@@ -346,11 +335,28 @@ getTypeMeta = do {
     return (c, SynTypeExprApp (c, SynTypeExprName $ Path [] "->") [e, m])
 } <|| getTypeExpr
 
+getTyConstraint = do {
+    (c, l) <- getPathCapitalLabel;
+    ts <- munch getTypeMeta;
+    return (c, l, ts)
+}
+
+getTyConstraints = do {
+    thisUsefulChar '{';
+    constrs <- sepBy1 getTyConstraint (thisUsefulChar ',');
+    require $ do {
+        thisUsefulChar '}';
+        thisSyntaxElem "=>";
+        return constrs
+    }
+} <|| return []
+
 getTyScheme = do {
     (c, _) <- thisSyntaxElem "forall";
     require $ do {
-        typevars <- munch getTypeVar; -- TODO
+        typevars <- munch getTypeVar;
         thisSyntaxElem ".";
+        getTyConstraints;
         m <- getTypeMeta;
         return (c, map snd typevars, m)
     }
@@ -368,6 +374,7 @@ getValDefinition = require $ do {
     meta <- getMeta;
     return $ SynValDef c visib label typehint meta
 }
+
 getValDefinitions = do {
     thisSyntaxElem "def";
     defs <- sepBy1 getValDefinition (thisSyntaxElem "and");
@@ -395,6 +402,61 @@ getDataDefinitions = do {
     return $ ModDataGroup defs
 }
 
+getRelValDecl = do {
+    (c, label) <- getLabel;
+    require $ do {
+        thisSyntaxElem ":";
+        typeexpr <- getTyScheme;
+        return (c, label, typeexpr)
+    }
+}
+
+getRelDef = do {
+    (c, _) <- thisSyntaxElem "rel";
+    require $ do {
+        visib <- getVisibility;
+        constrs <- getTyConstraints;
+        (_, label) <- getCapitalLabel;
+        typevars <- munch getTypeVar;
+        --TODO: Context ((P a b c, R a b) => )
+        thisSyntaxElem "=";
+        defs <- sepBy getRelValDecl (thisUsefulChar ',');
+        return $ ModRel c visib constrs label (map snd typevars) defs
+    }
+}
+
+getInstValDefinition = do {
+    thisSyntaxElem "def";
+    require $ do {
+        (c, label) <- getLabel;
+        thisSyntaxElem "=";
+        meta <- getMeta;
+        return (c, label, meta)
+    }
+}
+getInst = do {
+    (c, _) <- thisSyntaxElem "inst";
+    require $ do {
+        qualconstr <- do {
+            thisSyntaxElem "forall";
+            require $ do {
+                typevars <- munch getTypeVar;
+                thisSyntaxElem ".";
+                cs <- getTyConstraints;
+                constr <- getTyConstraint;
+                return (map snd typevars, cs, constr)
+            }
+        } <|| (do {
+            constr <- getTyConstraint;
+            return ([], [], constr)
+        });
+        thisUsefulChar '{';
+        defs <- munch getInstValDefinition;
+        thisUsefulChar '}';
+        return $ ModInst c qualconstr defs
+    }
+}
+
 getUse = do {
     (c, _) <- thisSyntaxElem "use";
     require $ do {
@@ -409,11 +471,9 @@ getModuleDef = do {
     require $ do {
         visib <- getVisibility;
         (_, label) <- getCapitalLabel;
-        skipUseless;
-        thisChar '{';
+        thisUsefulChar '{';
         mod <- getModuleInnerDefs;
-        skipUseless;
-        thisChar '}';
+        thisUsefulChar '}';
         return $ ModMod c visib label mod
     }
 }
@@ -430,7 +490,7 @@ getTypeSyn = do {
     }
 }
 getModuleInnerDefs = do {
-    res <- munch (getValDefinitions <|| getDataDefinitions <|| getTypeSyn <|| getUse <|| getModuleDef);
+    res <- munch (getValDefinitions <|| getDataDefinitions <|| getTypeSyn <|| getUse <|| getModuleDef <|| getRelDef <|| getInst);
     return $ Module res
 }
 --Entry point (da modificare)
