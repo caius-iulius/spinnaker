@@ -57,13 +57,6 @@ kindQBind c kq t | t == KindQuant kq = return nullKSubst
                  | Set.member kq (freeKindQuants t) = throwError $ show c ++ " Occurs check fails in kind inference: " ++ show (KindQuant kq) ++ " and " ++ show t
                  | otherwise = return $ Map.singleton kq t
 
-kindBindAdd :: StdCoord -> TypingEnv -> String -> Kind -> TyperState TypingEnv
-kindBindAdd c (TypingEnv ts ks vs) labl kind =
-    case Map.lookup labl ts of
-        Just _ -> throwError $ show c ++ " Type already bound " ++ labl
-        Nothing -> do
-            return $ TypingEnv ts (Map.union ks (Map.singleton labl kind)) vs
-
 kindmgu :: StdCoord -> Kind -> Kind -> TyperState KindSubst
 kindmgu c (KindQuant kq) t = kindQBind c kq t
 kindmgu c t (KindQuant kq) = kindQBind c kq t
@@ -154,7 +147,7 @@ addDataDefsEnv env ddefs =
         getvariantdatas ddef@(DataDef _ l qs vs) =
             Map.unions $ map (varianttovdata (datadeftotype ddef) qs) vs
     in foldl (\(TypingEnv ts ks vs) ddef@(DataDef c l qs _)->
-            (TypingEnv ts (Map.union ks (Map.singleton l (qstokind qs))) (Map.union vs (getvariantdatas ddef)))
+            (TypingEnv ts (Map.insert l (qstokind qs) ks) (Map.union vs (getvariantdatas ddef)))
         ) env ddefs
 
 unionDataDefEnv (TypingEnv _ ks _) (DataDef c l qs _) = 

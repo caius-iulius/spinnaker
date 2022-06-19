@@ -71,13 +71,12 @@ patValsInEnv :: DemodEnv -> SyntaxPattern -> TyperState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
     return (env', (c, Nothing, inner'))
-patValsInEnv (DemodEnv ms vs ts cs rs) (c, Just l, inner) =
-    case Map.lookup l vs of
-        Just _ -> throwError $ show c ++ " Label: " ++ show l ++ " is already bound"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            (env', inner') <- patValsInEnvInner c (DemodEnv ms (Map.union vs (Map.singleton l (Private, l++suffix))) ts cs rs) inner
-            return (env', (c, Just $ l++suffix, inner'))
+patValsInEnv (DemodEnv ms vs ts cs rs) (c, Just l, inner)
+    | Map.member l vs = throwError $ show c ++ " Label: " ++ show l ++ " is already bound"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        (env', inner') <- patValsInEnvInner c (DemodEnv ms (Map.insert l (Private, l++suffix) vs) ts cs rs) inner
+        return (env', (c, Just $ l++suffix, inner'))
 
 --espressioni
 demodExpr _ (c, SynExprLiteral l) = return (c, DataNOTHING, ExprLiteral l)
@@ -151,13 +150,12 @@ demodValDef env (SynValDef c _ l t e) = do
 
 valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> TyperState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])
-valDefGroupEnv env@(DemodEnv _ vs _ _ _) (SynValDef c v l t e:vvdefs) =
-    case Map.lookup l vs of
-        Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already bound"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            (env', vdefs') <- valDefGroupEnv (envsUnionLeft env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty Map.empty)) vvdefs
-            return (env', SynValDef c v (l++suffix) t e:vdefs')
+valDefGroupEnv env@(DemodEnv _ vs _ _ _) (SynValDef c v l t e:vvdefs)
+    | Map.member l vs = throwError $ show c ++ " Value: " ++ show l ++ " already bound"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        (env', vdefs') <- valDefGroupEnv (envsUnionLeft env (DemodEnv Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty Map.empty)) vvdefs
+        return (env', SynValDef c v (l++suffix) t e:vdefs')
 
 -- definizioni dei datatype
 demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState DataType
@@ -183,9 +181,9 @@ buildQmapQlist c qls =
         (qmap, qlist) <- mqmapqlist
         newk <- freshKind
         newq <- newTyQuant newk
-        case Map.lookup ql qmap of
-            Just _ -> throwError $ show c ++ " Type quantifier: " ++ show ql ++ " already bound"
-            Nothing -> return $ (Map.union qmap (Map.singleton ql newq), qlist ++ [(ql, newq)])
+        if Map.member ql qmap
+            then throwError $ show c ++ " Type quantifier: " ++ show ql ++ " already bound"
+            else return $ (Map.insert ql newq qmap, qlist ++ [(ql, newq)])
         ) (return (Map.empty, [])) qls
 
 demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
@@ -201,24 +199,22 @@ demodDataDef env (SynDataDef c _ l qls vars) = do --TODO: Questo codice fa cagar
 
 dataVarsEnv :: Visibility -> DemodEnv -> [SyntaxDataVariant] -> TyperState (DemodEnv, [SyntaxDataVariant])
 dataVarsEnv _ env [] = return (env, [])
-dataVarsEnv v env@(DemodEnv _ _ _ cs _) (SynDataVariant c l tes:vardefs) =
-    case Map.lookup l cs of
-        Just _ -> throwError $ show c ++ " Constructor: " ++ show l ++ " already bound"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            (env', vardefs') <- dataVarsEnv v (envsUnionLeft env (DemodEnv Map.empty Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty)) vardefs
-            return (env', SynDataVariant c (l++suffix) tes:vardefs')
+dataVarsEnv v env@(DemodEnv _ _ _ cs _) (SynDataVariant c l tes:vardefs)
+    | Map.member l cs = throwError $ show c ++ " Constructor: " ++ show l ++ " already bound"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        (env', vardefs') <- dataVarsEnv v (envsUnionLeft env (DemodEnv Map.empty Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty)) vardefs
+        return (env', SynDataVariant c (l++suffix) tes:vardefs')
 
 dataDefGroupEnv :: DemodEnv -> [SyntaxDataDef] -> TyperState (DemodEnv, [SyntaxDataDef])
 dataDefGroupEnv env [] = return (env, [])
-dataDefGroupEnv env@(DemodEnv _ _ ts _ _) (SynDataDef c v l qs vars:ddefs) =
-    case Map.lookup l ts of
-        Just _ -> throwError $ show c ++ " Data: " ++ show l ++ " already bound"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            (env', vars') <- dataVarsEnv v env vars
-            (env'', ddefs') <- dataDefGroupEnv (envsUnionLeft env' (DemodEnv Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) ddefs
-            return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
+dataDefGroupEnv env@(DemodEnv _ _ ts _ _) (SynDataDef c v l qs vars:ddefs)
+    | Map.member l ts = throwError $ show c ++ " Data: " ++ show l ++ " already bound"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        (env', vars') <- dataVarsEnv v env vars
+        (env'', ddefs') <- dataDefGroupEnv (envsUnionLeft env' (DemodEnv Map.empty Map.empty (Map.singleton l (v, l++suffix)) Map.empty Map.empty)) ddefs
+        return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
 
 -- rel & inst
 {-demodConstraint env qmap (c, pathlabl@(Path path labl), steas) = do
@@ -229,13 +225,12 @@ dataDefGroupEnv env@(DemodEnv _ _ ts _ _) (SynDataDef c v l qs vars:ddefs) =
             teas <- mapM (demodTypeExpr env qmap) steas
             return $ Pred nlabl teas-}
 
-demodRelDecl env@(DemodEnv ms vs ts cs rs) qmap visib (c, l, tyscheme) = do
-    case Map.lookup l vs of
-        Just _ -> throwError $ show c ++ " Value: " ++ show l ++ " already declared"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            dt <- demodTySchemeExpr env qmap tyscheme
-            return (DemodEnv ms (Map.union vs (Map.singleton l (visib, l++suffix))) ts cs rs, Map.singleton l (l++suffix), (c, l++suffix, dt))
+demodRelDecl env@(DemodEnv ms vs ts cs rs) qmap visib (c, l, tyscheme)
+    | Map.member l vs = throwError $ show c ++ " Value: " ++ show l ++ " already declared"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        dt <- demodTySchemeExpr env qmap tyscheme
+        return (DemodEnv ms (Map.insert l (visib, l++suffix) vs) ts cs rs, Map.singleton l (l++suffix), (c, l++suffix, dt))
 demodRelDecls env qmap visib [] = return (env, Map.empty, [])
 demodRelDecls env qmap visib (decl:decls) = do
     (env', relenv, decl') <- demodRelDecl env qmap visib decl
@@ -244,13 +239,12 @@ demodRelDecls env qmap visib (decl:decls) = do
 
 -- moduli
 demodModDef :: DemodEnv -> SyntaxModDef -> TyperState (DemodEnv, BlockProgram)
-demodModDef env@(DemodEnv ms vs ts cs rs) (ModMod c v l m) =
-    case Map.lookup l ms of
-        Just _ -> throwError $ show c ++ " Module: " ++ show l ++ " already defined"
-        Nothing -> do
-            (menv, demodded) <- demodModule (envSetPrivate env) m
-            lift $ lift $ putStrLn $ "Final module env of " ++ show l ++ ": " ++ show (envGetPubs menv)
-            return (DemodEnv (Map.union ms (Map.singleton l (v, envGetPubs menv))) vs ts cs rs, demodded)
+demodModDef env@(DemodEnv ms vs ts cs rs) (ModMod c v l m)
+    | Map.member l ms = throwError $ show c ++ " Module: " ++ show l ++ " already defined"
+    | otherwise = do
+        (menv, demodded) <- demodModule (envSetPrivate env) m
+        lift $ lift $ putStrLn $ "Final module env of " ++ show l ++ ": " ++ show (envGetPubs menv)
+        return (DemodEnv (Map.insert l (v, envGetPubs menv) ms) vs ts cs rs, demodded)
 demodModDef env (ModUse c v (Path p l)) =
     let setVisib = case v of
             Public -> id
@@ -266,14 +260,13 @@ demodModDef env (ModDataGroup ddefs) = do
     (env', ddefs') <- dataDefGroupEnv env ddefs
     ddefs'' <- mapM (demodDataDef env') ddefs'
     return (env', BlockProgram [ddefs''] [] [] [])
-demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls) =
-    case Map.lookup l rs of
-        Just _ -> throwError $ show c ++ " Rel: " ++ show l ++ " already defined"
-        Nothing -> do
-            suffix <- newUniqueSuffix
-            (qmap, qlist) <- buildQmapQlist c qls
-            (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
-            return (DemodEnv ms' vs' ts' cs' (Map.union rs' (Map.singleton l (visib, (l++suffix, relenv)))), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
+demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls)
+    | Map.member l rs = throwError $ show c ++ " Rel: " ++ show l ++ " already defined"
+    | otherwise = do
+        suffix <- newUniqueSuffix
+        (qmap, qlist) <- buildQmapQlist c qls
+        (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
+        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
 demodModDef env (ModInst _ _ _) = error "TODO demod dei InstDef"
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
 

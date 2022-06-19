@@ -69,8 +69,8 @@ mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
 mgu c t t' =
     throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
 
-liftMguList :: (StdCoord -> DataType -> DataType -> TyperState Subst) -> StdCoord -> [(DataType, DataType)] -> TyperState Subst
-liftMguList m c tts =
+liftUnionList :: (StdCoord -> DataType -> DataType -> TyperState Subst) -> StdCoord -> [(DataType, DataType)] -> TyperState Subst
+liftUnionList m c tts =
     foldl (\m_subst (dta, dtb) -> do{
         s <- m_subst;
         s' <- m c (substApply s dta) (substApply s dtb);
@@ -88,11 +88,6 @@ mergeInto c src tgt = do
         then throwError $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
         else return s
 
-liftMguPred :: (StdCoord->DataType->DataType->TyperState Subst)->StdCoord->Pred->Pred->TyperState Subst
-liftMguPred m c (Pred l ts) (Pred l' ts')
-    | l == l' = liftMguList m c (zip ts ts')
-    | otherwise = throwError $ show c ++ " Could not unify predicate names: " ++ show l ++ " and " ++ show l'
-
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
 tyBindAdd c (TypingEnv ts ks vs) labl scheme =
@@ -101,7 +96,7 @@ tyBindAdd c (TypingEnv ts ks vs) labl scheme =
         Nothing -> --do
             --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             --return $
-            TypingEnv (Map.union ts (Map.singleton labl scheme)) ks vs
+            TypingEnv (Map.insert labl scheme ts) ks vs
 
 getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
 getVariantData _ _ l@('(':')':slen) =
@@ -150,7 +145,7 @@ typePat env (c, _, PatVariant v ps) = do
     else do
         s <- getInstantiationSubst qs
         pts <- mapM (typePat env) ps
-        s' <- liftMguList mgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
+        s' <- liftUnionList mgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
         lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
         return $ substApply s' $ substApply s dt
 
@@ -236,6 +231,15 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     (s'', tfinal, others) <- typePutBranches (substApply mys env) (substApply mys tpat) (substApply s' texpr) branches
     lift $ lift $ putStrLn $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
+
+--Roba per i pred
+liftUnionPred :: (StdCoord->DataType->DataType->TyperState Subst)->StdCoord->Pred->Pred->TyperState Subst
+liftUnionPred m c (Pred l ts) (Pred l' ts')
+    | l == l' = liftUnionList m c (zip ts ts')
+    | otherwise = throwError $ show c ++ " Could not unify predicate names: " ++ show l ++ " and " ++ show l'
+
+mguPred = liftUnionPred mgu
+mergeIntoPred = liftUnionPred mergeInto
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
 substApplyExpr :: Subst -> HLExpr -> HLExpr
