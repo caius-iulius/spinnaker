@@ -45,21 +45,24 @@ builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT
     ,   VariantData "False#BI" [] [] boolT
     ]
-initTypingEnv = (TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars))
+builtinTypingRels = []
+initTypingEnv = TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) (Map.fromList builtinTypingRels)
 
 --Programma typer
 
 typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
     (ks', e', reldefs') <- typeRelDefs e reldefs
-    vdefgroups' <- typeValDefHints e' vdefgroups
-    (ts, e'', vdefgroups'') <- typeValDefGroups e' vdefgroups'
-    lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
+    (ks'', e'', instdefs') <- typeKInstDefs e' instdefs
+    vdefgroups' <- typeValDefHints e'' vdefgroups
+    (ts, e''', vdefgroups'') <- typeValDefGroups e'' vdefgroups'
     lift $ lift $ putStrLn $ "Final kind substitution (datas): " ++ show ks
     lift $ lift $ putStrLn $ "Final kind substitution (rels): " ++ show ks'
-    lift $ lift $ putStrLn $ "Final env: " ++ show e''
-    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e'')
-    return (e'', BlockProgram ddefgroups' reldefs' vdefgroups'' instdefs)
+    lift $ lift $ putStrLn $ "Final kind substitution (insts): " ++ show ks''
+    lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
+    lift $ lift $ putStrLn $ "Final env: " ++ show e'''
+    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e''')
+    return (e''', BlockProgram ddefgroups' reldefs' vdefgroups'' instdefs')
 
 typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, String, BlockProgram)
 typeProgram core program = do

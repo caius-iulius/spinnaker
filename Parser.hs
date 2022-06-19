@@ -435,23 +435,20 @@ getInstValDefinition = do {
 getInst = do {
     (c, _) <- thisSyntaxElem "inst";
     require $ do {
-        qualconstr <- do {
+        tyvars <- do {
             thisSyntaxElem "forall";
             require $ do {
                 typevars <- munch getTypeVar;
                 thisSyntaxElem ".";
-                cs <- getTyConstraints;
-                constr <- getTyConstraint;
-                return (map snd typevars, cs, constr)
+                return $ map snd typevars
             }
-        } <|| (do {
-            constr <- getTyConstraint;
-            return ([], [], constr)
-        });
+        } <|| return [];
+        cs <- getTyConstraints;
+        constr <- getTyConstraint;
         thisUsefulChar '{';
         defs <- munch getInstValDefinition;
         thisUsefulChar '}';
-        return $ ModInst c qualconstr defs
+        return $ ModInst c tyvars cs constr defs
     }
 }
 

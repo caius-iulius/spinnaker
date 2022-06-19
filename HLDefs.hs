@@ -41,7 +41,7 @@ data HLRelDef
     deriving Show
 
 data HLInstDef
-    = InstDef StdCoord (Qual Pred) [(String, HLExpr)]
+    = InstDef StdCoord (Qual Pred) [(StdCoord, String, HLExpr)]
     deriving Show
 
 data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [[HLValDef]] [HLInstDef]

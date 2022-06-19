@@ -59,8 +59,14 @@ instance Show TyScheme where
 data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome della variante, quantificatori generici, argomenti, datatype di appartenenza
     deriving Show
 
+-- Definizioni rel
+type InstData = Qual Pred
+data RelData = RelData [TyQuant] [(String, DataType)] [InstData]
+    deriving Show
+type RelEnv = Map.Map String RelData
+
 -- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
-data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) --NOTE: Il nome della variante qui è duplicato
+data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) RelEnv --NOTE: Il nome della variante qui è duplicato
     deriving Show
 
 --Definizioni utili

@@ -14,6 +14,9 @@ STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIM
 
 DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
 
+SCEGLI UNA SINTASSI MIGLIORE PER "inst" e i constraint
+Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implementerò i row types
+
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
 supporto multifile

@@ -217,14 +217,6 @@ dataDefGroupEnv env@(DemodEnv _ _ ts _ _) (SynDataDef c v l qs vars:ddefs)
         return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
 
 -- rel & inst
-{-demodConstraint env qmap (c, pathlabl@(Path path labl), steas) = do
-    (DemodEnv _ _ _ _ rs) <- getPathEnv c env path
-    case Map.lookup labl rs of
-        Nothing -> throwError $ show c ++ " Rel label: " ++ show pathlabl ++ " not bound"
-        Just (_, (nlabl, _)) -> do
-            teas <- mapM (demodTypeExpr env qmap) steas
-            return $ Pred nlabl teas-}
-
 demodRelDecl env@(DemodEnv ms vs ts cs rs) qmap visib (c, l, tyscheme)
     | Map.member l vs = throwError $ show c ++ " Value: " ++ show l ++ " already declared"
     | otherwise = do
@@ -237,6 +229,13 @@ demodRelDecls env qmap visib (decl:decls) = do
     (env'', relenv', decls') <- demodRelDecls env' qmap visib decls
     return (env'', Map.union relenv' relenv, decl':decls')
 
+demodPred env qmap (c, pathlabl@(Path path labl), steas) = do
+    (DemodEnv _ _ _ _ rs) <- getPathEnv c env path
+    case Map.lookup labl rs of
+        Nothing -> throwError $ show c ++ " Rel label: " ++ show pathlabl ++ " not bound"
+        Just (_, (nlabl, _)) -> do
+            teas <- mapM (demodTypeExpr env qmap) steas
+            return $ Pred nlabl teas
 -- moduli
 demodModDef :: DemodEnv -> SyntaxModDef -> TyperState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs rs) (ModMod c v l m)
@@ -267,7 +266,15 @@ demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls)
         (qmap, qlist) <- buildQmapQlist c qls
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
         return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
-demodModDef env (ModInst _ _ _) = error "TODO demod dei InstDef"
+demodModDef env (ModInst c qls preds head defs) = do
+    (qmap, qlist) <- buildQmapQlist c qls
+    preds' <- mapM (demodPred env qmap) preds
+    pred' <- demodPred env qmap head
+    defs' <- mapM demodInstDef defs
+    return (env, BlockProgram [] [] [] [InstDef c (Qual preds' pred') defs'])
+        where demodInstDef (c, l, e) = do
+                e' <- demodExpr env e
+                return (c, l, e')
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
 
 concatBlockPrograms (BlockProgram datagroups reldefs valgroups instdefs) (BlockProgram datagroups' reldefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (valgroups++valgroups') (instdefs++instdefs')

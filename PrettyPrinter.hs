@@ -20,7 +20,7 @@ toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining da
     (map toTreeHLDataVariant variants)
 
 toTreeHLRelDef (RelDef c label quants decls) = Node (show c ++ " Defining rel: " ++ show label ++ show quants ++ " declares: ") (map (\(c, l, t)->Node (show c ++ " Decl: " ++ l ++ " of type: " ++ show t) []) decls)
-toTreeHLInstDef (InstDef c qualpred defs) = Node (show c ++ " Defining inst: " ++ show qualpred) (map (\(l, e)->Node ("Def: " ++ show l) [toTreeHLExpr e]) defs)
+toTreeHLInstDef (InstDef c qualpred defs) = Node (show c ++ " Defining inst: " ++ show qualpred) (map (\(c, l, e)->Node (show c ++ " Def: " ++ show l) [toTreeHLExpr e]) defs)
 
 toTreeBlockProgram (BlockProgram datagroups reldefs valgroups instdefs) = Node "BlockProgram" [
         Node "Datas" (map (\group->Node "Group of datas" (map toTreeHLDataDef group)) datagroups),
@@ -62,5 +62,5 @@ toTreeSynModDef (ModTypeSyn c v l qs e) = Node (show c ++ " " ++ show v ++ " typ
 toTreeSynModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeSynValDef vvdefs)
 toTreeSynModDef (ModDataGroup group) = Node "Group of datas" (map toTreeSynDataDef group)
 toTreeSynModDef (ModRel c v l qs defs) = Node (show c ++ " " ++ show v ++ " rel definition: " ++ show l ++ " tyargs: " ++ show qs) (map toTreeSynRelValDecl defs)
-toTreeSynModDef (ModInst c qpred instdefs) = Node (show c ++ " Instance definition of: " ++ show qpred ++ " with inst_val_defs") (map (\(c', l, e)->Node ("Defining: " ++ show l) [toTreeSynExpr e]) instdefs)
+toTreeSynModDef (ModInst c qs preds head instdefs) = Node (show c ++ " Instance definition of: " ++ show head ++ " quantified with forall." ++ show qs ++ "{" ++ show preds ++ "}" ++ " with inst_val_defs") (map (\(c', l, e)->Node ("Defining: " ++ show l) [toTreeSynExpr e]) instdefs)
 toTreeSynMod (Module defs) = Node "Module" (map toTreeSynModDef defs)

@@ -90,13 +90,13 @@ mergeInto c src tgt = do
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
-tyBindAdd c (TypingEnv ts ks vs) labl scheme =
+tyBindAdd c (TypingEnv ts ks vs rs) labl scheme =
     case Map.lookup labl ts of
         --Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
         Nothing -> --do
             --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             --return $
-            TypingEnv (Map.insert labl scheme ts) ks vs
+            TypingEnv (Map.insert labl scheme ts) ks vs rs
 
 getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
 getVariantData _ _ l@('(':')':slen) =
@@ -105,7 +105,7 @@ getVariantData _ _ l@('(':')':slen) =
     in do
         qs <- mapM (\_->newTyQuant KType) [1..len]
         let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
-getVariantData c (TypingEnv _ _ vs) l =
+getVariantData c (TypingEnv _ _ vs _) l =
     case Map.lookup l vs of
         --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
         Just vdata -> do
@@ -113,8 +113,8 @@ getVariantData c (TypingEnv _ _ vs) l =
             return vdata
 
 instance Types TypingEnv where
-    freetyvars (TypingEnv ts ks vs) = Set.unions $ map freetyvars (Map.elems ts)
-    substApply s (TypingEnv ts ks vs) = TypingEnv (Map.map (substApply s) ts) ks vs
+    freetyvars (TypingEnv ts _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
+    substApply s (TypingEnv ts ks vs rs) = TypingEnv (Map.map (substApply s) ts) ks vs rs
 
 generalize env t =
     let quants = Set.toList $ Set.difference (freetyvars t) (freetyvars env)
@@ -169,7 +169,7 @@ patVarsInEnv gf env (c, Just labl, pdata) dt =
 typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, DataType, HLExpr)
 typeExpr _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, dt, (c, dt, ExprLiteral lit))
-typeExpr (TypingEnv env _ _) (c, _, ExprLabel labl) =
+typeExpr (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do
@@ -275,7 +275,7 @@ addValDefsEnv env vdefs = foldl
             tyBindAdd c e l (generalize e t)
         ) env vdefs
 
-unionValDefEnv (TypingEnv ts _ _) (ValDef c l _ (_, t, _)) = do
+unionValDefEnv (TypingEnv ts _ _ _) (ValDef c l _ (_, t, _)) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
     s <- mgu c t tFromEnv
@@ -284,7 +284,7 @@ unionValDefEnv (TypingEnv ts _ _) (ValDef c l _ (_, t, _)) = do
 
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _:vdefs) = checkValDefsHint env vdefs
-checkValDefsHint env@(TypingEnv ts _ _) (ValDef c l (Just hint) _:vdefs) = do
+checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just hint) _:vdefs) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
     s <- mergeInto c tFromEnv hint

@@ -13,9 +13,9 @@ rel Monad m =
 rel Into a b =
     into : a -> b
 
-# inst Monad m => Functor m {
-#     def fmap = \f, m -> bind m (return <| f)
-# }
+inst forall m. {Monad m} => Functor m {
+    def fmap = \f, m -> bind m (return <| f)
+}
 
 rel Num a =
     (+!) : a -> a -> a,
@@ -28,19 +28,21 @@ def main = ()
 # def double : forall a . {Num a} => a -> a
 #            = \x -> x +! x
 
-# inst Functor Maybe {
-#     def fmap = \f, m -> put m
-#         | None -> None
-#         | Some x -> Some (f x)
-# }
-# 
-# inst Monad Maybe {
-#     def return = \x -> Just x
-#     def bind = \m, f -> put m
-#         | None -> None
-#         | Some x -> f x
-# }
-# 
-# inst forall a b. {Show a, Show b} => Show (a, b) {
-#     def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
-# }
+data Maybe a = None | Some a
+
+inst Functor Maybe {
+    def fmap = \f, m -> put m
+        | None -> None
+        | Some x -> Some (f x)
+}
+
+inst Monad Maybe {
+    def return = \x -> Some x
+    def bind = \m, f -> put m
+        | None -> None
+        | Some x -> f x
+}
+
+inst forall a b. {Show a, Show b} => Show (a, b) {
+    def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
+}

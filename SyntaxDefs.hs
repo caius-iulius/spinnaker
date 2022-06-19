@@ -38,7 +38,7 @@ data SyntaxTypeExprData
     | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
-type SyntaxTyConstraint = (StdCoord, Path, [SyntaxTypeExpr])
+type SyntaxTyPred = (StdCoord, Path, [SyntaxTypeExpr])
 type SyntaxTySchemeExpr = (StdCoord, [String], {-[SyntaxTyConstraint],-} SyntaxTypeExpr)
 
 data SyntaxValDef
@@ -64,7 +64,7 @@ data SyntaxModDef
     | ModValGroup [SyntaxValDef]
     | ModDataGroup [SyntaxDataDef]
     | ModRel StdCoord Visibility String [String] [SyntaxModRelValDecl] --visibilità, nome, tyvars, corpo
-    | ModInst StdCoord ([String], [SyntaxTyConstraint], SyntaxTyConstraint) [(StdCoord, String, SyntaxExpr)]-- visibilità, predicato quantificato da constraints con forall, definizioni
+    | ModInst StdCoord [String] [SyntaxTyPred] SyntaxTyPred [(StdCoord, String, SyntaxExpr)]-- visibilità, predicato quantificato da constraints con forall, definizioni
     -- TODO: ModInst
     deriving Show
 data SyntaxModule = Module [SyntaxModDef]
