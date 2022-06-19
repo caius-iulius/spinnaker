@@ -21,11 +21,19 @@ incorpora file core
 implementa caratteri e completa le stringhe
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
-2. typing typeclass / typerel
-3. monomorfizzazione e scelta dei typeclass
-4. notazione do
-5. defunzionalizzazione in supercombinatori
-    K-Normal o A-Normal form
+2. typing typerel
+    - [OK] risoluzione dei kind nei rel
+    - aggiunta dei rel e delle definizioni dei loro membri nel contesto
+    - entailment ecc. come in THIH
+    - tipizzazione delle espressioni con Qual DataType e istanze
+    - riscrivi l'interprete per propagare i tipi e scegliere da vtable
+    - aggiungi controlli per limitare overlap (le istanze devono trattare una classe o un tipo definiti nel proprio modulo)
+3. monomorfizzazione
+4. aggiungi controlli per halting del compilatore
+    - controlla le istanze indecidibili
+    - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)
+5. notazione do
+6. defunzionalizzazione
     Semplificazione a un branch per putexpr
-6. compilazione a C
-7. ottimizzazioni su HLExpr
+7. compilazione a C
+8. ottimizzazioni

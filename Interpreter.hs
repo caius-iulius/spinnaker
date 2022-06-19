@@ -106,8 +106,9 @@ eval e@(c, dt, ExprPut val pses) = do
     choosePattern c val' pses
 
 evalProgram :: (String, BlockProgram) -> IO HLExpr
-evalProgram (entryPoint, BlockProgram datagroups valgroups) =
+{-evalProgram (entryPoint, BlockProgram datagroups valgroups) =
     let
         binds = join valgroups
         env = Map.fromList $ map (\(ValDef _ l _ e)->(l, e)) binds
-    in runReaderT (eval (Coord "interpreter" 0 0, DataNOTHING, ExprLabel entryPoint)) env
+    in runReaderT (eval (Coord "interpreter" 0 0, DataNOTHING, ExprLabel entryPoint)) env-}
+evalProgram = error "TODO"

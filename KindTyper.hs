@@ -26,6 +26,7 @@ instance Kinds Kind where
         Nothing -> KindQuant q
         Just k -> k
     kSubstApply s (KFun a r) = KFun (kSubstApply s a) (kSubstApply s r)
+    kSubstApply _ KindNOTHING = KindNOTHING
 
 instance Kinds TyQuant where
     kind (TyQuant _ k) = k
@@ -40,12 +41,14 @@ instance Kinds DataType where
     --kSubstApply s (DataTuple ts) = DataTuple (map (kSubstApply s) ts)
     kSubstApply s (DataTypeName l k) = DataTypeName l (kSubstApply s k)
     kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
+    kSubstApply s (DataCOORD c t) = DataCOORD c (kSubstApply s t)
 
 substApplyKindEnv s (TypingEnv ts ks vs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
 substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(c,t)->(c, kSubstApply s t)) ts)
 substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
+substApplyRelDecls s decls = map (\(c, l, t) -> (c, l, kSubstApply s t)) decls
 
 composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
 
@@ -96,19 +99,28 @@ typeTyExpr c env (DataTypeName l k) = do
 typeTyExpr c env (DataTypeApp f a) = do
     q <- freshKind
     (s1, k1, tf) <- typeTyExpr c env f
-    (s2, k2, ta) <- typeTyExpr c env a
+    (s2, k2, ta) <- typeTyExpr c env (kSubstApply s1 a)
     s3 <- kindmgu c (kSubstApply s2 k1) (KFun k2 q)
     let finals = composeKSubst s3 (composeKSubst s2 s1)
         finalk = kSubstApply s3 q in
             return (finals, finalk, DataTypeApp (kSubstApply finals tf) (kSubstApply finals ta))
 
+typeTyExprStar c env dt = do
+    (s, k, dt') <- typeTyExpr c env dt
+    s' <- kindmgu c k KType
+    return (composeKSubst s' s, kSubstApply s' dt')
+
 typeTyExprsStar :: TypingEnv -> [(StdCoord, DataType)] -> TyperState (KindSubst, [(StdCoord, DataType)])
 typeTyExprsStar env [] = return (nullKSubst, [])
-typeTyExprsStar env ((c,e):es) = do
+{-typeTyExprsStar env ((c,e):es) = do
     (s, k, t) <- typeTyExpr c env e
     s1 <- kindmgu c k KType
     (s2, ts) <- typeTyExprsStar env es
-    return (composeKSubst s2 (composeKSubst s1 s), (c, kSubstApply s2 t):ts)
+    return (composeKSubst s2 (composeKSubst s1 s), (c, kSubstApply (composeKSubst s2 s1) t):ts)-}
+typeTyExprsStar env ((c,e):es) = do
+    (s, t) <- typeTyExprStar c env e
+    (s', ts) <- typeTyExprsStar env (map (\(c',e')->(c',kSubstApply s e')) es)
+    return (composeKSubst s' s, (c, kSubstApply s' t):ts)
 
 typeDataVariant env (DataVariant c l es) = do
     (s, ts) <- typeTyExprsStar env es
@@ -175,6 +187,30 @@ typeDataDefGroups env (ddefs:ddefss) = do
     (s', env'', ddefss') <- typeDataDefGroups env' ddefss
     return (composeKSubst s' s, env'', map (substApplyDataDef s') ddefs':ddefss') --TODO: è necessaro? se non sbaglio l'env è senza variabili
 
+
+typeRelDecls :: TypingEnv  -> [(StdCoord, String, DataType)] -> TyperState (KindSubst, [(StdCoord, String, DataType)])
+typeRelDecls env [] = return (nullKSubst, [])
+{-typeRelDecls env ((c, l, dt):decls) = do
+    (s, dt') <- typeTyExprStar c env dt
+    (s', decls') <- typeRelDecls env (substApplyRelDecls s decls)
+    return (composeKSubst s' s, (c, l, kSubstApply s' dt'):decls')-}
+typeRelDecls env decls = do
+    (s, csts) <- typeTyExprsStar env (map (\(c,l,t)->(c,t)) decls)
+    s' <- return $ Map.unions $ map (\(c, t) -> kindMonomorphize $ kind t) csts
+    return (composeKSubst s' s, zipWith (\(_,l,_) (c, t)->(c,l, kSubstApply s' t)) decls csts)
+
+typeRelDef env (RelDef c l qs decls) = do
+    (s, decls') <- typeRelDecls env decls
+    s' <- return $ Map.unions $ map (kindMonomorphize . kind . kSubstApply s) qs
+    s'' <- return $ composeKSubst s' s
+    return (s'', substApplyKindEnv s'' env, RelDef c l (map (kSubstApply s'') qs) (substApplyRelDecls s'' decls'))
+
+typeRelDefs :: TypingEnv -> [HLRelDef] -> TyperState (KindSubst, TypingEnv, [HLRelDef])
+typeRelDefs env [] = return (nullKSubst, env, [])
+typeRelDefs env (reldef:reldefs) = do
+    (s, env', reldef') <- typeRelDef env reldef
+    (s', env'', reldefs') <- typeRelDefs env' reldefs
+    return (composeKSubst s' s, env'', reldef':reldefs') --TODO: è necessario? se non sbaglio l'env è senza variabili. TODO: se è necessario qui c'è un bug, non viene applicata la sostituzione s' a reldef'
 
 -- Typing degli hint
 typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef

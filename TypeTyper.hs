@@ -44,19 +44,19 @@ instance Types DataType where
         DataTypeApp (substApply s dta) (substApply s dtb)
     substApply s (DataTypeName tn k) = (DataTypeName tn k)
 
+instance Types Pred where
+    freetyvars (Pred _ ts) = Set.unions $ map freetyvars ts
+    substApply s (Pred l ts) = Pred l $ map (substApply s) ts
+
+instance Types t => Types (Qual t) where
+    freetyvars (Qual ps t) = Set.unions $ (freetyvars t):(map freetyvars ps)
+    substApply s (Qual ps t) = Qual (map (substApply s) ps) (substApply s t)
+
 instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
 --Algoritmo MGU
-listMgu :: StdCoord -> [(DataType, DataType)] -> TyperState Subst
-listMgu c tts =
-    foldl (\m_subst (dta, dtb) -> do{
-        s <- m_subst;
-        s' <- mgu c (substApply s dta) (substApply s dtb);
-        return $ composeSubst s' s
-    }) (return nullSubst) tts
-
 mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
 mgu c (DataQuant q) t = quantBind c q t
 mgu c t (DataQuant q) = quantBind c q t
@@ -69,6 +69,14 @@ mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
 mgu c t t' =
     throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
 
+liftMguList :: (StdCoord -> DataType -> DataType -> TyperState Subst) -> StdCoord -> [(DataType, DataType)] -> TyperState Subst
+liftMguList m c tts =
+    foldl (\m_subst (dta, dtb) -> do{
+        s <- m_subst;
+        s' <- m c (substApply s dta) (substApply s dtb);
+        return $ composeSubst s' s
+    }) (return nullSubst) tts
+
 --TODO: Da testare
 mergeInto c src tgt = do
     s <- mgu c src tgt
@@ -79,6 +87,11 @@ mergeInto c src tgt = do
         in if length transformsInTgt /= 0
         then throwError $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
         else return s
+
+liftMguPred :: (StdCoord->DataType->DataType->TyperState Subst)->StdCoord->Pred->Pred->TyperState Subst
+liftMguPred m c (Pred l ts) (Pred l' ts')
+    | l == l' = liftMguList m c (zip ts ts')
+    | otherwise = throwError $ show c ++ " Could not unify predicate names: " ++ show l ++ " and " ++ show l'
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
@@ -137,7 +150,7 @@ typePat env (c, _, PatVariant v ps) = do
     else do
         s <- getInstantiationSubst qs
         pts <- mapM (typePat env) ps
-        s' <- listMgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
+        s' <- liftMguList mgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
         lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
         return $ substApply s' $ substApply s dt
 

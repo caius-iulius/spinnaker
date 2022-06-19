@@ -19,9 +19,14 @@ toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: "
 toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHLDataVariant variants)
 
-toTreeBlockProgram (BlockProgram datagroups valgroups) = Node "BlockProgram" [
+toTreeHLRelDef (RelDef c label quants decls) = Node (show c ++ " Defining rel: " ++ show label ++ show quants ++ " declares: ") (map (\(c, l, t)->Node (show c ++ " Decl: " ++ l ++ " of type: " ++ show t) []) decls)
+toTreeHLInstDef (InstDef c qualpred defs) = Node (show c ++ " Defining inst: " ++ show qualpred) (map (\(l, e)->Node ("Def: " ++ show l) [toTreeHLExpr e]) defs)
+
+toTreeBlockProgram (BlockProgram datagroups reldefs valgroups instdefs) = Node "BlockProgram" [
         Node "Datas" (map (\group->Node "Group of datas" (map toTreeHLDataDef group)) datagroups),
-        Node "Vals" (map (\group->Node "Group of vals" (map toTreeHLValDef group)) valgroups)
+        Node "Rels" (map toTreeHLRelDef reldefs),
+        Node "Vals" (map (\group->Node "Group of vals" (map toTreeHLValDef group)) valgroups),
+        Node "Insts" (map toTreeHLInstDef instdefs)
     ]
 
 --Roba per Syn
@@ -56,6 +61,6 @@ toTreeSynModDef (ModUse c v p) = Node (show c ++ " Using " ++ show v ++ " module
 toTreeSynModDef (ModTypeSyn c v l qs e) = Node (show c ++ " " ++ show v ++ " type synonym: " ++ show l ++ " tyargs: " ++ show qs) [toTreeSynTypeExpr e]
 toTreeSynModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeSynValDef vvdefs)
 toTreeSynModDef (ModDataGroup group) = Node "Group of datas" (map toTreeSynDataDef group)
-toTreeSynModDef (ModRel c v constrs l qs defs) = Node (show c ++ " " ++ show v ++ " rel definition with constraints: " ++ show constrs ++ " labl: " ++ show l ++ " tyargs: " ++ show qs) (map toTreeSynRelValDecl defs)
+toTreeSynModDef (ModRel c v l qs defs) = Node (show c ++ " " ++ show v ++ " rel definition: " ++ show l ++ " tyargs: " ++ show qs) (map toTreeSynRelValDecl defs)
 toTreeSynModDef (ModInst c qpred instdefs) = Node (show c ++ " Instance definition of: " ++ show qpred ++ " with inst_val_defs") (map (\(c', l, e)->Node ("Defining: " ++ show l) [toTreeSynExpr e]) instdefs)
 toTreeSynMod (Module defs) = Node "Module" (map toTreeSynModDef defs)

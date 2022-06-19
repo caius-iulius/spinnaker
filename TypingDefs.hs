@@ -43,6 +43,14 @@ instance Show DataType where
     show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
 
+data Pred = Pred String [DataType]
+instance Show Pred where
+    show (Pred l ts) = l ++ (foldr (++) [] . map ((' ':) . show)) ts
+
+data Qual t = Qual [Pred] t
+instance Show t => Show (Qual t) where
+    show (Qual ps a) = '{': (foldr (\l r->l ++ ", " ++ r) "} => " (map show ps)) ++ show a
+
 data TyScheme = TyScheme [TyQuant] DataType
 instance Show TyScheme where
     show (TyScheme qs dt) = let showq (TyQuant q k) = " " ++ show q ++ ":" ++ show k in
@@ -50,6 +58,7 @@ instance Show TyScheme where
 
 data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome della variante, quantificatori generici, argomenti, datatype di appartenenza
     deriving Show
+
 -- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
 data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) --NOTE: Il nome della variante qui è duplicato
     deriving Show

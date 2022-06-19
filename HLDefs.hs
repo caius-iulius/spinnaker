@@ -36,4 +36,12 @@ data HLDataDef
     = DataDef StdCoord String [(String, TyQuant)] [HLDataVariant]
     deriving Show
 
-data BlockProgram = BlockProgram [[HLDataDef]] [[HLValDef]]
+data HLRelDef
+    = RelDef StdCoord String [TyQuant] [(StdCoord, String, DataType)]
+    deriving Show
+
+data HLInstDef
+    = InstDef StdCoord (Qual Pred) [(String, HLExpr)]
+    deriving Show
+
+data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [[HLValDef]] [HLInstDef]

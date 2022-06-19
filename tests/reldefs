@@ -1,35 +1,46 @@
+use Core
+
 rel pub Show a =
-    show : a -> String
+    show : a -> List Int
 
 rel Functor f =
     fmap : forall a b . (a -> b) -> f a -> f b
 
-rel {Functor m} => Monad m =
+rel Monad m =
     return : forall a . a -> m a,
     bind : forall a b . m a -> (a -> m b) -> m b
 
+rel Into a b =
+    into : a -> b
+
+# inst Monad m => Functor m {
+#     def fmap = \f, m -> bind m (return <| f)
+# }
+
 rel Num a =
-    (+) : a -> a -> a,
-    (-) : a -> a -> a,
-    (*) : a -> a -> a,
-    (/) : a -> a -> a
+    (+!) : a -> a -> a,
+    (-!) : a -> a -> a,
+    (*!) : a -> a -> a,
+    (/!) : a -> a -> a
 
-def double : forall a . {Num a} => a -> a
-           = \x -> x + x
+def main = ()
 
-inst Functor Maybe {
-    def fmap = \f, m -> put m
-        | None -> None
-        | Some x -> Some (f x)
-}
+# def double : forall a . {Num a} => a -> a
+#            = \x -> x +! x
 
-inst Monad Maybe {
-    def return = \x -> Just x
-    def bind = \m, f -> put m
-        | None -> None
-        | Some x -> f x
-}
-
-inst forall a b. {Show a, Show b} => Show (a, b) {
-    def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
-}
+# inst Functor Maybe {
+#     def fmap = \f, m -> put m
+#         | None -> None
+#         | Some x -> Some (f x)
+# }
+# 
+# inst Monad Maybe {
+#     def return = \x -> Just x
+#     def bind = \m, f -> put m
+#         | None -> None
+#         | Some x -> f x
+# }
+# 
+# inst forall a b. {Show a, Show b} => Show (a, b) {
+#     def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
+# }

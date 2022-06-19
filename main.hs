@@ -55,5 +55,5 @@ testCompile = do {
 main = do {
     (_, ep, b) <- testCompile;
     result <- evalProgram (ep, b);
-    putStrLn $ "Result: " ++ (drawTree $ toTreeHLExpr result)
+    putStrLn $ "Result: " ++ (drawTree $ toTreeHLExpr result);
 }

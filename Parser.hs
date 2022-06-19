@@ -337,7 +337,7 @@ getTypeMeta = do {
 
 getTyConstraint = do {
     (c, l) <- getPathCapitalLabel;
-    ts <- munch getTypeMeta;
+    ts <- munch getTypeTerm;
     return (c, l, ts)
 }
 
@@ -415,13 +415,11 @@ getRelDef = do {
     (c, _) <- thisSyntaxElem "rel";
     require $ do {
         visib <- getVisibility;
-        constrs <- getTyConstraints;
         (_, label) <- getCapitalLabel;
         typevars <- munch getTypeVar;
-        --TODO: Context ((P a b c, R a b) => )
         thisSyntaxElem "=";
         defs <- sepBy getRelValDecl (thisUsefulChar ',');
-        return $ ModRel c visib constrs label (map snd typevars) defs
+        return $ ModRel c visib label (map snd typevars) defs
     }
 }
 
