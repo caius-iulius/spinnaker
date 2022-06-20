@@ -1,7 +1,6 @@
 module Typer (typeBlockProgram, typeProgram) where
 import qualified Data.Map as Map
 import Control.Monad.Trans
-import Control.Monad.Except
 import Data.Tree
 import PrettyPrinter
 import HLDefs
@@ -69,7 +68,7 @@ typeProgram core program = do
     lift $ lift $ putStrLn $ "Init typing env: " ++ show initTypingEnv
     (DemodEnv _ vs _ _ _, block) <- demodProgram initCoreDemodEnv core program
     case Map.lookup "main" vs of
-        Nothing -> throwError "Entry point \"main\" is not defined"
+        Nothing -> fail "Entry point \"main\" is not defined"
         Just (_, entryPoint) -> do
             lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
             (env, tyblock) <- typeBlockProgram block

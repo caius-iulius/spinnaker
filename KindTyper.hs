@@ -1,7 +1,7 @@
 module KindTyper where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Control.Monad.Except
+import Control.Monad.Trans
 import MPCL(StdCoord)
 import TypingDefs
 import HLDefs
@@ -55,7 +55,7 @@ composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
 
 kindQBind :: StdCoord -> KindQuant -> Kind -> TyperState KindSubst
 kindQBind c kq t | t == KindQuant kq = return nullKSubst
-                 | Set.member kq (freeKindQuants t) = throwError $ show c ++ " Occurs check fails in kind inference: " ++ show (KindQuant kq) ++ " and " ++ show t
+                 | Set.member kq (freeKindQuants t) = fail $ show c ++ " Occurs check fails in kind inference: " ++ show (KindQuant kq) ++ " and " ++ show t
                  | otherwise = return $ Map.singleton kq t
 
 kindmgu :: StdCoord -> Kind -> Kind -> TyperState KindSubst
@@ -66,7 +66,7 @@ kindmgu c (KFun a r) (KFun a' r') = do
     s1 <- kindmgu c a a'
     s2 <- kindmgu c (kSubstApply s1 r) (kSubstApply s1 r')
     return $ composeKSubst s1 s2
-kindmgu c k1 k2 = throwError $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
+kindmgu c k1 k2 = fail $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
 
 -- Funzioni di typing
 getTyData :: StdCoord -> TypingEnv -> String -> TyperState Kind
@@ -77,7 +77,7 @@ getTyData _ _ l@('(':')':slen) =
         foldr (\_->KFun KType) KType [0..len - 1]
 getTyData c (TypingEnv _ ks _ _) l =
     case Map.lookup l ks of
-        Nothing -> throwError $ show c ++ " Unbound typename: " ++ l
+        Nothing -> fail $ show c ++ " Unbound typename: " ++ l
         Just k -> return k
 
 typeTyExpr :: StdCoord -> TypingEnv -> DataType -> TyperState (KindSubst, Kind, DataType)
@@ -239,17 +239,13 @@ typeQualPred c env (Qual preds pred) = do
                     (s', ps') <- typePreds c env (map (substApplyPred s) ps)
                     return (composeKSubst s' s, (substApplyPred s' p'):ps')
 
-insts :: RelEnv -> String -> [InstData]
-insts re l = case Map.lookup l re of
-                Just (RelData _ _ is) -> is
-
 addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs decls insts)->RelData qs decls (p:insts)) l rs
 
 typeKInstDef :: TypingEnv -> HLInstDef -> TyperState (KindSubst, TypingEnv, HLInstDef)
 typeKInstDef env (InstDef c qualhead defs) = do
     (s, qualhead') <- typeQualPred c env qualhead
     return (s, addInst qualhead env, InstDef c qualhead' defs)
-    --TODO: controlli vari su defs, applica la sostituzione su defs se aggiungo i cast nelle espressioni
+    --TODO: controlli vari su defs (e.g. condizioni Paterson), applica la sostituzione su defs se aggiungo i cast nelle espressioni
 
 typeKInstDefs :: TypingEnv -> [HLInstDef] -> TyperState (KindSubst, TypingEnv, [HLInstDef])
 typeKInstDefs env [] = return (nullKSubst, env, [])

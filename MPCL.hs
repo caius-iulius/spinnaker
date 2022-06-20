@@ -140,6 +140,7 @@ data StdCoord = Coord String Int Int
 instance Show StdCoord where
     show (Coord file line col) =
         "[" ++ file ++ ":" ++ show line ++ ":" ++ show col ++ "]"
+dummyStdCoord = Coord "" 0 0
 
 stdcoord_newc (Coord file line col) char = --TODO: Come si trattano i caratteri a più celle?
     case char of 

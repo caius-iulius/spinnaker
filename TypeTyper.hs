@@ -1,9 +1,9 @@
 module TypeTyper where
-import Control.Monad.Except
-import Control.Monad.State
+import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import MPCL (StdCoord)
+import Data.Maybe(catMaybes, isJust, isNothing)
+import MPCL (StdCoord, dummyStdCoord)
 import TypingDefs
 import HLDefs
 import KindTyper(kind)
@@ -16,15 +16,6 @@ nullSubst :: Subst
 nullSubst = Map.empty
 
 composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
-
-quantBind :: StdCoord -> TyQuant -> DataType -> TyperState Subst
-quantBind c q t
-    | (case t of
-        DataQuant q' -> q' == q
-        _ -> False) = return nullSubst
-    | Set.member q (freetyvars t) = throwError $ show c ++ " Occurs check fails: " ++ show q ++ " into " ++ show t
-    | kind q /= kind t = throwError $ show c ++ " Kinds do not match in substitution: " ++ show q ++ "into " ++ show t
-    | otherwise = return (Map.singleton q t)
 
 -- Classe Types e altre funzioni utili
 
@@ -56,43 +47,15 @@ instance Types TyScheme where
     freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
---Algoritmo MGU
-mgu :: StdCoord -> DataType -> DataType -> TyperState Subst
-mgu c (DataQuant q) t = quantBind c q t
-mgu c t (DataQuant q) = quantBind c q t
-mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
-    if s == s'  && k == k' then return nullSubst else throwError $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
-mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
-    s <- mgu c f f'
-    s' <- mgu c (substApply s a) (substApply s a')
-    return (composeSubst s' s)
-mgu c t t' =
-    throwError $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
-
-liftUnionList :: (StdCoord -> DataType -> DataType -> TyperState Subst) -> StdCoord -> [(DataType, DataType)] -> TyperState Subst
-liftUnionList m c tts =
-    foldl (\m_subst (dta, dtb) -> do{
-        s <- m_subst;
-        s' <- m c (substApply s dta) (substApply s dtb);
-        return $ composeSubst s' s
-    }) (return nullSubst) tts
-
---TODO: Da testare
-mergeInto c src tgt = do
-    s <- mgu c src tgt
-    let
-        keyss = Set.fromList $ map fst $ Map.toList s
-        frees = freetyvars tgt
-        transformsInTgt = Set.intersection keyss frees
-        in if length transformsInTgt /= 0
-        then throwError $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
-        else return s
+instance Types TypingEnv where
+    freetyvars (TypingEnv ts _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
+    substApply s (TypingEnv ts ks vs rs) = TypingEnv (Map.map (substApply s) ts) ks vs rs
 
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
 tyBindAdd c (TypingEnv ts ks vs rs) labl scheme =
     case Map.lookup labl ts of
-        --Just _ -> throwError $ show c ++ " Variable already bound: " ++ labl
+        --Just _ -> fail $ show c ++ " Variable already bound: " ++ labl
         Nothing -> --do
             --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             --return $
@@ -107,14 +70,10 @@ getVariantData _ _ l@('(':')':slen) =
         let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
 getVariantData c (TypingEnv _ _ vs _) l =
     case Map.lookup l vs of
-        --Nothing -> throwError $ show c ++ " Unbound constructor: " ++ l
+        --Nothing -> fail $ show c ++ " Unbound constructor: " ++ l
         Just vdata -> do
             lift $ lift $ putStrLn $ "VDATA " ++ show l ++ show vdata
             return vdata
-
-instance Types TypingEnv where
-    freetyvars (TypingEnv ts _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
-    substApply s (TypingEnv ts ks vs rs) = TypingEnv (Map.map (substApply s) ts) ks vs rs
 
 generalize env t =
     let quants = Set.toList $ Set.difference (freetyvars t) (freetyvars env)
@@ -130,6 +89,48 @@ instantiate (TyScheme qs t) = do
     return $ substApply subst t
 
 
+--Algoritmo MGU
+quantBind :: MonadFail m => StdCoord -> TyQuant -> DataType -> m Subst
+quantBind c q t
+    | (case t of
+        DataQuant q' -> q' == q
+        _ -> False) = return nullSubst
+    | Set.member q (freetyvars t) = fail $ show c ++ " Occurs check fails: " ++ show q ++ " into " ++ show t
+    | kind q /= kind t = fail $ show c ++ " Kinds do not match in substitution: " ++ show q ++ "into " ++ show t
+    | otherwise = return (Map.singleton q t)
+
+mgu :: MonadFail m => StdCoord -> DataType -> DataType -> m Subst
+--TODO: regole per resilienza DataCOORD?
+mgu c (DataQuant q) t = quantBind c q t
+mgu c t (DataQuant q) = quantBind c q t
+mgu c t@(DataTypeName s k) t'@(DataTypeName s' k') =
+    if s == s'  && k == k' then return nullSubst else fail $ show c ++ " Could not unify typenames: " ++ show t ++ " and " ++ show t'
+mgu c (DataTypeApp f a) (DataTypeApp f' a') = do
+    s <- mgu c f f'
+    s' <- mgu c (substApply s a) (substApply s a')
+    return (composeSubst s' s)
+mgu c t t' =
+    fail $ show c ++ " Could not unify types: " ++ show t ++ " and " ++ show t'
+
+liftUnionList :: MonadFail m => (StdCoord -> DataType -> DataType -> m Subst) -> StdCoord -> [(DataType, DataType)] -> m Subst
+liftUnionList m c tts =
+    foldl (\m_subst (dta, dtb) -> do{
+        s <- m_subst;
+        s' <- m c (substApply s dta) (substApply s dtb);
+        return $ composeSubst s' s
+    }) (return nullSubst) tts
+
+--TODO: Da testare
+match c src tgt = do
+    s <- mgu c src tgt
+    let
+        keyss = Set.fromList $ map fst $ Map.toList s
+        frees = freetyvars tgt
+        transformsInTgt = Set.intersection keyss frees
+        in if length transformsInTgt /= 0
+        then fail $ show c ++ " Could not merge type: " ++ show src ++ " into: " ++ show tgt
+        else return s
+
 -- Funzioni di typing
 typeLit :: Literal -> DataType
 typeLit (LitInteger _) = intT
@@ -141,7 +142,7 @@ typePat _ (_, _, PatWildcard) = freshType KType
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat env (c, _, PatVariant v ps) = do
     (VariantData _ qs vts dt) <- getVariantData c env v
-    if length ps /= length vts then throwError $ show c ++ " Constructor is applied to wrong number of arguments"
+    if length ps /= length vts then fail $ show c ++ " Constructor is applied to wrong number of arguments"
     else do
         s <- getInstantiationSubst qs
         pts <- mapM (typePat env) ps
@@ -171,7 +172,7 @@ typeExpr _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, dt, (c, dt, ExprLiteral lit))
 typeExpr (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
-        --Nothing -> throwError $ show c ++ " Unbound variable: " ++ labl
+        --Nothing -> fail $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do
                           lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
                           t <- instantiate scheme
@@ -232,15 +233,6 @@ typePutBranches env tpat texpr ((pat, expr@(c, _, _)):branches) = do
     lift $ lift $ putStrLn $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     return (composeSubst s'' mys, tfinal, (pat, expr'):others)
 
---Roba per i pred
-liftUnionPred :: (StdCoord->DataType->DataType->TyperState Subst)->StdCoord->Pred->Pred->TyperState Subst
-liftUnionPred m c (Pred l ts) (Pred l' ts')
-    | l == l' = liftUnionList m c (zip ts ts')
-    | otherwise = throwError $ show c ++ " Could not unify predicate names: " ++ show l ++ " and " ++ show l'
-
-mguPred = liftUnionPred mgu
-mergeIntoPred = liftUnionPred mergeInto
-
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
 substApplyExpr :: Subst -> HLExpr -> HLExpr
 substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
@@ -287,7 +279,7 @@ checkValDefsHint env (ValDef c l Nothing _:vdefs) = checkValDefsHint env vdefs
 checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just hint) _:vdefs) = do
     tFromEnv <- case Map.lookup l ts of
         Just scheme -> instantiate scheme
-    s <- mergeInto c tFromEnv hint
+    s <- match c tFromEnv hint
     s' <- checkValDefsHint (substApply s env) vdefs
     return (composeSubst s' s)
 
@@ -304,7 +296,7 @@ typeValDefGroup env vdefs = do
         vdefs'' = map (substApplyValDef sfinal) vdefs'
         env' = addValDefsEnv (substApply sfinal env) vdefs''
         in if (0 == (length $ freetyvars env')) then return (sfinal, env', vdefs'')
-        else throwError $ show ((\(ValDef c _ _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
+        else fail $ show ((\(ValDef c _ _ _ )->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])
 typeValDefGroups env (vdefs:vdefss) = do

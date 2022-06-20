@@ -1,7 +1,7 @@
 module TypingDefs where
-import Control.Monad.Except
 import Control.Monad.State
 import qualified Data.Map as Map
+import ResultT
 import MPCL(StdCoord)
 
 type KindQuant = Int
@@ -34,6 +34,14 @@ data DataType
     | DataTypeName String Kind -- Nome del tipo, kind del tipo
     | DataTypeApp DataType DataType --Funzione di tipi, argomento
 
+instance Eq DataType where
+    DataCOORD _ t == t' = t == t'
+    t == DataCOORD _ t' = t == t'
+    DataQuant q == DataQuant q' = q == q'
+    DataTypeName l k == DataTypeName l' k' = l == l' && k == k'
+    DataTypeApp f a == DataTypeApp f' a' = f == f' && a == a'
+    _ == _ = False
+
 -- TODO: Miglior debug per tipi tupla (o tipi-nome)
 instance Show DataType where
     show DataNOTHING = "NOTHING"
@@ -44,6 +52,7 @@ instance Show DataType where
     show (DataTypeApp f a) = "(" ++ show f ++ " " ++ show a ++ ")"
 
 data Pred = Pred String [DataType]
+    deriving Eq
 instance Show Pred where
     show (Pred l ts) = l ++ (foldr (++) [] . map ((' ':) . show)) ts
 
@@ -84,9 +93,10 @@ boolT = DataTypeName "Bool#BI" KType
 charT = DataTypeName "Char#BI" KType
 
 -- Infrastruttura monadica
+
 type TyperStateData = (Int, KindQuant, TyQuantId)
 
-type TyperState t = ExceptT String (StateT TyperStateData IO) t
+type TyperState t = ResultT (StateT TyperStateData IO) t
 
 newUniqueSuffix :: TyperState String
 newUniqueSuffix = do
@@ -117,4 +127,4 @@ freshKind = do
 
 runTyperState :: TyperStateData -> TyperState t -> IO (Either String t, TyperStateData)
 runTyperState state t =
-    runStateT (runExceptT t) state
+    runStateT (runResultT t) state
