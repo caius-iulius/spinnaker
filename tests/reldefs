@@ -23,7 +23,7 @@ rel Num a =
     (*!) : a -> a -> a,
     (/!) : a -> a -> a
 
-def main = () 5
+def main = ()
 
 # def double : forall a . {Num a} => a -> a
 #            = \x -> x +! x
