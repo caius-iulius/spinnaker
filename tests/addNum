@@ -1,0 +1,7 @@
+use Core
+
+rel MyNum a = (+!) : a -> a -> a
+
+def double = \x -> x +! x
+
+def main = 0

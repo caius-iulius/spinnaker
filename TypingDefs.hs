@@ -60,7 +60,7 @@ data Qual t = Qual [Pred] t
 instance Show t => Show (Qual t) where
     show (Qual ps a) = '{': (foldr (\l r->l ++ ", " ++ r) "} => " (map show ps)) ++ show a
 
-data TyScheme = TyScheme [TyQuant] DataType
+data TyScheme = TyScheme [TyQuant] (Qual DataType)
 instance Show TyScheme where
     show (TyScheme qs dt) = let showq (TyQuant q k) = " " ++ show q ++ ":" ++ show k in
         "forall" ++ foldl (++) "" (map showq qs) ++ "." ++ show dt
@@ -70,7 +70,7 @@ data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome dell
 
 -- Definizioni rel
 type InstData = Qual Pred
-data RelData = RelData [TyQuant] [(String, DataType)] [InstData]
+data RelData = RelData [TyQuant] [(String, Qual DataType)] [InstData]
     deriving Show
 type RelEnv = Map.Map String RelData
 

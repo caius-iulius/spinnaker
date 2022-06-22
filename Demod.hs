@@ -145,7 +145,7 @@ demodValDef env (SynValDef c _ l t e) = do
             te' <- demodTySchemeExpr env Map.empty te
             return $ Just te'
     e' <- demodExpr env e
-    return (ValDef c l t' e')
+    return (ValDef c l t' [] e')
 
 valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> TyperState (DemodEnv, [SyntaxValDef])
 valDefGroupEnv env [] = return (env, [])

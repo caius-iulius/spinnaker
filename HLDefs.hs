@@ -25,7 +25,7 @@ data HLExprData
 type HLExpr = (StdCoord, DataType, HLExprData)
 
 data HLValDef
-    = ValDef StdCoord String (Maybe DataType) HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
+    = ValDef StdCoord String (Maybe DataType) [Pred] HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
 data HLDataVariant

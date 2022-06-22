@@ -193,24 +193,23 @@ typeDataDefGroups env (ddefs:ddefss) = do
 
 
 typeRelDecls :: TypingEnv  -> [(StdCoord, String, DataType)] -> TyperState (KindSubst, [(StdCoord, String, DataType)])
-typeRelDecls env [] = return (nullKSubst, [])
-{-typeRelDecls env ((c, l, dt):decls) = do
-    (s, dt') <- typeTyExprStar c env dt
-    (s', decls') <- typeRelDecls env (substApplyRelDecls s decls)
-    return (composeKSubst s' s, (c, l, kSubstApply s' dt'):decls')-}
 typeRelDecls env decls = do
     (s, csts) <- typeTyExprsStar env (map (\(c,l,t)->(c,t)) decls)
     s' <- return $ Map.unions $ map (\(c, t) -> kindMonomorphize $ kind t) csts
     return (composeKSubst s' s, zipWith (\(_,l,_) (c, t)->(c,l, kSubstApply s' t)) decls csts)
 
 
-addRel l qs decls (TypingEnv ts ks vs rs) = TypingEnv ts ks vs (Map.insert l (RelData qs (map (\(_,d,t)->(d,t)) decls) []) rs)
+addRel :: String -> [TyQuant] -> [(StdCoord, String, DataType)] -> TypingEnv -> TypingEnv
+addRel l qs decls (TypingEnv ts ks vs rs) =
+    let relpred = Pred l (map DataQuant qs)
+        declpairs = map (\(_,d,t)->(d, Qual [relpred] t)) decls
+        in TypingEnv ts ks vs (Map.insert l (RelData qs declpairs []) rs)
 
 typeRelDef env (RelDef c l qs decls) = do
     (s, decls') <- typeRelDecls env decls
-    s' <- return $ Map.unions $ map (kindMonomorphize . kind . kSubstApply s) qs
-    s'' <- return $ composeKSubst s' s
-    let decls'' = substApplyRelDecls s'' decls'
+    let s' = Map.unions $ map (kindMonomorphize . kind . kSubstApply s) qs
+        s'' = composeKSubst s' s
+        decls'' = substApplyRelDecls s'' decls'
         qs' = map (kSubstApply s'') qs
         in return (s'', substApplyKindEnv s'' (addRel l qs' decls'' env), RelDef c l qs' decls'') --TODO: è necessario? se non sbaglio l'env è senza variabili.
 
@@ -256,12 +255,12 @@ typeKInstDefs env (instdef:instdefs) = do
 
 -- Typing degli hint
 typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
-typeValDefHint env vdef@(ValDef _ _ Nothing _) = return vdef
-typeValDefHint env (ValDef c l (Just tyscheme) e) = do
+typeValDefHint env vdef@(ValDef _ _ Nothing _ _) = return vdef
+typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
     (_, _, dt) <- typeTyExpr c env tyscheme
     lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show dt
     s <- kindmgu c (kind dt) KType
-    return $ ValDef c l (Just (kSubstApply s dt)) e
+    return $ ValDef c l (Just (kSubstApply s dt)) ps e
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

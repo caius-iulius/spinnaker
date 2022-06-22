@@ -28,17 +28,17 @@ builtinTypingTypes =
     ,   ("Bool#BI", KType)
     ]
 builtinTypingVals =
-    [   ("_addInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_subInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_mulInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_divInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_equInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_neqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_leqInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_greInt#BI", TyScheme [] (buildFunType (buildTupType [intT, intT]) boolT))
+    [   ("_addInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_subInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_mulInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_divInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
+    ,   ("_equInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_neqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_leqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_greInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
     --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (buildFunType intT (buildTupType [])))
-    ,   ("_getChr#BI", TyScheme [] (buildFunType (buildTupType []) intT))
+    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType intT (buildTupType [])))
+    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType []) intT))
     ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT
@@ -52,7 +52,7 @@ initTypingEnv = TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtin
 typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
     (ks', e', reldefs') <- typeRelDefs e reldefs
-    (ks'', e'', instdefs') <- typeKInstDefs e' instdefs
+    (ks'', e'', instdefs') <- typeKInstDefs (addRelDecls e') instdefs
     vdefgroups' <- typeValDefHints e'' vdefgroups
     (ts, e''', vdefgroups'') <- typeValDefGroups e'' vdefgroups'
     lift $ lift $ putStrLn $ "Final kind substitution (datas): " ++ show ks
