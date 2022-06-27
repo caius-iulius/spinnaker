@@ -6,6 +6,7 @@ import PrettyPrinter
 import HLDefs
 import SyntaxDefs
 import Demod
+
 import TypingDefs
 import KindTyper
 import TypeTyper

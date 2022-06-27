@@ -1,6 +1,7 @@
 module TypingDefs where
 import Control.Monad.State
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import ResultT
 import MPCL(StdCoord)
 
@@ -12,6 +13,17 @@ data Kind
     | KindQuant KindQuant --Questo l'ho tolto perché alla fine dell'inferenza tutti i kind liberi diventano *
     | KFun Kind Kind
     deriving Eq
+
+type KindSubst = Map.Map KindQuant Kind
+-- Classe kinds, usata per sostituzioni e per avere il kind
+class Kinds t where
+    kind :: t->Kind
+    kSubstApply :: KindSubst -> t -> t
+
+type Subst = Map.Map TyQuant DataType
+class Types t where
+    freetyvars :: t -> Set.Set TyQuant
+    substApply :: Subst -> t -> t
 
 instance Show Kind where
     show KindNOTHING = "NOTHING"

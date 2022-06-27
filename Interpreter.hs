@@ -37,22 +37,22 @@ getBinds :: HLPattern -> [String]
 getBinds (_, Nothing, patdata) = getBindsInner patdata
 getBinds (_, Just l, patdata) = l : getBindsInner patdata
 
-substApply :: Map.Map String HLExpr -> HLExpr -> HLExpr
-substApply _ e@(_, _, ExprLiteral _) = e
-substApply s (c, dt, ExprApp e0 e1) = (c, dt, ExprApp (substApply s e0) (substApply s e1))
-substApply s e@(_, _, ExprLabel l) =
+exprSubstApply :: Map.Map String HLExpr -> HLExpr -> HLExpr
+exprSubstApply _ e@(_, _, ExprLiteral _) = e
+exprSubstApply s (c, dt, ExprApp e0 e1) = (c, dt, ExprApp (exprSubstApply s e0) (exprSubstApply s e1))
+exprSubstApply s e@(_, _, ExprLabel l) =
     case Map.lookup l s of
         Nothing -> e
         Just expr -> expr
-substApply s (c, dt, ExprConstructor v es) = (c, dt, ExprConstructor v (map (substApply s) es))
-substApply s (c, dt, ExprLambda pat ret) =
+exprSubstApply s (c, dt, ExprConstructor v es) = (c, dt, ExprConstructor v (map (exprSubstApply s) es))
+exprSubstApply s (c, dt, ExprLambda pat ret) =
     let
         s' = foldl (flip Map.delete) s (getBinds pat)
-    in (c, dt, ExprLambda pat (substApply s' ret))
-substApply s (c, dt, ExprPut val pses) =
+    in (c, dt, ExprLambda pat (exprSubstApply s' ret))
+exprSubstApply s (c, dt, ExprPut val pses) =
     let
-        peSubstApply (p, e) = (p, substApply (foldl (flip Map.delete) s (getBinds p)) e)
-    in (c, dt, ExprPut (substApply s val) (map peSubstApply pses))
+        peSubstApply (p, e) = (p, exprSubstApply (foldl (flip Map.delete) s (getBinds p)) e)
+    in (c, dt, ExprPut (exprSubstApply s val) (map peSubstApply pses))
 
 builtinApply :: String -> HLExpr -> InterpState HLExprData
 builtinApply "_addInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprLiteral $ LitInteger (i0 + i1)
@@ -77,7 +77,7 @@ choosePattern c _ [] = error $ show c ++ " Non-exhausive putexpr"
 choosePattern c val ((p, e):pses) =
     case sievePattern p val of
         Nothing -> choosePattern c val pses
-        Just s -> eval $ substApply s e
+        Just s -> eval $ exprSubstApply s e
 
 eval :: HLExpr -> InterpState HLExpr
 eval e@(_, _, ExprLiteral l) = return e
@@ -91,7 +91,7 @@ eval (_, _, ExprApp f a) = do
             return (c, at, bicall)
         (_, _, ExprLambda pat ret) -> case sievePattern pat a' of
                 Nothing -> error $ "WHAT SIEVE: " ++ show pat ++ " val " ++ show a'
-                Just s -> eval $ substApply s ret
+                Just s -> eval $ exprSubstApply s ret
 eval e@(c, dt, ExprLabel l) = do
     env <- ask
     case Map.lookup l env of

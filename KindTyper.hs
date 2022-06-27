@@ -3,45 +3,9 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Control.Monad.Trans
 import MPCL(StdCoord)
-import TypingDefs
 import HLDefs
-
-type KindSubst = Map.Map KindQuant Kind
-nullKSubst :: KindSubst
-nullKSubst = Map.empty
-
-freeKindQuants KType = Set.empty
-freeKindQuants (KindQuant q) = Set.singleton q
-freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
-
--- Classe kinds, usata per sostituzioni e per avere il kind
-class Kinds t where
-    kind :: t->Kind
-    kSubstApply :: KindSubst -> t -> t
-
-instance Kinds Kind where
-    kind = id
-    kSubstApply _ KType = KType
-    kSubstApply s (KindQuant q) = case Map.lookup q s of
-        Nothing -> KindQuant q
-        Just k -> k
-    kSubstApply s (KFun a r) = KFun (kSubstApply s a) (kSubstApply s r)
-    kSubstApply _ KindNOTHING = KindNOTHING
-
-instance Kinds TyQuant where
-    kind (TyQuant _ k) = k
-    kSubstApply s (TyQuant t k) = TyQuant t (kSubstApply s k)
-
-instance Kinds DataType where
-    kind (DataQuant q) = kind q
-    --kind (DataTuple _) = KType
-    kind (DataTypeName _ k) = k
-    kind (DataTypeApp t _) = let (KFun _ k) = kind t in k
-    kSubstApply s (DataQuant q) = DataQuant (kSubstApply s q)
-    --kSubstApply s (DataTuple ts) = DataTuple (map (kSubstApply s) ts)
-    kSubstApply s (DataTypeName l k) = DataTypeName l (kSubstApply s k)
-    kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
-    kSubstApply s (DataCOORD c t) = DataCOORD c (kSubstApply s t)
+import TypingDefs
+import MGUs
 
 substApplyKindEnv s (TypingEnv ts ks vs rs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs rs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
@@ -50,23 +14,6 @@ substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
 substApplyRelDecls s decls = map (\(c, l, t) -> (c, l, kSubstApply s t)) decls
 substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
-
-composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
-
-kindQBind :: StdCoord -> KindQuant -> Kind -> TyperState KindSubst
-kindQBind c kq t | t == KindQuant kq = return nullKSubst
-                 | Set.member kq (freeKindQuants t) = fail $ show c ++ " Occurs check fails in kind inference: " ++ show (KindQuant kq) ++ " and " ++ show t
-                 | otherwise = return $ Map.singleton kq t
-
-kindmgu :: StdCoord -> Kind -> Kind -> TyperState KindSubst
-kindmgu c (KindQuant kq) t = kindQBind c kq t
-kindmgu c t (KindQuant kq) = kindQBind c kq t
-kindmgu _ KType KType = return nullKSubst
-kindmgu c (KFun a r) (KFun a' r') = do
-    s1 <- kindmgu c a a'
-    s2 <- kindmgu c (kSubstApply s1 r) (kSubstApply s1 r')
-    return $ composeKSubst s1 s2
-kindmgu c k1 k2 = fail $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
 
 -- Funzioni di typing
 getTyData :: StdCoord -> TypingEnv -> String -> TyperState Kind
