@@ -2,8 +2,7 @@ module TypeTyper where
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
---import Data.Maybe(isJust, isNothing)
-import MPCL (StdCoord)--, dummyStdCoord)
+import MPCL (StdCoord)
 import TypingDefs
 import MGUs
 import HLDefs
@@ -21,39 +20,6 @@ getVariantData c (TypingEnv _ _ vs _) l =
         Just vdata -> do
             lift $ lift $ putStrLn $ "VDATA " ++ show l ++ show vdata
             return vdata
-
---tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
-tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
-tyBindAdd c (TypingEnv ts ks vs rs) labl scheme =
-    case Map.lookup labl ts of
-        --Just _ -> fail $ show c ++ " Variable already bound: " ++ labl
-        Nothing -> --do
-            --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
-            --return $
-            TypingEnv (Map.insert labl scheme ts) ks vs rs
-
-generalize :: TypingEnv -> Qual DataType -> TyScheme
-generalize env t =
-    let quants = Set.toList $ Set.difference (freetyvars t) (freetyvars env)
-    in TyScheme quants t
-
---TODO: Sposta in altro file
---TODO: Controlla qui che non ci siano qualificatori liberi nelle definizioni
-addRelDecls :: TypingEnv -> TypingEnv
-addRelDecls env@(TypingEnv ts ks vs rs) =
-    let general_decl_pairs = concat $ map (\(_, RelData _ lqts _)->map (\(l, qt)->(l, generalize env qt)) lqts) $ Map.toList rs
-        general_decls_map = Map.fromList general_decl_pairs
-        in TypingEnv (Map.union ts general_decls_map) ks vs rs
-
-getInstantiationSubst qs = do
-    nqs <- mapM (\(TyQuant _ k) -> freshType k) qs
-    return $ Map.fromList (zip qs nqs)
-
-instantiate :: TyScheme -> TyperState (Qual DataType)
-instantiate scm@(TyScheme qs t) = do
-    subst <- getInstantiationSubst qs
-    lift $ lift $ putStrLn $ "Instantiating: " ++ show scm ++ " with subst: " ++ show subst
-    return $ substApply subst t
 
 -- Funzioni di typing
 typeLit :: Literal -> DataType
@@ -91,28 +57,27 @@ patVarsInEnv gf env (c, Just labl, pdata) dt =
     in innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
--- TODO: In ogni iterazione di questa funzione vanno controllati i qualificatori liberi
-typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
-typeExpr _ (c, _, ExprLiteral lit) = do
+typeExprInternal :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
+typeExprInternal _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, [], dt, (c, dt, ExprLiteral lit))
-typeExpr (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
+typeExprInternal (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> fail $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do
                           lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
                           Qual ps t <- instantiate scheme
                           return (nullSubst, ps, t, (c, t, ExprLabel labl))
-typeExpr env (c, _, ExprConstructor l []) = do
+typeExprInternal env (c, _, ExprConstructor l []) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
     s <- getInstantiationSubst qs
     let mydt = substApply s (foldr buildFunType dt argts)
     lift $ lift $ putStrLn $ "CONSTRUCTOR DT " ++ show l ++ show mydt
     return (nullSubst, [], mydt, (c, mydt, ExprConstructor l []))
-typeExpr env (c, _, ExprConstructor l es) = do --TODO: Da testare
+typeExprInternal env (c, _, ExprConstructor l es) = do --TODO: Da testare
     (s, ps, t, (_, _, ExprApp (_, _, ExprConstructor l' es') e')) <- typeExpr env (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprConstructor l (init es)) (last es))
     return (s, ps, t, (c, t, ExprConstructor l' (es' ++ [e'])))
     --typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
-typeExpr env (c, _, ExprApp f a) = do
+typeExprInternal env (c, _, ExprApp f a) = do
     q <- freshType KType
     (s1, ps1, t1, f') <- typeExpr env f
     (s2, ps2, t2, a') <- typeExpr (substApply s1 env) a
@@ -123,13 +88,13 @@ typeExpr env (c, _, ExprApp f a) = do
         finalps = map (substApply finals) (ps1++ps2)
     return (finals, finalps, finalt, (c, finalt, ExprApp f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
-typeExpr env (c, _, ExprLambda pat expr) = do
+typeExprInternal env (c, _, ExprLambda pat expr) = do
     argt <- typePat env pat
     env' <- patVarsInEnv (TyScheme [] . Qual []) env pat argt
     (s, ps, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
         in return (s, ps, finaldt, (c, finaldt, ExprLambda pat e))
-typeExpr env (c, _, ExprPut val pses) = do
+typeExprInternal env (c, _, ExprPut val pses) = do
     (s, ps, tval, val') <- typeExpr env val
     (s', tval') <- unifyPats (substApply s env) tval pses
     tempt <- freshType KType--TODO GIUSTO IL FRESH?
@@ -138,6 +103,13 @@ typeExpr env (c, _, ExprPut val pses) = do
     let finals = composeSubst s'' (composeSubst s' s)
         finalps = map (substApply finals) (ps++ps'')
         in return (finals, finalps, texpr, (c, texpr, ExprPut val' pses'))
+
+typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
+typeExpr env expr@(c, _, _) = do
+    (s, ps, t, expr') <- typeExprInternal env expr
+    ps' <- reduce c env ps
+    checkAmbiguousQual c env (Qual ps' t)
+    return (s, ps', t, expr')
 
 --Funzioni helper per putexpr
 unifyPats :: TypingEnv -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, DataType)
@@ -177,20 +149,21 @@ substApplyValDef s (ValDef c l t ps e) = ValDef c l t (map (substApply s) ps) (s
 --Funzioni per le definizioni globali
 typeValDef env (ValDef c l t _ e) = do --TODO: Qui dimentico i predicati già presenti, dovrebbero essere spazzatura dalle tipizzazioni precedenti
     (s, ps, dt, e') <- typeExpr env e
-    lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show dt ++ " and subst: " ++ show s
+    lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show (Qual ps dt) ++ " and subst: " ++ show s
     return (s, ValDef c l t ps e')
 
 quantifiedValDefEnv init_env [] = return init_env
-quantifiedValDefEnv env (ValDef c s _ _ _:vdefs) = do
+quantifiedValDefEnv env (ValDef c l _ _ _:vdefs) = do
     t <- freshType KType
-    env' <- return $ tyBindAdd c env s (TyScheme [] (Qual [] t))
+    lift $ lift $ putStrLn $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
+    env' <- return $ tyBindAdd c env l (TyScheme [] (Qual [] t))
     quantifiedValDefEnv env' vdefs
 
 typeValDefsLoop _ [] = return (nullSubst, [])
 typeValDefsLoop env (vdef:vdefs) = do
     (s, vdef') <- typeValDef env vdef
-    (s', vdefs') <- typeValDefsLoop (substApply s env) vdefs
-    return (composeSubst s' s, vdef':vdefs')
+    (s', vdefs') <- typeValDefsLoop (substApply s env) (map (substApplyValDef s) vdefs)
+    return (composeSubst s' s, substApplyValDef s' vdef':vdefs')
 
 addValDefsEnv env vdefs = foldl
     (\e (ValDef c l _ ps (_, t, _))->
@@ -204,21 +177,26 @@ unionValDefEnv (TypingEnv ts _ _ _) (ValDef c l _ ps (_, t, _)) = do
     lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
     return s
 
-checkHint :: StdCoord -> TypingEnv -> Qual DataType -> Qual DataType -> TyperState Subst
-checkHint c env (Qual pshint typehint) (Qual pst typet) = do
-    s <- match c typet typehint
-    --TODO: Sto dimenticando i predicati, devo controllare se "hint entails ps"
-    return s
+checkHintType :: StdCoord -> TypingEnv -> Qual DataType -> Qual DataType -> TyperState Subst
+checkHintType c env (Qual pshint typehint) (Qual pst typet) = match c typet typehint
 
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _ _:vdefs) = checkValDefsHint env vdefs
 checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just hint) ps (_, t, _):vdefs) = do
-    --(Qual pe tFromEnv) <- case Map.lookup l ts of 
-    --    Just scheme -> instantiate scheme
-    --if length pe /= 0 then fail "PREDS IN ENV NOT EMPTY" else return ()
-    s <- checkHint c env (Qual [] hint) (Qual ps t)
+    s <- checkHintType c env hint (Qual ps t)
     s' <- checkValDefsHint (substApply s env) vdefs
     return (composeSubst s' s)
+
+checkValDefsHintPreds :: TypingEnv -> [HLValDef] -> TyperState [HLValDef]
+checkValDefsHintPreds env vdefs =
+    mapM checkHintPreds vdefs
+        where checkHintPreds vdef@(ValDef _ _ Nothing _ _) = return vdef
+              checkHintPreds (ValDef c l hint@(Just (Qual pshint thint)) pst e) = do
+                mapM (checkHintPred c pshint) pst
+                return $ ValDef c l hint pshint e
+              checkHintPred c pshint pt = if entail env pshint pt
+                then return ()
+                else fail $ show c ++ " Type hint qualifiers: " ++ show pshint ++ " do not entail constraint: " ++ show pt
 
 -- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
 -- TODO: Mi sa che questa funzione non dovrebbe restituire una sostituzione
@@ -232,7 +210,10 @@ typeValDefGroup env vdefs = do
         sfinal = composeSubst s'' s'
         vdefs'' = map (substApplyValDef sfinal) vdefs'
         env' = addValDefsEnv (substApply sfinal env) vdefs''
-        in if (0 == (length $ freetyvars env')) then return (sfinal, env', vdefs'')
+        in if (0 == (length $ freetyvars env')) then do
+            --lift $ lift $ putStrLn $ "Final ValDef Subst: " ++ show sfinal
+            vdefs''' <- checkValDefsHintPreds env' vdefs''
+            return (sfinal, env', vdefs''')
         else fail $ show ((\(ValDef c _ _ _ _)->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])

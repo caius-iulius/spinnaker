@@ -23,8 +23,8 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
 frontendCompile :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))
 frontendCompile core program = (>>= return . fst) $ runTyperState (0, 0, 0) $ do {
     (env, entryPoint, block) <- typeProgram core program;
-    block' <- completeVariantProgram env block;
-    (env', block'') <- typeBlockProgram block';
+    let (env', block'') = (env, block) in--block' <- completeVariantProgram env block;
+    --(env', block'') <- typeBlockProgram block';
     return (env', entryPoint, block'')
 }
 

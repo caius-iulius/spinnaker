@@ -39,7 +39,7 @@ data SyntaxTypeExprData
     deriving Show
 type SyntaxTypeExpr = (StdCoord, SyntaxTypeExprData)
 type SyntaxTyPred = (StdCoord, Path, [SyntaxTypeExpr])
-type SyntaxTySchemeExpr = (StdCoord, [String], {-[SyntaxTyConstraint],-} SyntaxTypeExpr)
+type SyntaxTySchemeExpr = (StdCoord, [String], [SyntaxTyPred], SyntaxTypeExpr)
 
 data SyntaxValDef
     = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione

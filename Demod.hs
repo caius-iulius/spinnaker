@@ -131,12 +131,15 @@ demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
     demodExpr (envsUnionLeft env' env) e
 
 -- definizioni dei valori globali
-demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState DataType
-demodTySchemeExpr env qmap (c, qls, te) = do
+demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState (Qual DataType)
+demodTySchemeExpr env qmap (c, qls, ps, te) = do
     (qmap', _) <- buildQmapQlist c qls
     if (length $ Map.intersection qmap qmap') /= 0
         then fail $ show c ++ " Type scheme declares already used tyquants (TODO: migliora l'error reporting)"
-        else demodTypeExpr env (Map.union qmap' qmap) te
+        else do
+            ps' <- mapM (demodPred env (Map.union qmap' qmap)) ps
+            te' <- demodTypeExpr env (Map.union qmap' qmap) te
+            return $ Qual ps' te'
 
 demodValDef env (SynValDef c _ l t e) = do
     t' <- case t of

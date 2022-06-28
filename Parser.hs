@@ -356,13 +356,13 @@ getTyScheme = do {
     require $ do {
         typevars <- munch getTypeVar;
         thisSyntaxElem ".";
-        getTyConstraints;
+        preds <- getTyConstraints;
         m <- getTypeMeta;
-        return (c, map snd typevars, m)
+        return (c, map snd typevars, preds, m)
     }
 } <|| do {
     m <- getTypeMeta;
-    return (fst m, [], m)
+    return (fst m, [], [], m)
 }
 
 -- Parser per le definizioni

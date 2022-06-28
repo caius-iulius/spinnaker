@@ -10,24 +10,6 @@ rel Monad m =
     return : forall a . a -> m a,
     bind : forall a b . m a -> (a -> m b) -> m b
 
-rel Into a b =
-    into : a -> b
-
-inst forall m. {Monad m} => Functor m {
-    def fmap = \f, m -> bind m (return <| f)
-}
-
-rel Num a =
-    (+!) : a -> a -> a,
-    (-!) : a -> a -> a,
-    (*!) : a -> a -> a,
-    (/!) : a -> a -> a
-
-def main = ()
-
-def double # : forall a . {Num a} => a -> a
-            = \x -> x +! x
-
 data Maybe a = None | Some a
 
 inst Functor Maybe {
@@ -46,3 +28,36 @@ inst Monad Maybe {
 inst forall a b. {Show a, Show b} => Show (a, b) {
     def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
 }
+inst forall m. {Monad m} => Functor m {
+    def fmap = \f, m -> bind m (return <| f)
+}
+
+def retfmap # : forall m a b. {Monad m, Functor m} => (a -> b) -> a -> m b 
+            = \f -> fmap f <| return
+
+def showTuple = \a, b -> show (a, b)
+
+rel Num a =
+    (+!) : a -> a -> a,
+    (-!) : a -> a -> a,
+    (*!) : a -> a -> a,
+    (/!) : a -> a -> a
+
+inst Num Int {
+    def (+!) = (+)
+    def (*!) = (*)
+    def (-!) = (-)
+    def (/!) = (/)
+}
+
+def double : forall a . {Num a, Show a} => a -> a
+           = \x -> x +! x
+
+def squareplus = \x -> x +! x *! x
+
+def threenplus1 = \x -> 1 +! x *! 3
+
+# def mutual1 = \x -> x +! mutual2 x
+# and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
+
+def main = ()

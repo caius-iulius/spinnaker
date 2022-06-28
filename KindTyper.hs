@@ -13,7 +13,6 @@ substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(c,t)->(c, kSu
 substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
 substApplyRelDecls s decls = map (\(c, l, t) -> (c, l, kSubstApply s t)) decls
-substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
 
 -- Funzioni di typing
 getTyData :: StdCoord -> TypingEnv -> String -> TyperState Kind
@@ -46,32 +45,17 @@ typeTyExpr c env (DataTypeApp f a) = do
         finalk = kSubstApply s3 q in
             return (finals, finalk, DataTypeApp (kSubstApply finals tf) (kSubstApply finals ta))
 
-{-typeTyExprStar c env dt = do
-    (s, k, dt') <- typeTyExpr c env dt
-    s' <- kindmgu c k KType
-    return (composeKSubst s' s, kSubstApply s' dt')-}
-
-typeAndUnifyList :: TypingEnv -> [(StdCoord, DataType)] -> [Kind] -> TyperState (KindSubst, [(StdCoord, DataType)])
-typeAndUnifyList env [] [] = return (nullKSubst, [])
-typeAndUnifyList env ((c,e):es) (mk:ks) = do
-    (s, k, t) <- typeTyExpr c env e
+typeAndUnifyList :: Kinds e => (StdCoord -> TypingEnv -> e -> TyperState (KindSubst, Kind, e)) -> TypingEnv -> [(StdCoord, e)] -> [Kind] -> TyperState (KindSubst, [(StdCoord, e)])
+typeAndUnifyList tye env [] [] = return (nullKSubst, [])
+typeAndUnifyList tye env ((c,e):es) (mk:ks) = do
+    (s, k, t) <- tye c env e
     s' <- kindmgu c k mk
-    (s'', ts) <- typeAndUnifyList env (map (\(c',e')->(c', kSubstApply (composeKSubst s' s) e')) es) ks
+    (s'', ts) <- typeAndUnifyList tye env (map (\(c',e')->(c', kSubstApply (composeKSubst s' s) e')) es) ks
     s''' <- return $ composeKSubst s'' (composeKSubst s' s)
     return (s''', (c, kSubstApply s''' t):ts)
 
-typeTyExprsStar :: TypingEnv -> [(StdCoord, DataType)] -> TyperState (KindSubst, [(StdCoord, DataType)])
-typeTyExprsStar env [] = return (nullKSubst, [])
-{-typeTyExprsStar env ((c,e):es) = do
-    (s, k, t) <- typeTyExpr c env e
-    s1 <- kindmgu c k KType
-    (s2, ts) <- typeTyExprsStar env es
-    return (composeKSubst s2 (composeKSubst s1 s), (c, kSubstApply (composeKSubst s2 s1) t):ts)-}
-{-typeTyExprsStar env ((c,e):es) = do
-    (s, t) <- typeTyExprStar c env e
-    (s', ts) <- typeTyExprsStar env (map (\(c',e')->(c',kSubstApply s e')) es)
-    return (composeKSubst s' s, (c, kSubstApply s' t):ts)-}
-typeTyExprsStar env ts = typeAndUnifyList env ts (take (length ts) $ repeat KType)
+typeTyExprsStar env ts = typeAndUnifyList typeTyExpr env ts (take (length ts) $ repeat KType)
+typeQualTypeStar env ts = typeAndUnifyList typeQualType env ts (take (length ts) $ repeat KType)
 
 typeDataVariant env (DataVariant c l es) = do
     (s, ts) <- typeTyExprsStar env es
@@ -139,17 +123,17 @@ typeDataDefGroups env (ddefs:ddefss) = do
     return (composeKSubst s' s, env'', map (substApplyDataDef s') ddefs':ddefss') --TODO: è necessaro? se non sbaglio l'env è senza variabili
 
 
-typeRelDecls :: TypingEnv  -> [(StdCoord, String, DataType)] -> TyperState (KindSubst, [(StdCoord, String, DataType)])
+typeRelDecls :: TypingEnv  -> [(StdCoord, String, Qual DataType)] -> TyperState (KindSubst, [(StdCoord, String, Qual DataType)])
 typeRelDecls env decls = do
-    (s, csts) <- typeTyExprsStar env (map (\(c,l,t)->(c,t)) decls)
+    (s, csts) <- typeQualTypeStar env (map (\(c,l,t)->(c,t)) decls)
     s' <- return $ Map.unions $ map (\(c, t) -> kindMonomorphize $ kind t) csts
     return (composeKSubst s' s, zipWith (\(_,l,_) (c, t)->(c,l, kSubstApply s' t)) decls csts)
 
 
-addRel :: String -> [TyQuant] -> [(StdCoord, String, DataType)] -> TypingEnv -> TypingEnv
+addRel :: String -> [TyQuant] -> [(StdCoord, String, Qual DataType)] -> TypingEnv -> TypingEnv
 addRel l qs decls (TypingEnv ts ks vs rs) =
     let relpred = Pred l (map DataQuant qs)
-        declpairs = map (\(_,d,t)->(d, Qual [relpred] t)) decls
+        declpairs = map (\(_,d,Qual ps t)->(d, Qual (relpred:ps) t)) decls
         in TypingEnv ts ks vs (Map.insert l (RelData qs declpairs []) rs)
 
 typeRelDef env (RelDef c l qs decls) = do
@@ -171,7 +155,7 @@ typePred :: StdCoord -> TypingEnv -> Pred -> TyperState (KindSubst, Pred)
 typePred c env@(TypingEnv _ _ _ rs) (Pred l ts) =
     case Map.lookup l rs of
         Just (RelData qs _ _) -> do
-            (s, ts') <- typeAndUnifyList env (zip (take (length ts) $ repeat c) ts) (map kind qs)
+            (s, ts') <- typeAndUnifyList typeTyExpr env (zip (take (length ts) $ repeat c) ts) (map kind qs)
             return (s, Pred l (map snd ts'))
 
 typeQualPred :: StdCoord -> TypingEnv -> Qual Pred -> TyperState (KindSubst, Qual Pred)
@@ -185,12 +169,32 @@ typeQualPred c env (Qual preds pred) = do
                     (s', ps') <- typePreds c env (map (substApplyPred s) ps)
                     return (composeKSubst s' s, (substApplyPred s' p'):ps')
 
+typeQualType :: StdCoord -> TypingEnv -> Qual DataType -> TyperState (KindSubst, Kind, Qual DataType)
+typeQualType c env (Qual preds a) = do
+    (s, preds') <- typePreds c env preds
+    (s', k, a') <- typeTyExpr c env (kSubstApply s a)
+    return (composeKSubst s' s, k, Qual (map (substApplyPred s') preds') a')
+        where   typePreds :: StdCoord -> TypingEnv -> [Pred] -> TyperState (KindSubst, [Pred]) --TODO: Codice duplicato sopra
+                typePreds c env [] = return (nullKSubst, [])
+                typePreds c env (p:ps) = do
+                    (s, p') <- typePred c env p
+                    (s', ps') <- typePreds c env (map (substApplyPred s) ps)
+                    return (composeKSubst s' s, (substApplyPred s' p'):ps')
+
 addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs decls insts)->RelData qs decls (p:insts)) l rs
+
+--TODO: Sposta in altro file
+--TODO: Controlla qui che non ci siano qualificatori liberi nelle definizioni
+addRelDecls :: TypingEnv -> TypingEnv
+addRelDecls env@(TypingEnv ts ks vs rs) =
+    let general_decl_pairs = concat $ map (\(_, RelData _ lqts _)->map (\(l, qt)->(l, generalize env qt)) lqts) $ Map.toList rs
+        general_decls_map = Map.fromList general_decl_pairs
+        in TypingEnv (Map.union ts general_decls_map) ks vs rs
 
 typeKInstDef :: TypingEnv -> HLInstDef -> TyperState (KindSubst, TypingEnv, HLInstDef)
 typeKInstDef env (InstDef c qualhead defs) = do
     (s, qualhead') <- typeQualPred c env qualhead
-    return (s, addInst qualhead env, InstDef c qualhead' defs)
+    return (s, addInst qualhead' env, InstDef c qualhead' defs)
     --TODO: controlli vari su defs (e.g. condizioni Paterson), applica la sostituzione su defs se aggiungo i cast nelle espressioni
 
 typeKInstDefs :: TypingEnv -> [HLInstDef] -> TyperState (KindSubst, TypingEnv, [HLInstDef])
@@ -204,7 +208,7 @@ typeKInstDefs env (instdef:instdefs) = do
 typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
 typeValDefHint env vdef@(ValDef _ _ Nothing _ _) = return vdef
 typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
-    (_, _, dt) <- typeTyExpr c env tyscheme
+    (_, _, dt) <- typeQualType c env tyscheme
     lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show dt
     s <- kindmgu c (kind dt) KType
     return $ ValDef c l (Just (kSubstApply s dt)) ps e

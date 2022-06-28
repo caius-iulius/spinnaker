@@ -69,6 +69,8 @@ instance Show Pred where
     show (Pred l ts) = l ++ (foldr (++) [] . map ((' ':) . show)) ts
 
 data Qual t = Qual [Pred] t
+    deriving Eq
+
 instance Show t => Show (Qual t) where
     show (Qual ps a) = '{': (foldr (\l r->l ++ ", " ++ r) "} => " (map show ps)) ++ show a
 

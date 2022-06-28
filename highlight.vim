@@ -7,7 +7,7 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn keyword mylangTopDef mod data def and
+syn keyword mylangTopDef mod data def and rel inst
 syn keyword mylangTopKeyword use
 syn keyword mylangTopAccess pub
 syn keyword mylangKeyword let put forall

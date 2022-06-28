@@ -1,12 +1,8 @@
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
 phantom types per determinare se un programma è stato tipizzato?
 
-invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costrazione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli monomorficamente
-
-
-CONTROLLO DELLE DEFINIZIONI RICORSIVE:
-"def x = x" NON DEVE ESSERE PERMESSO
-Si può tentare il sistema di tipizzazione di ocaml, permettere solo valori di funzioni oppure utilizzare un contesto di funzioni già "computate"
+invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costruzione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli monomorficamente
+alternativamente si può introdurre un vincolo: ogni valore utilizzato prima della sua dichiarazione deve avere un tipo specificato dall'hint. Questo però apre la strada alla ricorsione polimorfica, che andrebbe impedita da qualche altro controllo. Inoltre anche semplici programmi come il fattoriale dovrebbero essere annotati.
 
 prendi una decisione riguardo all'ambiguità sintattica del pattern matching
 
@@ -21,22 +17,25 @@ Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri spe
 
 supporto multifile
 incorpora file core
-implementa caratteri e completa le stringhe
+implementa caratteri
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel
     - [OK] risoluzione dei kind nei rel
-    - aggiunta dei rel e delle definizioni dei loro membri nel contesto
-    - entailment ecc. come in THIH
-    - tipizzazione delle espressioni con Qual DataType e istanze
+    - [OK] aggiunta dei rel e delle definizioni dei loro membri nel contesto
+    - [OK] entailment ecc. come in THIH
+    - [OK] tipizzazione delle espressioni con Qual DataType
+    - gestione dell'hinting e dei predicati nei gruppi di valdef
+    - tipizzazione istanze
     - riscrivi l'interprete per propagare i tipi e scegliere da vtable
     - aggiungi controlli per limitare overlap (le istanze devono trattare una classe o un tipo definiti nel proprio modulo)
-3. monomorfizzazione
-4. aggiungi controlli per halting del compilatore
-    - controlla le istanze indecidibili
+    - aggiungi controlli di correttezza delle istanze, tra cui le istanze indecidibili
+3. aggiungi controlli per halting del compilatore
     - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)
+4. monomorfizzazione
 5. notazione do
 6. defunzionalizzazione
     Semplificazione a un branch per putexpr
 7. compilazione a C
 8. ottimizzazioni
+- aggiungi controlli di correttezza
