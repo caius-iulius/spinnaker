@@ -98,7 +98,7 @@ unionDataDefEnv (TypingEnv _ ks _ _) (DataDef c l qs _) =
             s <- kindmgu c (qstokind qs) kFromEnv
             return s
 
-kindMonomorphize :: Kind -> KindSubst
+kindMonomorphize :: Kinds k => k -> KindSubst
 kindMonomorphize = Map.fromList . map (flip (,) KType) . Set.toList . freeKindQuants
 
 dataMonomorphize (DataDef _ _ qs _) = Map.unions $ map (kindMonomorphize . kind . snd) qs
@@ -155,8 +155,11 @@ typePred :: StdCoord -> TypingEnv -> Pred -> TyperState (KindSubst, Pred)
 typePred c env@(TypingEnv _ _ _ rs) (Pred l ts) =
     case Map.lookup l rs of
         Just (RelData qs _ _) -> do
-            (s, ts') <- typeAndUnifyList typeTyExpr env (zip (take (length ts) $ repeat c) ts) (map kind qs)
-            return (s, Pred l (map snd ts'))
+            if length qs /= length ts
+            then fail $ show c ++ " TypeRel: " ++ show l ++ " applied to wrong number of arguments"
+            else do
+                (s, ts') <- typeAndUnifyList typeTyExpr env (zip (take (length ts) $ repeat c) ts) (map kind qs)
+                return (s, Pred l (map snd ts'))
 
 typeQualPred :: StdCoord -> TypingEnv -> Qual Pred -> TyperState (KindSubst, Qual Pred)
 typeQualPred c env (Qual preds pred) = do
@@ -209,9 +212,10 @@ typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
 typeValDefHint env vdef@(ValDef _ _ Nothing _ _) = return vdef
 typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
     (_, _, dt) <- typeQualType c env tyscheme
-    lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show dt
     s <- kindmgu c (kind dt) KType
-    return $ ValDef c l (Just (kSubstApply s dt)) ps e
+    let s' = kindMonomorphize (kSubstApply s dt)
+    lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s dt) ++ show (freeKindQuants dt)
+    return $ ValDef c l (Just (kSubstApply (composeKSubst s' s) dt)) ps e
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

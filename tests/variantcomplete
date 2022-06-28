@@ -1,0 +1,3 @@
+data Prod3 a b c = Prod3 a b c
+
+def main = Prod3 1 1.5 ()

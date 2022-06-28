@@ -108,7 +108,7 @@ typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
 typeExpr env expr@(c, _, _) = do
     (s, ps, t, expr') <- typeExprInternal env expr
     ps' <- reduce c env ps
-    checkAmbiguousQual c env (Qual ps' t)
+    --checkAmbiguousQual c env (Qual ps' t)
     return (s, ps', t, expr')
 
 --Funzioni helper per putexpr
@@ -184,7 +184,7 @@ checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _ _:vdefs) = checkValDefsHint env vdefs
 checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just hint) ps (_, t, _):vdefs) = do
     s <- checkHintType c env hint (Qual ps t)
-    s' <- checkValDefsHint (substApply s env) vdefs
+    s' <- checkValDefsHint (substApply s env) (map (substApplyValDef s) vdefs)
     return (composeSubst s' s)
 
 checkValDefsHintPreds :: TypingEnv -> [HLValDef] -> TyperState [HLValDef]
@@ -206,15 +206,16 @@ typeValDefGroup env vdefs = do
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
     s' <- return $ foldl (flip composeSubst) s substs
     s'' <- checkValDefsHint (substApply s' vars_env) (map (substApplyValDef s') vdefs') --TODO: La posizione è giusta?
-    let
-        sfinal = composeSubst s'' s'
+    let sfinal = composeSubst s'' s'
         vdefs'' = map (substApplyValDef sfinal) vdefs'
-        env' = addValDefsEnv (substApply sfinal env) vdefs''
-        in if (0 == (length $ freetyvars env')) then do
+        ps = concat $ map (\(ValDef _ _ _ ps _) -> ps) vdefs''
+        vdefs''' = map (\(ValDef c l h _ e)->ValDef c l h ps e) vdefs''
             --lift $ lift $ putStrLn $ "Final ValDef Subst: " ++ show sfinal
-            vdefs''' <- checkValDefsHintPreds env' vdefs''
-            return (sfinal, env', vdefs''')
-        else fail $ show ((\(ValDef c _ _ _ _)->c) $ head vdefs'') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
+    mapM (\(ValDef c _ _ ps' (_, t, _))->checkAmbiguousQual c env (Qual ps' t)) vdefs'''
+    vdefs'''' <- checkValDefsHintPreds env vdefs'''
+    let env' = addValDefsEnv (substApply sfinal env) vdefs''''
+    if (0 == (length $ freetyvars env')) then return (sfinal, env', vdefs'''')
+    else fail $ show ((\(ValDef c _ _ _ _)->c) $ head vdefs''') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])
 typeValDefGroups env (vdefs:vdefss) = do

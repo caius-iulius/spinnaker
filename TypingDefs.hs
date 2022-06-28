@@ -19,6 +19,7 @@ type KindSubst = Map.Map KindQuant Kind
 class Kinds t where
     kind :: t->Kind
     kSubstApply :: KindSubst -> t -> t
+    freeKindQuants :: t -> Set.Set KindQuant
 
 type Subst = Map.Map TyQuant DataType
 class Types t where
@@ -57,7 +58,7 @@ instance Eq DataType where
 -- TODO: Miglior debug per tipi tupla (o tipi-nome)
 instance Show DataType where
     show DataNOTHING = "NOTHING"
-    show (DataCOORD c dt) = "AT("++show c ++ ", " ++ show dt ++ ")"
+    show (DataCOORD c dt) = "(AT"++show c ++ " " ++ show dt ++ ")"
     show (DataQuant q) = show q
     show (DataTypeName s k) = s++":"++show k
     show (DataTypeApp (DataTypeApp (DataTypeName "->#BI" _) a) r) = "(" ++ show a ++ "->" ++ show r ++ ")" --Caso speciale per le funzioni

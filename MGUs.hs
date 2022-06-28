@@ -15,9 +15,15 @@ instance Kinds Kind where
     kSubstApply s (KFun a r) = KFun (kSubstApply s a) (kSubstApply s r)
     kSubstApply _ KindNOTHING = KindNOTHING
 
+    freeKindQuants KType = Set.empty
+    freeKindQuants (KindQuant q) = Set.singleton q
+    freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
+
+
 instance Kinds TyQuant where
     kind (TyQuant _ k) = k
     kSubstApply s (TyQuant t k) = TyQuant t (kSubstApply s k)
+    freeKindQuants (TyQuant _ k) = freeKindQuants k
 
 instance Kinds DataType where
     kind (DataQuant q) = kind q
@@ -32,17 +38,20 @@ instance Kinds DataType where
     kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
     kSubstApply s (DataCOORD c t) = DataCOORD c (kSubstApply s t)
 
+    freeKindQuants (DataQuant q) = freeKindQuants q
+    freeKindQuants (DataTypeName _ k) = freeKindQuants k
+    freeKindQuants (DataTypeApp f a) = Set.union (freeKindQuants f) (freeKindQuants a)
+    freeKindQuants (DataCOORD _ t) = freeKindQuants t
+
 substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
+freeKindQuantsPred (Pred l ts) = Set.unions (map freeKindQuants ts)
 instance Kinds t => Kinds (Qual t) where
     kind (Qual _ t) = kind t
     kSubstApply s (Qual ps t) = Qual (map (substApplyPred s) ps) (kSubstApply s t)
+    freeKindQuants (Qual ps t) = Set.unions (freeKindQuants t : map freeKindQuantsPred ps)
 
 nullKSubst :: KindSubst
 nullKSubst = Map.empty
-
-freeKindQuants KType = Set.empty
-freeKindQuants (KindQuant q) = Set.singleton q
-freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
 
 composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
 

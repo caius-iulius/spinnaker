@@ -1,4 +1,4 @@
-module VariantComplete where
+module VariantComplete(completeVariantValDefGroups, completeVariantInstDefs) where
 import HLDefs
 import TypingDefs
 import TypeTyper(getVariantData)
@@ -26,6 +26,19 @@ completeVariant env (c, t, ExprPut v pses) = do
     pses' <- mapM (\(p, e)-> completeVariant env e >>= \e' -> return (p, e')) pses
     return (c, t, ExprPut v' pses')
 
+completeVariantValDefGroups :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
+completeVariantValDefGroups env = mapM (mapM (\(ValDef c l t ps e)-> completeVariant env e >>= (return . ValDef c l t ps)))
+
+completeVariantInstDefs :: TypingEnv -> [HLInstDef] -> TyperState [HLInstDef]
+completeVariantInstDefs env =
+    mapM (\(InstDef c qh defs)->(mapM (\(c', l, e)-> do
+        e' <- completeVariant env e
+        return (c', l, e')) defs) >>= return . InstDef c qh)
+
+{-completeVariantProgram :: TypingEnv -> BlockProgram -> TyperState BlockProgram
 completeVariantProgram env (BlockProgram datadefs reldefs valdefs instdefs) = do
-    valdefs' <- mapM (mapM (\(ValDef c l t ps e)-> completeVariant env e >>= (return . ValDef c l t ps))) valdefs
-    return (BlockProgram datadefs reldefs valdefs' instdefs)
+    instdefs' <- mapM (\(InstDef c qh defs)->(mapM (\(c', l, e)-> do
+        e' <- completeVariant env e
+        return (c', l, e')) defs) >>= return . InstDef c qh) instdefs
+    return (BlockProgram datadefs reldefs valdefs' instdefs')
+-}

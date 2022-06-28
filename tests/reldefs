@@ -50,14 +50,15 @@ inst Num Int {
     def (/!) = (/)
 }
 
-def double : forall a . {Num a, Show a} => a -> a
+def double : forall a . {Num a} => a -> a
            = \x -> x +! x
 
 def squareplus = \x -> x +! x *! x
 
 def threenplus1 = \x -> 1 +! x *! 3
 
-# def mutual1 = \x -> x +! mutual2 x
-# and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
+def mutual1 : forall m x . {Num (m x), Functor m} => m x -> m x 
+            = \x -> x +! mutual2 x
+and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
 
 def main = ()
