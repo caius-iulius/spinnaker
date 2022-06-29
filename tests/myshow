@@ -1,0 +1,32 @@
+use Core
+
+data Char = CharCode Int
+
+rel pub MyShow a =
+    myshow : a -> List Int
+
+inst forall a b. {MyShow a, MyShow b} => MyShow (a, b) {
+    def myshow = \(a, b) -> "(" ++ myshow a ++ ", " ++ myshow b ++ ")"
+}
+
+inst MyShow Int {
+    def myshow = Utility.showInt
+}
+
+inst MyShow Char {
+    def myshow = \CharCode i -> "CharCode " ++ Utility.showInt i
+}
+
+inst MyShow (List Char) {
+    def myshow = \l -> [34 | map (\CharCode c -> c) l ++ [34]]
+}
+
+inst forall a. {MyShow a} => MyShow (List a) {
+    def myshow = Utility.showList myshow
+}
+
+def main =
+    let codetos = map CharCode
+    -> let _  = putStrLn (myshow (10, (codetos "Ciao Mondo!")))
+    -> putStrLn $ myshow [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9]]
+

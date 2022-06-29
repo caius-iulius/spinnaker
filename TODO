@@ -1,10 +1,15 @@
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
+
 phantom types per determinare se un programma è stato tipizzato?
 
 invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costruzione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli monomorficamente
 alternativamente si può introdurre un vincolo: ogni valore utilizzato prima della sua dichiarazione deve avere un tipo specificato dall'hint. Questo però apre la strada alla ricorsione polimorfica, che andrebbe impedita da qualche altro controllo. Inoltre anche semplici programmi come il fattoriale dovrebbero essere annotati.
 
 prendi una decisione riguardo all'ambiguità sintattica del pattern matching
+
+decidi se i putexpr (quindi anche i letexpr) devono rimanere polimorfici
+    Vantaggio: comodità e espressività, in caso contrario l'unico polimorfismo possibile è nel top level
+    svantaggi: ci sono più ambiguità possibili a causa dei qualificatori, il monomorfizzatore deve fare molto più lavoro, le computazioni dei valori vanno fatte più volte con comportamenti potenzialmente diversi
 
 STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIMO COMPILATORE
 
@@ -19,6 +24,10 @@ supporto multifile
 incorpora file core
 implementa caratteri
 
+utilizza un nuovo sistema di entrypoint, controllato con gli hint giusti, tipo (scritto direttamente nel compilatore, oppure definito in Core):
+    def entryPoint : () = _unsafeRunIO (main >>= \v -> putStrLn (show v))
+attualmente un programma che non abbia "()" come tipo per main crasha nell'interprete, questo a causa della scelta forzata di vtable
+
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel
     - [OK] risoluzione dei kind nei rel
@@ -27,15 +36,14 @@ implementa caratteri
     - [OK] tipizzazione delle espressioni con Qual DataType
     - [OK] gestione dell'hinting e dei predicati nei gruppi di valdef
     - [OK] tipizzazione istanze
-    - aggiungi controlli di correttezza delle istanze, tra cui la decidibilità
-    - riscrivi l'interprete per propagare i tipi e scegliere da vtable
-    - aggiungi controlli per limitare overlap (le istanze devono trattare una classe o un tipo definiti nel proprio modulo)
+    - [OK] riscrivi l'interprete per propagare i tipi e scegliere da vtable
+    - aggiungi controlli per limitare overlap (le istanze devono trattare una relazione o un tipo definiti nel proprio modulo)
 3. aggiungi controlli per halting del compilatore
+    - controlla decidibilità delle istanze
     - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)
 4. monomorfizzazione
 5. notazione do
-6. defunzionalizzazione
-    Semplificazione a un branch per putexpr
+6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. compilazione a C
 8. ottimizzazioni
 - aggiungi controlli di correttezza

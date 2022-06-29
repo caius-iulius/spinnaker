@@ -172,6 +172,7 @@ liftUnionList m c tts =
     }) (return nullSubst) tts
 
 --TODO: Da testare
+match :: MonadFail m => StdCoord -> DataType -> DataType -> m Subst
 match c src tgt = do
     s <- mgu c src tgt
     let

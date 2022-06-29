@@ -61,4 +61,11 @@ def mutual1 : forall m x . {Num (m x), Functor m} => m x -> m x
             = \x -> x +! mutual2 x
 and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
 
-def main = ()
+# TODO: Questo dà errore perché attualmente "put" è polimorfico
+# def main =
+#     let mySub = (-!) ->
+#     putStrLn (Utility.showInt (mySub 69 27))
+
+def main =
+    let answerToAll = 69 -! 27 ->
+    putStrLn (Utility.showInt answerToAll)

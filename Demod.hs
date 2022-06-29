@@ -242,7 +242,7 @@ demodPred env qmap (c, pathlabl@(Path path labl), steas) = do
 demodInstDefs rc rpath env relenv defs = loop [] relenv defs
     where loop final mrelenv []
             | length mrelenv == 0 = return $ reverse final
-            | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ (show $ Map.toList mrelenv)
+            | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ (show $ map fst $ Map.toList mrelenv)
           loop final mrelenv ((c, l, e):mdefs) =
             case Map.lookup l mrelenv of
                 Nothing -> fail $ show c ++ " Member " ++ show l ++ " of instance for: " ++ show rpath ++ 

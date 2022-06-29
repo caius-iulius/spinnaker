@@ -2,14 +2,38 @@ module Interpreter where
 import qualified Data.Map as Map
 import Control.Monad.Reader
 import Data.Char
-import MPCL(StdCoord(..))
+import Data.Maybe(isJust, catMaybes)
+import Data.List(partition)
+import Data.Tree
+
+import MPCL(StdCoord(..), dummyStdCoord)
+import PrettyPrinter
 import TypingDefs
+import MGUs
+import TypeTyper(substApplyExpr)
 import HLDefs
 
-import Data.Tree
-import PrettyPrinter
 
-type InterpState t = ReaderT (Map.Map String HLExpr) IO t
+type InterpEnv = Map.Map String [(DataType, HLExpr)]
+type InterpState t = ReaderT InterpEnv IO t
+
+findEnvVal :: InterpEnv -> String -> DataType -> Maybe HLExpr
+findEnvVal env l t = Map.lookup l env >>= getMostSpecific
+    where reduceMostSpecifics :: [(DataType, HLExpr)]->[(DataType, HLExpr)]->[(DataType, HLExpr)]
+          reduceMostSpecifics sps [] = sps
+          reduceMostSpecifics sps ((te, e):tses')
+            | any (\(te', _) -> isJust (match dummyStdCoord te te')) (sps ++ tses')
+                = reduceMostSpecifics sps tses'
+            | otherwise =  reduceMostSpecifics ((te, e):sps) tses'
+          getMostSpecific tses =
+            let matching = catMaybes [match dummyStdCoord te t >> Just (te, e) | (te, e) <- tses]
+                specifics = reduceMostSpecifics [] matching
+            in case specifics of
+                [] -> error $ "No matching istances of: " ++ show l ++ " with type: " ++ show t
+                ((te, e):[]) -> do
+                    s <- match dummyStdCoord te t
+                    Just (substApplyExpr s e)
+                xs -> error $ "Cannot find most specific instance of: " ++ show l ++ " with type: " ++ show t ++ "\n    Possible instances are: " ++ show (map fst xs)
 
 sievePatternInner :: HLPatternData -> HLExpr -> Maybe (Map.Map String HLExpr)
 sievePatternInner PatWildcard _ = return Map.empty
@@ -94,7 +118,7 @@ eval (_, _, ExprApp f a) = do
                 Just s -> eval $ exprSubstApply s ret
 eval e@(c, dt, ExprLabel l) = do
     env <- ask
-    case Map.lookup l env of
+    case findEnvVal env l dt of
         Just expr -> eval expr
         Nothing -> return e
 eval e@(c, dt, ExprConstructor l es) = do
@@ -105,10 +129,25 @@ eval e@(c, dt, ExprPut val pses) = do
     val' <- eval val
     choosePattern c val' pses
 
+myListMerge :: Eq k => [(k,v)]->[(k,[v])]
+myListMerge [] = []
+myListMerge ((k,v):kvs) =
+    let (isk, isntk) = partition ((k==) . fst) kvs
+        in (k, v:map snd isk):myListMerge isntk
+
 evalProgram :: (String, BlockProgram) -> IO HLExpr
-{-evalProgram (entryPoint, BlockProgram datagroups valgroups) =
+evalProgram (entryPoint, BlockProgram datagroups reldefs valgroups instdefs) =
     let
-        binds = join valgroups
-        env = Map.fromList $ map (\(ValDef _ l _ e)->(l, e)) binds
-    in runReaderT (eval (Coord "interpreter" 0 0, DataNOTHING, ExprLabel entryPoint)) env-}
-evalProgram = error "TODO"
+        valbinds = join valgroups
+        valVtables = map (\(ValDef _ l _ _ e@(_, t, _))->(l, [(t, e)])) valbinds
+        instsList = myListMerge $ map (\(InstDef _ (Qual _ (Pred l _)) cles) -> (l, cles)) instdefs
+        instsListTEs = map (\(il, cless) -> (il, map (\(c, l, e@(_, t, _))->(l, (t, e))) (concat cless))) instsList
+        instsVtables :: [(String, [(DataType, HLExpr)])]
+        instsVtables = concat $ map (myListMerge . snd) instsListTEs
+
+        env = Map.fromList (valVtables ++ instsVtables)
+    in do
+        putStrLn $ "Interpreter VTABLEs: " ++ show (map (\(l, tses)->(l, map fst tses)) $ Map.toList env)
+        putStrLn $ "\n---- ESEGUO IL PROGRAMMA ----"
+        runReaderT (eval (Coord "interpreter" 0 0, buildTupType [], ExprLabel entryPoint)) env
+    --TODO: così main può avere soltanto il tipo: (), il che non viene controllato nel typer
