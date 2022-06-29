@@ -25,11 +25,11 @@ implementa caratteri
     - [OK] aggiunta dei rel e delle definizioni dei loro membri nel contesto
     - [OK] entailment ecc. come in THIH
     - [OK] tipizzazione delle espressioni con Qual DataType
-    - gestione dell'hinting e dei predicati nei gruppi di valdef
-    - tipizzazione istanze
+    - [OK] gestione dell'hinting e dei predicati nei gruppi di valdef
+    - [OK] tipizzazione istanze
+    - aggiungi controlli di correttezza delle istanze, tra cui la decidibilità
     - riscrivi l'interprete per propagare i tipi e scegliere da vtable
     - aggiungi controlli per limitare overlap (le istanze devono trattare una classe o un tipo definiti nel proprio modulo)
-    - aggiungi controlli di correttezza delle istanze, tra cui le istanze indecidibili
 3. aggiungi controlli per halting del compilatore
     - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)
 4. monomorfizzazione

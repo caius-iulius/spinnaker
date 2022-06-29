@@ -59,13 +59,14 @@ typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
     (ks'', e'', instdefs'') <- typeKInstDefs (addRelDecls e') instdefs'
     vdefgroups'' <- typeValDefHints e'' vdefgroups'
     (ts, e''', vdefgroups''') <- typeValDefGroups e'' vdefgroups''
+    instdefs''' <- typeInstDefs e''' instdefs''
     lift $ lift $ putStrLn $ "Final kind substitution (datas): " ++ show ks
     lift $ lift $ putStrLn $ "Final kind substitution (rels): " ++ show ks'
     lift $ lift $ putStrLn $ "Final kind substitution (insts): " ++ show ks''
     lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
     lift $ lift $ putStrLn $ "Final env: " ++ show e'''
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e''')
-    return (e''', BlockProgram ddefgroups' reldefs' vdefgroups''' instdefs'')
+    return (e''', BlockProgram ddefgroups' reldefs' vdefgroups''' instdefs''')
 
 typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, String, BlockProgram)
 typeProgram core program = do

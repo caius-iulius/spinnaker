@@ -238,6 +238,20 @@ demodPred env qmap (c, pathlabl@(Path path labl), steas) = do
         Just (_, (nlabl, _)) -> do
             teas <- mapM (demodTypeExpr env qmap) steas
             return $ Pred nlabl teas
+
+demodInstDefs rc rpath env relenv defs = loop [] relenv defs
+    where loop final mrelenv []
+            | length mrelenv == 0 = return $ reverse final
+            | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ (show $ Map.toList mrelenv)
+          loop final mrelenv ((c, l, e):mdefs) =
+            case Map.lookup l mrelenv of
+                Nothing -> fail $ show c ++ " Member " ++ show l ++ " of instance for: " ++ show rpath ++ 
+                    if any (\(_, l', _) -> l == l') final
+                    then " has already been defined"
+                    else " isn't declared and shouldn't be defined"
+                Just newlabl -> do
+                    e' <- demodExpr env e
+                    loop ((c, newlabl, e'):final) (Map.delete l mrelenv) mdefs
 -- moduli
 demodModDef :: DemodEnv -> SyntaxModDef -> TyperState (DemodEnv, BlockProgram)
 demodModDef env@(DemodEnv ms vs ts cs rs) (ModMod c v l m)
@@ -268,15 +282,15 @@ demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls)
         (qmap, qlist) <- buildQmapQlist c qls
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
         return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
-demodModDef env (ModInst c qls preds head defs) = do
+demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
     (qmap, qlist) <- buildQmapQlist c qls
     preds' <- mapM (demodPred env qmap) preds
     pred' <- demodPred env qmap head
-    defs' <- mapM demodInstDef defs
+    (DemodEnv _ _ _ _ rs) <- getPathEnv c env rpath
+    let relenv = case Map.lookup rlabl rs of
+            Just (_, (_, relenv)) -> relenv
+    defs' <- demodInstDefs c rpl env relenv defs
     return (env, BlockProgram [] [] [] [InstDef c (Qual preds' pred') defs'])
-        where demodInstDef (c, l, e) = do
-                e' <- demodExpr env e
-                return (c, l, e')
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
 
 concatBlockPrograms (BlockProgram datagroups reldefs valgroups instdefs) (BlockProgram datagroups' reldefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (valgroups++valgroups') (instdefs++instdefs')

@@ -102,7 +102,8 @@ typeExprInternal env (c, _, ExprPut val pses) = do
     lift $ lift $ putStrLn $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tval' ++ " texpr:"++show texpr
     let finals = composeSubst s'' (composeSubst s' s)
         finalps = map (substApply finals) (ps++ps'')
-        in return (finals, finalps, texpr, (c, texpr, ExprPut val' pses'))
+        finalt = substApply finals texpr
+        in return (finals, finalps, finalt, (c, finalt, ExprPut val' pses'))
 
 typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
 typeExpr env expr@(c, _, _) = do
@@ -177,26 +178,27 @@ unionValDefEnv (TypingEnv ts _ _ _) (ValDef c l _ ps (_, t, _)) = do
     lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
     return s
 
-checkHintType :: StdCoord -> TypingEnv -> Qual DataType -> Qual DataType -> TyperState Subst
-checkHintType c env (Qual pshint typehint) (Qual pst typet) = match c typet typehint
+checkHintType :: StdCoord -> TypingEnv -> DataType -> DataType -> TyperState Subst
+checkHintType c env typehint typet = match c typet typehint
+
+checkHintPreds c env pshint pst = mapM checkHintPred pst
+    where checkHintPred pt = if entail env pshint pt
+            then return ()
+            else fail $ show c ++ " Type hint qualifiers: " ++ show pshint ++ " do not entail constraint: " ++ show pt
 
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _ _:vdefs) = checkValDefsHint env vdefs
-checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just hint) ps (_, t, _):vdefs) = do
-    s <- checkHintType c env hint (Qual ps t)
+checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just (Qual _ hint)) ps (_, t, _):vdefs) = do
+    s <- checkHintType c env hint t
     s' <- checkValDefsHint (substApply s env) (map (substApplyValDef s) vdefs)
     return (composeSubst s' s)
 
 checkValDefsHintPreds :: TypingEnv -> [HLValDef] -> TyperState [HLValDef]
-checkValDefsHintPreds env vdefs =
-    mapM checkHintPreds vdefs
-        where checkHintPreds vdef@(ValDef _ _ Nothing _ _) = return vdef
-              checkHintPreds (ValDef c l hint@(Just (Qual pshint thint)) pst e) = do
-                mapM (checkHintPred c pshint) pst
+checkValDefsHintPreds env vdefs = mapM checkValDefHintPreds vdefs
+        where checkValDefHintPreds vdef@(ValDef _ _ Nothing _ _) = return vdef
+              checkValDefHintPreds (ValDef c l hint@(Just (Qual pshint thint)) pst e) = do
+                checkHintPreds c env pshint pst
                 return $ ValDef c l hint pshint e
-              checkHintPred c pshint pt = if entail env pshint pt
-                then return ()
-                else fail $ show c ++ " Type hint qualifiers: " ++ show pshint ++ " do not entail constraint: " ++ show pt
 
 -- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
 -- TODO: Mi sa che questa funzione non dovrebbe restituire una sostituzione
@@ -204,7 +206,7 @@ typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
     substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
-    s' <- return $ foldl (flip composeSubst) s substs
+    let s' = foldl (flip composeSubst) s substs
     s'' <- checkValDefsHint (substApply s' vars_env) (map (substApplyValDef s') vdefs') --TODO: La posizione è giusta?
     let sfinal = composeSubst s'' s'
         vdefs'' = map (substApplyValDef sfinal) vdefs'
@@ -222,3 +224,23 @@ typeValDefGroups env (vdefs:vdefss) = do
     (s, env', vdefs') <- typeValDefGroup env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
     (s', env'', vdefss') <- typeValDefGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
+
+typeInstDef env@(TypingEnv _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
+    case Map.lookup l rs of
+        Just (RelData qs decls _) -> do
+            let instSubst = Map.fromList $ zip qs ts
+                substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
+            defs' <- typeInstMembers (Map.fromList substdecls) [] defs
+            return $ InstDef c qh defs'
+    where typeInstMembers declmap final [] = return $ reverse final
+          typeInstMembers declmap final ((dc,dl,e):members) =
+                case Map.lookup dl declmap of
+                    Just (Qual dps dt) -> do
+                        (s, eps, te, e') <- typeExpr env e
+                        s' <- checkHintType dc env dt te
+                        let finals = composeSubst s' s
+                            finale = substApplyExpr finals e'
+                        checkHintPreds dc env (ps ++ dps) (map (substApply s') eps)
+                        typeInstMembers declmap ((dc, dl, finale):final) members
+typeInstDefs :: TypingEnv -> [HLInstDef] -> TyperState [HLInstDef]
+typeInstDefs env = mapM (typeInstDef env)
