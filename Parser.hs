@@ -85,6 +85,7 @@ getFloat = do {
 getEscape = do {
     (c, _) <- thisChar '\\';
     char <- (thisChar 'n' >> return '\n')
+        <|| (thisChar '\\' >> return '\\')
         <|| (thisChar '"' >> return '"')
         <|| (thisChar '\'' >> return '\''); --TODO Altri escape
     return (c, char)
@@ -98,13 +99,21 @@ getString = do {
     return (c, map snd chars)
 }
 
+getCharLit = do {
+    skipUseless;
+    (c, _) <- thisChar '\'';
+    (_, char) <- require $ difference (stdSatisfy isPrint "") (thisChar '\'' <|| thisChar '\\') <|| getEscape <|| whiteSpace;
+    require $ thisChar '\'';
+    return (c, LitInteger (ord char))
+}
+
 getLiteral = describeError "Expected literal" $ do {
     (c, f) <- getFloat;
-    return $ (c, LitFloating f)
+    return (c, LitFloating f)
 } <|| do {
     (c, i) <- getInteger;
-    return $ (c, LitInteger i)
-}
+    return (c, LitInteger i)
+} <|| getCharLit
 
 getOperatorText = do {
     skipUseless;

@@ -37,7 +37,9 @@ attualmente un programma che non abbia "()" come tipo per main crasha nell'inter
     - [OK] gestione dell'hinting e dei predicati nei gruppi di valdef
     - [OK] tipizzazione istanze
     - [OK] riscrivi l'interprete per propagare i tipi e scegliere da vtable
-    - aggiungi controlli per limitare overlap (le istanze devono trattare una relazione o un tipo definiti nel proprio modulo)
+    - aggiungi controlli per limitare overlap
+        - rilevamento istanze identiche
+        - le istanze devono trattare una relazione o un tipo definiti nel proprio modulo
 3. aggiungi controlli per halting del compilatore
     - controlla decidibilità delle istanze
     - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)

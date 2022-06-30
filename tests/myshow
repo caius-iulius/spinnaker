@@ -1,6 +1,6 @@
 use Core
 
-data Char = CharCode Int
+data MyChar = MyCharCode Int
 
 rel pub MyShow a =
     myshow : a -> List Int
@@ -13,12 +13,19 @@ inst MyShow Int {
     def myshow = Utility.showInt
 }
 
-inst MyShow Char {
-    def myshow = \CharCode i -> "CharCode " ++ Utility.showInt i
+def escapeChar = \c -> put c
+    | '\n' -> "\\n"
+    | '\\' -> "\\\\"
+    | '\'' -> "\\'"
+    | '"' -> "\\\""
+    | _ -> [c]
+
+inst MyShow MyChar {
+    def myshow = \MyCharCode i -> ['\'' | escapeChar i ++ "'"]
 }
 
-inst MyShow (List Char) {
-    def myshow = \l -> [34 | map (\CharCode c -> c) l ++ [34]]
+inst MyShow (List MyChar) {
+    def myshow = \l -> ['"' | foldl (\s, MyCharCode i -> s ++ escapeChar i) [] l ++ "\""]
 }
 
 inst forall a. {MyShow a} => MyShow (List a) {
@@ -26,7 +33,8 @@ inst forall a. {MyShow a} => MyShow (List a) {
 }
 
 def main =
-    let codetos = map CharCode
-    -> let _  = putStrLn (myshow (10, (codetos "Ciao Mondo!")))
+    let s = "Ciao\\\nMondo!"
+    -> let _ = putStrLn (myshow (10, map MyCharCode s))
+    -> let _ = putStrLn s
     -> putStrLn $ myshow [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9]]
 

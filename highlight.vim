@@ -21,6 +21,8 @@ syn match mylangNumber "\v[0-9][0-9_]*"
 syn match mylangFloat "\v[0-9][0-9_]*\.[0-9_]+"
 syn keyword mylangTodo TODO FIXME NOTE contained
 syn match mylangLineComment "#.*$" contains=mylangTodo
+syn region mylangChar start=+'+ skip=+\\\\\|\\'+ end=+'+
+  \ contains=@Spell
 syn region mylangString start=+"+ skip=+\\\\\|\\"+ end=+"+
   \ contains=@Spell
 syn region mylangParens matchgroup=mylangDelimiter start="(" end=")" contains=TOP,@Spell
@@ -40,6 +42,7 @@ highlight def link mylangFloat Float
 highlight def link mylangOperator Operator
 highlight def link mylangTodo Todo
 highlight def link mylangLineComment Comment
+highlight def link mylangChar Character
 highlight def link mylangString String
 highlight def link mylangDelimiter Delimiter
 highlight def link mylangSeparator Delimiter

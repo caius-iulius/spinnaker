@@ -116,6 +116,7 @@ eval (_, _, ExprApp f a) = do
         (_, _, ExprLambda pat ret) -> case sievePattern pat a' of
                 Nothing -> error $ "WHAT SIEVE: " ++ show pat ++ " val " ++ show a'
                 Just s -> eval $ exprSubstApply s ret
+        (c, myt, myf) -> error $ show c ++ " WHAT: " ++ show myf ++ " : " ++ show myt
 eval e@(c, dt, ExprLabel l) = do
     env <- ask
     case findEnvVal env l dt of
