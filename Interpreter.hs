@@ -87,12 +87,14 @@ builtinApply "_equInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitI
 builtinApply "_neqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") []
 builtinApply "_leqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") []
 builtinApply "_greInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") []
-builtinApply "_putChr#BI" (_, _, ExprLiteral (LitInteger i)) = do
-    lift $ putChar $ chr i
+builtinApply "_convItoC#BI" (_, _, ExprLiteral (LitInteger i)) = return $ ExprLiteral $ LitCharacter (chr i)
+builtinApply "_convCtoI#BI" (_, _, ExprLiteral (LitCharacter c)) = return $ ExprLiteral $ LitInteger (ord c)
+builtinApply "_putChr#BI" (_, _, ExprLiteral (LitCharacter c)) = do
+    lift $ putChar c
     return $ ExprConstructor "()0" []
 builtinApply "_getChr#BI" (_, _, ExprConstructor "()0" []) = do
-    c <- lift $ getChar
-    return $ ExprLiteral $ LitInteger $ ord c
+    c <- lift getChar
+    return $ ExprLiteral $ LitCharacter c
 
 builtinApply l e = error $ "TODO builtinApply: " ++ l
 

@@ -14,26 +14,26 @@ mod pub Sort {
     def split : forall a . List a -> (List a, List a)
     = \lst -> split_internal ([], []) (reverse lst)
 
-    def merge = \compare, lists ->
+    def merge = \lists ->
         put lists
         | (l, Nil) -> l
         | (Nil, l) -> l
         | (Cons xa xsa, Cons xb xsb) -> (
-            put compare xa xb
-            | True -> xa :: merge compare (xsa, (xb::xsb))
-            | _ -> xb :: merge compare ((xa::xsa), xsb)
+            put xa <= xb
+            | True -> xa :: merge (xsa, (xb::xsb))
+            | _ -> xb :: merge ((xa::xsa), xsb)
         )
 
     def mytest = \lists ->
         put lists
         | (Cons xa xsa, Cons xb xsb) -> (xa::xsb, xb::xsa)
 
-    def pub mergesort = \compare, list ->
+    def pub mergesort = \list ->
         put list
         | Nil -> Nil
         | Cons x Nil -> list
         | _ -> let (left, right) = split list ->
-            merge compare (mergesort compare left, mergesort compare right)
+            merge (mergesort left, mergesort right)
 }
 
-def main = putStrLn $ Utility.showListInt $ Sort.mergesort (<=) (reverse $ -5..10)
+def main = putStrLn $ show $ Sort.mergesort (reverse $ -5..10)

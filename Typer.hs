@@ -13,8 +13,10 @@ import TypeTyper
 import VariantComplete
 
 --Definizioni builtin per Demod
-builtinDemodTypes = ["->", "Int", "Flt", "Bool"]
-builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt", "_putChr", "_getChr"]
+builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr"]
+builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt",
+                    "_putChr", "_getChr",
+                    "_convItoC", "_convCtoI"]
 builtinDemodVars = ["True", "False"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
@@ -28,6 +30,7 @@ builtinTypingTypes =
     ,   ("Int#BI", KType)
     ,   ("Flt#BI", KType)
     ,   ("Bool#BI", KType)
+    ,   ("Chr#BI", KType)
     ]
 builtinTypingVals =
     [   ("_addInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
@@ -38,9 +41,11 @@ builtinTypingVals =
     ,   ("_neqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
     ,   ("_leqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
     ,   ("_greInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
+    ,   ("_convItoC#BI", TyScheme [] (Qual [] $ buildFunType intT chrT))
+    ,   ("_convCtoI#BI", TyScheme [] (Qual [] $ buildFunType chrT intT))
     --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType intT (buildTupType [])))
-    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType []) intT))
+    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType chrT (buildTupType [])))
+    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType []) chrT))
     ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT

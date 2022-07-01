@@ -105,7 +105,7 @@ buildFunType a r =
 intT = DataTypeName "Int#BI" KType
 fltT = DataTypeName "Flt#BI" KType
 boolT = DataTypeName "Bool#BI" KType
-charT = DataTypeName "Char#BI" KType
+chrT = DataTypeName "Chr#BI" KType
 
 -- Infrastruttura monadica
 

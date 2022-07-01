@@ -25,6 +25,7 @@ getVariantData c (TypingEnv _ _ vs _) l =
 typeLit :: Literal -> DataType
 typeLit (LitInteger _) = intT
 typeLit (LitFloating _) = fltT
+typeLit (LitCharacter _) = chrT
 
 -- Funzioni per i pattern, DA RICONTROLLARE E COMPLETARE
 typePat :: TypingEnv -> HLPattern -> TyperState DataType

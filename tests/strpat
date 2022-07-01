@@ -8,6 +8,6 @@ def strtonum = \s -> put s
 
 def main =
     putStrLn $
-    Utility.showListInt $
+    show $
     map strtonum
         ["uno", "due", "tre", "nonvalido", "un", "ue"]

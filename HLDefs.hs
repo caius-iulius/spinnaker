@@ -5,6 +5,7 @@ import TypingDefs
 data Literal
     = LitInteger Int
     | LitFloating Float
+    | LitCharacter Char
     deriving (Show, Eq)
 
 data HLPatternData

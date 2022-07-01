@@ -1,35 +1,48 @@
 # TODO:Questo file andrà copiato in una stringa nel compilatore
 
-# operatori di base
-def pub (+) = \a,b->_addInt(a,b)
-def pub (-) = \a,b->_subInt(a,b)
-def pub (*) = \a,b->_mulInt(a,b)
-def pub (/) = \a,b->_divInt(a,b)
-def pub (<) = \a,b->_greInt(b,a)
-def pub (>) = \a,b->_greInt(a,b)
-def pub (=) = \a,b->_equInt(a,b)
-def pub (!=)= \a,b->_neqInt(a,b)
-def pub (<=)= \a,b->_leqInt(a,b)
-def pub (>=)= \a,b->_leqInt(b,a)
-
-# operatori funzionali
-# NOTA: In F# (e OCaml in un certo senso) gli operatori di composizione sono (>>) e (<<) invece di (|>) e (<|).
-# Oltretutto (|>) e (<|) sono pipe e non composizioni,ma (|>) è associativa a sinistra. Bisogna considerare vantaggi e svantaggi dei vari approcci in un sistema associativo a destra.
-#   In F#:
-#   def (|>) = \x,f{f x}
-# In molti casi la composizione è rappresentata da un punto,ma al momento sto pensando di usarlo per i namespace e le struct
-
 def pub (|>) = \f,g,x->g(f x)
 def pub (<|) = \f,g,x->f(g x)
-
-# questi in forse
 def pub (|->) = \x,f->f x
-
-# altra roba utile
 def pub ($) = \a,b->a b
 def pub flip = \f,x,y->f y x
 def pub curry = \f,x,y->f(x,y)
 def pub uncurry = \f,(x,y)->f x y
+
+rel pub Num a =
+    (+) : a -> a -> a,
+    (-) : a -> a -> a,
+    (*) : a -> a -> a,
+    (/) : a -> a -> a
+
+rel pub Eq a =
+    (=) : a -> a -> Bool,
+    (!=) : a -> a -> Bool
+
+rel pub Ord a =
+    (<) : a -> a -> Bool,
+    (>) : a -> a -> Bool,
+    (>=) : a -> a -> Bool,
+    (<=) : a -> a -> Bool
+
+
+inst Num Int {
+    def (+) = \a,b->_addInt(a,b)
+    def (-) = \a,b->_subInt(a,b)
+    def (*) = \a,b->_mulInt(a,b)
+    def (/) = \a,b->_divInt(a,b)
+}
+
+inst Eq Int {
+    def (=) = \a,b->_equInt(a,b)
+    def (!=)= \a,b->_neqInt(a,b)
+}
+
+inst Ord Int {
+    def (<) = \a,b->_greInt(b,a)
+    def (>) = \a,b->_greInt(a,b)
+    def (<=)= \a,b->_leqInt(a,b)
+    def (>=)= \a,b->_leqInt(b,a)
+}
 
 mod pub List {
     data pub List a
@@ -93,21 +106,20 @@ mod pub List {
 }
 use pub List
 
-mod pub IO {
-    def pub putChr = _putChr
-    def pub getChr = _getChr
-    def pub putStr = \s ->
-        put s
-        | Nil -> ()
-        | Cons c cs ->
-            let _ = (putChr c, putStr cs) -> ()
-    def pub putStrLn = \s ->
-        let _ = (putStr s, putChr 10) -> ()
-}
-use pub IO
+mod pub Show {
+    rel pub Show a = show : a -> List Chr
 
-mod pub Utility {
-    def showDigit = \i -> 48 + i
+    inst Show () {
+        def show = \() -> Cons '(' (Cons ')' Nil)
+    }
+
+    inst Show Bool {
+        def show = \b -> put b
+            | True -> Cons 'T' (Cons 'r' (Cons 'u' (Cons 'e' Nil)))
+            | False -> Cons 'F' (Cons 'a' (Cons 'l' (Cons 's' (Cons 'e' Nil))))
+    }
+
+    def showDigit = \i -> _convItoC (48 + i)
 
     def showNonNeg = \i ->
         put i < 10
@@ -117,19 +129,52 @@ mod pub Utility {
             let prev = showNonNeg div10 ->
             prev ++ Cons (showDigit $ i - div10*10) Nil
 
-    def pub showInt = \i ->
+    def showInt = \i ->
         put i < 0
-        | True -> Cons 45 (showNonNeg (0-i))
+        | True -> Cons '-' (showNonNeg (0-i))
         | _ -> showNonNeg i
 
-    def showListInternal = \f, l ->
+    inst Show Int { def show = showInt }
+
+    def escapeChar = \c -> put c
+        | '\n' -> Cons '\\' (Cons 'n' Nil)
+        | '\\' -> Cons '\\' (Cons '\\' Nil)
+        | '\'' -> Cons '\\' (Cons '\'' Nil)
+        | '"' -> Cons '\\' (Cons '"' Nil)
+        | _ -> Cons c Nil
+
+    inst Show Chr {
+        def show = \c -> Cons '\'' (escapeChar c) ++ (Cons '\'' Nil)
+    }
+
+    inst Show (List Chr) {
+        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChar c) Nil l) ++ Cons '"' Nil
+    }
+
+    def showListInternal = \l ->
         put l
-        | Nil -> Cons 93 Nil
-        | Cons x Nil -> f x ++ Cons 93 Nil
-        | Cons x xs -> f x ++ Cons 44 (Cons 32 Nil) ++ showListInternal f xs
+        | Nil -> Cons ']' Nil
+        | Cons x Nil -> show x ++ Cons ']' Nil
+        | Cons x xs -> show x ++ Cons ',' (Cons ' ' Nil) ++ showListInternal xs
 
-    def pub showList = \f, l -> Cons 91 (showListInternal f l)
-    def pub showListInt = showList showInt
+    def showList = \l -> Cons '[' (showListInternal l)
+
+    inst forall a. {Show a} => Show (List a) {
+        def show = showList
+    }
 }
+use pub Show
 
+mod pub IO {
+    def pub putChr = _putChr
+    def pub getChr = _getChr
+    def pub putStr = \s ->
+        put s
+        | Nil -> ()
+        | Cons c cs ->
+            let _ = (putChr c, putStr cs) -> ()
+    def pub putStrLn = \s ->
+        let _ = (putStr s, putChr '\n') -> ()
+}
+use pub IO
 # NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...

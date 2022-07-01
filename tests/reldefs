@@ -1,8 +1,5 @@
 use Core
 
-rel pub Show a =
-    show : a -> List Int
-
 rel Functor f =
     fmap : forall a b . (a -> b) -> f a -> f b
 
@@ -25,9 +22,6 @@ inst Monad Maybe {
         | Some x -> f x
 }
 
-inst forall a b. {Show a, Show b} => Show (a, b) {
-    def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
-}
 inst forall m. {Monad m} => Functor m {
     def fmap = \f, m -> bind m (return <| f)
 }
@@ -35,37 +29,35 @@ inst forall m. {Monad m} => Functor m {
 def retfmap # : forall m a b. {Monad m, Functor m} => (a -> b) -> a -> m b 
             = \f -> fmap f <| return
 
-def showTuple = \a, b -> show (a, b)
-
-rel Num a =
+rel MyNum a =
     (+!) : a -> a -> a,
     (-!) : a -> a -> a,
     (*!) : a -> a -> a,
     (/!) : a -> a -> a
 
-inst Num Int {
+inst MyNum Int {
     def (+!) = (+)
     def (*!) = (*)
     def (-!) = (-)
     def (/!) = (/)
 }
 
-def double : forall a . {Num a} => a -> a
+def double : forall a . {MyNum a} => a -> a
            = \x -> x +! x
 
 def squareplus = \x -> x +! x *! x
 
 def threenplus1 = \x -> 1 +! x *! 3
 
-def mutual1 : forall m x . {Num (m x), Functor m} => m x -> m x 
+def mutual1 : forall m x . {MyNum (m x), Functor m} => m x -> m x 
             = \x -> x +! mutual2 x
 and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
 
 # TODO: Questo dà errore perché attualmente "put" è polimorfico
 # def main =
 #     let mySub = (-!) ->
-#     putStrLn (Utility.showInt (mySub 69 27))
+#     putStrLn (show (mySub 69 27))
 
 def main =
     let answerToAll = 69 -! 27 ->
-    putStrLn (Utility.showInt answerToAll)
+    putStrLn (show answerToAll)

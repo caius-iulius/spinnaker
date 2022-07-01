@@ -22,7 +22,6 @@ Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri spe
 
 supporto multifile
 incorpora file core
-implementa caratteri
 
 utilizza un nuovo sistema di entrypoint, controllato con gli hint giusti, tipo (scritto direttamente nel compilatore, oppure definito in Core):
     def entryPoint : () = _unsafeRunIO (main >>= \v -> putStrLn (show v))
@@ -48,4 +47,3 @@ attualmente un programma che non abbia "()" come tipo per main crasha nell'inter
 6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. compilazione a C
 8. ottimizzazioni
-- aggiungi controlli di correttezza

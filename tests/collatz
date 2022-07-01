@@ -7,7 +7,7 @@ def collatz = \l, n ->
         | True -> (n / 2)
         | False -> (1 + 3*n))
 
-def main = IO.putStrLn
-         $ Utility.showListInt
-         $ List.reverse
+def main = putStrLn
+         $ show
+         $ reverse
          $ collatz [] 42

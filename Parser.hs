@@ -104,7 +104,7 @@ getCharLit = do {
     (c, _) <- thisChar '\'';
     (_, char) <- require $ difference (stdSatisfy isPrint "") (thisChar '\'' <|| thisChar '\\') <|| getEscape <|| whiteSpace;
     require $ thisChar '\'';
-    return (c, LitInteger (ord char))
+    return (c, LitCharacter char)
 }
 
 getLiteral = describeError "Expected literal" $ do {
@@ -174,7 +174,7 @@ getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulCh
 
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, s) <- getString;
-    return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitInteger $ ord char)) s) (c, Nothing, SynPatListNil))
+    return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitCharacter char)) s) (c, Nothing, SynPatListNil))
 } <|| do {
     (c, l) <- getLiteral;
     return (c, Nothing, SynPatLiteral l)
@@ -215,7 +215,7 @@ getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulC
 
 getTerm = describeError "Expected term" $ do { --String
     (c, s) <- getString;
-    return (c, SynExprListConss (map (\char->(c, SynExprLiteral $ LitInteger $ ord char)) s) (c, SynExprListNil))
+    return (c, SynExprListConss (map (\char->(c, SynExprLiteral $ LitCharacter char)) s) (c, SynExprListNil))
 } <|| do { -- Literal
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)

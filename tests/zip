@@ -2,4 +2,4 @@ use Core
 
 def main =
     let list = [0, 123, 13, 5, 523] ->
-    putStrLn $ Utility.showListInt $ zipWith (+) (0..length list) list
+    putStrLn $ show $ zipWith (+) (0..length list) list

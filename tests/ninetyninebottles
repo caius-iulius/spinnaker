@@ -4,7 +4,7 @@ def bottles = \n ->
     put n
     | 0 -> "no more bottles"
     | 1 -> "1 bottle"
-    | _ -> Utility.showInt n ++ " bottles"
+    | _ -> show n ++ " bottles"
 
 def verse = \n ->
     if n = 0
