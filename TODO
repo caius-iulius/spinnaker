@@ -15,17 +15,13 @@ STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIM
 
 DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
 
-SCEGLI UNA SINTASSI MIGLIORE PER "inst" e i constraint
+SCEGLI UNA SINTASSI MIGLIORE PER "inst" (e forse per i constraint)
 Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implementerò i row types
 
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
 supporto multifile
 incorpora file core
-
-utilizza un nuovo sistema di entrypoint, controllato con gli hint giusti, tipo (scritto direttamente nel compilatore, oppure definito in Core):
-    def entryPoint : () = _unsafeRunIO (main >>= \v -> putStrLn (show v))
-attualmente un programma che non abbia "()" come tipo per main crasha nell'interprete, questo a causa della scelta forzata di vtable
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel

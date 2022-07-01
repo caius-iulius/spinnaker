@@ -2,11 +2,12 @@ module Typer (typeBlockProgram, typeProgram) where
 import qualified Data.Map as Map
 import Control.Monad.Trans
 import Data.Tree
+
+import MPCL(StdCoord(..))
 import PrettyPrinter
 import HLDefs
 import SyntaxDefs
 import Demod
-
 import TypingDefs
 import KindTyper
 import TypeTyper
@@ -55,7 +56,6 @@ builtinTypingRels = []
 initTypingEnv = TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) (Map.fromList builtinTypingRels)
 
 --Programma typer
-
 typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
     vdefgroups' <- completeVariantValDefGroups e vdefgroups
@@ -73,13 +73,20 @@ typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e''')
     return (e''', BlockProgram ddefgroups' reldefs' vdefgroups''' instdefs''')
 
+
+entryPointBlock env = do
+    hle <- demodExpr env syne
+    let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] (buildTupType []))) [] hle
+    return $ BlockProgram [] [] [[entryPointVDef]] []
+    where c = Coord "entryPoint" 0 0
+          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core"] "putStrLn")) (c, SynExprApp (c, SynExprLabel (Path ["Core"] "show")) (c, SynExprLabel (Path [] "main"))))
+
 typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, String, BlockProgram)
 typeProgram core program = do
     lift $ lift $ putStrLn $ "Init typing env: " ++ show initTypingEnv
-    (DemodEnv _ vs _ _ _, block) <- demodProgram initCoreDemodEnv core program
-    case Map.lookup "main" vs of
-        Nothing -> fail "Entry point \"main\" is not defined"
-        Just (_, entryPoint) -> do
-            lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
-            (env, tyblock) <- typeBlockProgram block
-            return (env, entryPoint, tyblock)
+    (denv, block) <- demodProgram initCoreDemodEnv core program
+    entry <- entryPointBlock denv
+    let block' = concatBlockPrograms block entry
+    lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block')
+    (env, tyblock) <- typeBlockProgram block'
+    return (env, "entryPoint#BI", tyblock)

@@ -1,4 +1,4 @@
-module Demod (DemodEnv(..), demodProgram) where
+module Demod (DemodEnv(..), concatBlockPrograms, demodExpr, demodProgram) where
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import MPCL(StdCoord)
