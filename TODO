@@ -7,10 +7,6 @@ alternativamente si può introdurre un vincolo: ogni valore utilizzato prima del
 
 prendi una decisione riguardo all'ambiguità sintattica del pattern matching
 
-decidi se i putexpr (quindi anche i letexpr) devono rimanere polimorfici
-    Vantaggio: comodità e espressività, in caso contrario l'unico polimorfismo possibile è nel top level
-    svantaggi: ci sono più ambiguità possibili a causa dei qualificatori, il monomorfizzatore deve fare molto più lavoro, le computazioni dei valori vanno fatte più volte con comportamenti potenzialmente diversi
-
 STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIMO COMPILATORE
 
 DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
@@ -39,6 +35,8 @@ incorpora file core
     - controlla decidibilità delle istanze
     - controlla valori reciprocamente definiti (e.g. def a = b and b = a) (sia in bindgroup che tra istanze)
 4. monomorfizzazione
+    - [OK] valori, relazioni
+    - datatype (come fa MLTon, selettiva sulle varianti usate)
 5. notazione do
 6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. compilazione a C

@@ -126,7 +126,7 @@ typePutBranches :: TypingEnv -> Qual DataType -> DataType -> [(HLPattern, HLExpr
 typePutBranches _ _ texpr [] = return (nullSubst, [], texpr, [])
 typePutBranches env qtpat@(Qual pspat tpat) texpr ((pat, expr@(c, _, _)):branches) = do
     lift $ lift $ putStrLn $ " PUTBRANCH_SRT tpat:" ++ show tpat ++ " texpr:" ++ show texpr
-    env' <- patVarsInEnv (generalize env . Qual pspat) env pat tpat
+    env' <- patVarsInEnv (TyScheme [] . Qual pspat) env pat tpat
     (s, psexpr, texpr', expr') <- typeExpr env' expr
     lift $ lift $ putStrLn $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
     s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?

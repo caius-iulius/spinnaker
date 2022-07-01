@@ -81,7 +81,7 @@ entryPointBlock env = do
     where c = Coord "entryPoint" 0 0
           syne = (c, SynExprApp (c, SynExprLabel (Path ["Core"] "putStrLn")) (c, SynExprApp (c, SynExprLabel (Path ["Core"] "show")) (c, SynExprLabel (Path [] "main"))))
 
-typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, String, BlockProgram)
+typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, HLExpr, BlockProgram)
 typeProgram core program = do
     lift $ lift $ putStrLn $ "Init typing env: " ++ show initTypingEnv
     (denv, block) <- demodProgram initCoreDemodEnv core program
@@ -89,4 +89,4 @@ typeProgram core program = do
     let block' = concatBlockPrograms block entry
     lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block')
     (env, tyblock) <- typeBlockProgram block'
-    return (env, "entryPoint#BI", tyblock)
+    return (env, (Coord "entryPoint" 0 0, buildTupType [], ExprLabel "entryPoint#BI"), tyblock)

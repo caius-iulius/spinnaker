@@ -10,6 +10,7 @@ import Interpreter
 import HLDefs
 import TypingDefs
 import SyntaxDefs
+import Monomorphizer
 
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
     handle <- openFile "core" ReadMode;
@@ -19,10 +20,10 @@ coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fall
         err -> error $ show err
 }
 
-frontendCompile :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, String, BlockProgram))
+frontendCompile :: SyntaxModule -> SyntaxModule -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
 frontendCompile core program = (>>= return . fst) $ runTyperState (0, 0, 0) $ typeProgram core program;
 
-testCompile :: IO (TypingEnv, String, BlockProgram)
+testCompile :: IO (TypingEnv, HLExpr, BlockProgram)
 testCompile = do {
     args <- getArgs;
     handle <- openFile (head args) ReadMode;
@@ -38,7 +39,7 @@ testCompile = do {
             case either of
                 Left e -> error $ "Typing error: " ++ e
                 Right (env, entryPoint, block) -> do {
-                    putStrLn $ drawTree $ Node ("Typed TEMPORARY, entryPoint: " ++ entryPoint) [toTreeBlockProgram $ block];
+                    putStrLn $ drawTree $ Node ("Typed TEMPORARY, entryPoint: " ++ show entryPoint) [toTreeBlockProgram $ block];
                     putStrLn $ "Final typingEnv: " ++ show env;
                     return (env, entryPoint, block)
                 }
@@ -48,6 +49,7 @@ testCompile = do {
 
 main = do {
     (_, ep, b) <- testCompile;
-    result <- evalProgram (ep, b);
-    putStrLn $ "Result: " ++ (drawTree $ toTreeHLExpr result);
+    (ep', mono) <- monomorphizeProgram (ep, b);
+    putStrLn $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
+    evalProgram (ep', mono);
 }
