@@ -9,7 +9,7 @@ import SyntaxDefs
 
 labelFirst = thisChar '_' <|| asciiAlphaLower
 capitalLabelFirst = asciiAlphaUpper
-labelChar = thisChar '_' <|| asciiAlphaNumeric
+labelChar = thisChar '_' <|| thisChar '\'' <|| asciiAlphaNumeric
 tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":!$%&*+/-<=>?@\\^|~."
@@ -33,8 +33,7 @@ getLabelText = do {
     skipUseless;
     (c, f) <- labelFirst;
     others <- munch labelChar;
-    quotes <- munch $ thisChar '\'';
-    return (c, f:map snd (others ++ quotes))
+    return (c, f:map snd others)
 }
 
 getKeyword = do {
@@ -48,8 +47,7 @@ getCapitalLabel = do {
     skipUseless;
     (c, f) <- capitalLabelFirst;
     others <- munch labelChar;
-    quotes <- munch $ thisChar '\'';
-    return (c, f:map snd (others++quotes))
+    return (c, f:map snd others)
 }
 
 getInteger = do {

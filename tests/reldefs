@@ -51,7 +51,7 @@ def threenplus1 = \x -> 1 +! x *! 3
 
 def mutual1 : forall m x . {MyNum (m x), Functor m} => m x -> m x 
             = \x -> x +! mutual2 x
-and mutual2 = \x -> mutual1 (fmap (\x'->x') x)
+and mutual2 = \x -> mutual1 (fmap (\x'x->x'x) x)
 
 # TODO: Questo dà errore perché attualmente "put" è polimorfico
 # def main =

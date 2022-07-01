@@ -7,6 +7,7 @@ def pub ($) = \a,b->a b
 def pub flip = \f,x,y->f y x
 def pub curry = \f,x,y->f(x,y)
 def pub uncurry = \f,(x,y)->f x y
+def pub id = \x->x
 
 rel pub Num a =
     (+) : a -> a -> a,
@@ -23,6 +24,10 @@ rel pub Ord a =
     (>) : a -> a -> Bool,
     (>=) : a -> a -> Bool,
     (<=) : a -> a -> Bool
+
+rel pub Enum a =
+    toEnum : a->Int,
+    fromEnum : Int->a
 
 
 inst Num Int {
@@ -42,6 +47,16 @@ inst Ord Int {
     def (>) = \a,b->_greInt(a,b)
     def (<=)= \a,b->_leqInt(a,b)
     def (>=)= \a,b->_leqInt(b,a)
+}
+
+inst Enum Int {
+    def toEnum = id
+    def fromEnum = id
+}
+
+inst Enum Chr {
+    def toEnum = _convCtoI
+    def fromEnum = _convItoC
 }
 
 mod pub List {
@@ -119,7 +134,7 @@ mod pub Show {
             | False -> Cons 'F' (Cons 'a' (Cons 'l' (Cons 's' (Cons 'e' Nil))))
     }
 
-    def showDigit = \i -> _convItoC (48 + i)
+    def showDigit : Int -> Chr = \i -> fromEnum (48 + i)
 
     def showNonNeg = \i ->
         put i < 10
@@ -136,7 +151,7 @@ mod pub Show {
 
     inst Show Int { def show = showInt }
 
-    def escapeChar = \c -> put c
+    def escapeChr = \c -> put c
         | '\n' -> Cons '\\' (Cons 'n' Nil)
         | '\\' -> Cons '\\' (Cons '\\' Nil)
         | '\'' -> Cons '\\' (Cons '\'' Nil)
@@ -144,11 +159,11 @@ mod pub Show {
         | _ -> Cons c Nil
 
     inst Show Chr {
-        def show = \c -> Cons '\'' (escapeChar c) ++ (Cons '\'' Nil)
+        def show = \c -> Cons '\'' (escapeChr c) ++ (Cons '\'' Nil)
     }
 
     inst Show (List Chr) {
-        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChar c) Nil l) ++ Cons '"' Nil
+        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChr c) Nil l) ++ Cons '"' Nil
     }
 
     def showListInternal = \l ->
