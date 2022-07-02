@@ -10,6 +10,7 @@ import Interpreter
 import HLDefs
 import TypingDefs
 import SyntaxDefs
+import OptimizeHL
 import Monomorphizer
 
 coreModule = do { --NOTE: Non dà messaggi di errore se il parsing del Core fallisce
@@ -49,7 +50,8 @@ testCompile = do {
 
 main = do {
     (_, ep, b) <- testCompile;
-    (ep', mono) <- monomorphizeProgram (ep, b);
+    prog <- monomorphizeProgram (ep, b);
+    (ep', mono) <- return $ inlineProgram prog;
     putStrLn $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
     evalProgram (ep', mono);
 }

@@ -40,4 +40,8 @@ incorpora file core
 5. notazione do
 6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. compilazione a C
-8. ottimizzazioni
+8. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors"
+    - [TEST] inlining globale
+    - inlining locale
+    - putofput
+    - application
