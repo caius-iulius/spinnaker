@@ -4,7 +4,7 @@ def fix : forall a b. ((a -> b) -> a -> b) -> a -> b
     = \f, x -> f (fix f) x
 
 def fac = fix $ \f, n ->
-    if n = 0 then 1
+    if n == 0 then 1
     else n * f (n - 1)
 
 def main = fac 5

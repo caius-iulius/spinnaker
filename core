@@ -16,7 +16,7 @@ rel pub Num a =
     (/) : a -> a -> a
 
 rel pub Eq a =
-    (=) : a -> a -> Bool,
+    (==) : a -> a -> Bool,
     (!=) : a -> a -> Bool
 
 rel pub Ord a =
@@ -38,7 +38,7 @@ inst Num Int {
 }
 
 inst Eq Int {
-    def (=) = \a,b->_equInt(a,b)
+    def (==) = \a,b->_equInt(a,b)
     def (!=)= \a,b->_neqInt(a,b)
 }
 

@@ -161,28 +161,23 @@ typePred c env@(TypingEnv _ _ _ rs) (Pred l ts) =
                 (s, ts') <- typeAndUnifyList typeTyExpr env (zip (take (length ts) $ repeat c) ts) (map kind qs)
                 return (s, Pred l (map snd ts'))
 
+typePreds :: StdCoord -> TypingEnv -> [Pred] -> TyperState (KindSubst, [Pred])
+typePreds c env [] = return (nullKSubst, [])
+typePreds c env (p:ps) = do
+    (s, p') <- typePred c env p
+    (s', ps') <- typePreds c env (map (substApplyPred s) ps)
+    return (composeKSubst s' s, (substApplyPred s' p'):ps')
+
 typeQualPred :: StdCoord -> TypingEnv -> Qual Pred -> TyperState (KindSubst, Qual Pred)
 typeQualPred c env (Qual preds pred) = do
     (s, pred':preds') <- typePreds c env (pred:preds)
     return (s, Qual preds' pred')
-        where   typePreds :: StdCoord -> TypingEnv -> [Pred] -> TyperState (KindSubst, [Pred])
-                typePreds c env [] = return (nullKSubst, [])
-                typePreds c env (p:ps) = do
-                    (s, p') <- typePred c env p
-                    (s', ps') <- typePreds c env (map (substApplyPred s) ps)
-                    return (composeKSubst s' s, (substApplyPred s' p'):ps')
 
 typeQualType :: StdCoord -> TypingEnv -> Qual DataType -> TyperState (KindSubst, Kind, Qual DataType)
 typeQualType c env (Qual preds a) = do
     (s, preds') <- typePreds c env preds
     (s', k, a') <- typeTyExpr c env (kSubstApply s a)
     return (composeKSubst s' s, k, Qual (map (substApplyPred s') preds') a')
-        where   typePreds :: StdCoord -> TypingEnv -> [Pred] -> TyperState (KindSubst, [Pred]) --TODO: Codice duplicato sopra
-                typePreds c env [] = return (nullKSubst, [])
-                typePreds c env (p:ps) = do
-                    (s, p') <- typePred c env p
-                    (s', ps') <- typePreds c env (map (substApplyPred s) ps)
-                    return (composeKSubst s' s, (substApplyPred s' p'):ps')
 
 addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs decls insts)->RelData qs decls (p:insts)) l rs
 
