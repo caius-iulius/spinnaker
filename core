@@ -26,8 +26,8 @@ rel pub Ord a =
     (<=) : a -> a -> Bool
 
 rel pub Enum a =
-    toEnum : a->Int,
-    fromEnum : Int->a
+    fromEnum : a->Int,
+    toEnum : Int->a
 
 
 inst Num Int {
@@ -55,8 +55,8 @@ inst Enum Int {
 }
 
 inst Enum Chr {
-    def toEnum = _convCtoI
-    def fromEnum = _convItoC
+    def toEnum = _convItoC
+    def fromEnum = _convCtoI
 }
 
 mod pub List {
@@ -114,10 +114,16 @@ mod pub List {
         | Nil -> l'
         | Cons x xs -> Cons x (xs ++ l')
 
-    def pub (..) = \from, to ->
+    def innerdotdot = \from, to ->
         put from >= to
         | True -> Nil
-        | _ -> Cons from ((from+1)..to)
+        | _ -> Cons (toEnum from) (innerdotdot (from+1) to)
+    def pub (..) : forall a. {Enum a} => a -> a -> List a
+        = \from, to ->
+            innerdotdot (fromEnum from) (fromEnum to)
+    def pub (..=) : forall a. {Enum a} => a -> a -> List a
+        = \from, to ->
+            innerdotdot (fromEnum from) (fromEnum to + 1)
 }
 use pub List
 
@@ -134,7 +140,7 @@ mod pub Show {
             | False -> Cons 'F' (Cons 'a' (Cons 'l' (Cons 's' (Cons 'e' Nil))))
     }
 
-    def showDigit : Int -> Chr = \i -> fromEnum (48 + i)
+    def showDigit : Int -> Chr = \i -> toEnum (48 + i)
 
     def showNonNeg = \i ->
         put i < 10
@@ -156,7 +162,7 @@ mod pub Show {
         | '\\' -> Cons '\\' (Cons '\\' Nil)
         | '\'' -> Cons '\\' (Cons '\'' Nil)
         | '"' -> Cons '\\' (Cons '"' Nil)
-        | _ -> Cons c Nil
+        | _ -> Cons c Nil #Solo se 32 <= fromEnum c <= 126
 
     inst Show Chr {
         def show = \c -> Cons '\'' (escapeChr c) ++ (Cons '\'' Nil)
