@@ -12,9 +12,9 @@ capitalLabelFirst = asciiAlphaUpper
 labelChar = thisChar '_' <|| thisChar '\'' <|| asciiAlphaNumeric
 tailDigit = thisChar '_' <|| digit
 
-opChar = anyChar ":!$%&*+/-<=>?@\\^|~."
+opChar = anyChar ":;!$%&*+/-<=>?@\\^|~."
 
-validSymbols = ["->", "|", "\\", ".", "=>"]
+validSymbols = ["->", "|", "\\", ".", "=>", ";", "<-"]
 
 keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "forall", "def", "data", "typesyn", "rel", "inst", "use", "mod"]
 
@@ -163,7 +163,8 @@ getPathCapitalLabel = do {
 -- Analisi semantica
 
 -- Parser vari per pattern
-getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
+--TODO: assicurarsi che non avere il require non causi backtracking indesiderato
+getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> {-require $-} (thisUsefulChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
     es <- sepBy1 getPatternExpr (thisUsefulChar ',');
     final <- option (c, Nothing, SynPatListNil) (thisSyntaxElem "|" >> require getPatternExpr);
     thisUsefulChar ']';
@@ -190,7 +191,7 @@ getPatternTerm = describeError "Expected pattern term" $ do {
   <|| do {
     (c, _) <- thisUsefulChar '(';
     m <- sepBy getPatternExpr (thisUsefulChar ',');
-    require $ thisUsefulChar ')';
+    {-require $ -}thisUsefulChar ')'; --TODO: Assicurarsi che non avere il require non causi backtracking indesiderato
 
     if length m == 1
     then return $ head m
@@ -240,12 +241,23 @@ getExpr = do { --FCall e Label nel caso che ce ne sia una
         foldl1 (\t1 t2 -> (c, SynExprApp t1 t2)) terms
 }
 
-getMeta = getLambda <|| getIfThenElse <|| getLet <|| getPut <|| do { --EXPR OP META
+getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| do { --EXPR OP META
     expr <- getExpr;
     (opc, op) <- getOperator;
     meta <- require getMeta;
     return (opc, SynExprApp (opc, SynExprApp (opc, SynExprLabel $ Path [] op) expr) meta)
 } <|| getExpr
+
+getBindSyn = do {
+    p@(c, _, _) <- getPatternExpr;
+    thisSyntaxElem "<-";
+    require $ do {
+        me <- getMeta;
+        thisSyntaxElem ";";
+        fe <- getMeta;
+        return (c, SynExprBind p me fe)
+    }
+}
 
 getLet = do
     (c, _) <- thisSyntaxElem "let"

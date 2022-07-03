@@ -1,4 +1,5 @@
 module Interpreter where
+import System.IO
 import qualified Data.Map as Map
 import Control.Monad.Reader
 import Data.Char
@@ -72,6 +73,7 @@ builtinApply "_putChr#BI" (_, _, ExprLiteral (LitCharacter c)) = do
     lift $ putChar c
     return $ ExprConstructor "()0" []
 builtinApply "_getChr#BI" (_, _, ExprConstructor "()0" []) = do
+    lift $ hFlush stdout
     c <- lift getChar
     return $ ExprLiteral $ LitCharacter c
 

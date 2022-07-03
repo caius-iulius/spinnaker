@@ -79,7 +79,7 @@ entryPointBlock env = do
     let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] (buildTupType []))) [] hle
     return $ BlockProgram [] [] [[entryPointVDef]] []
     where c = Coord "entryPoint" 0 0
-          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core"] "putStrLn")) (c, SynExprApp (c, SynExprLabel (Path ["Core"] "show")) (c, SynExprLabel (Path [] "main"))))
+          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runIO")) (c, SynExprLabel (Path [] "main")))
 
 typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, HLExpr, BlockProgram)
 typeProgram core program = do

@@ -8,58 +8,75 @@ def pub flip = \f,x,y->f y x
 def pub curry = \f,x,y->f(x,y)
 def pub uncurry = \f,(x,y)->f x y
 def pub id = \x->x
+def pub const = \x,_->x
 
-rel pub Num a =
-    (+) : a -> a -> a,
-    (-) : a -> a -> a,
-    (*) : a -> a -> a,
-    (/) : a -> a -> a
+mod Numerics {
+    rel pub Num a =
+        (+) : a -> a -> a,
+        (-) : a -> a -> a,
+        (*) : a -> a -> a,
+        (/) : a -> a -> a
 
-rel pub Eq a =
-    (==) : a -> a -> Bool,
-    (!=) : a -> a -> Bool
+    rel pub Eq a =
+        (==) : a -> a -> Bool,
+        (!=) : a -> a -> Bool
 
-rel pub Ord a =
-    (<) : a -> a -> Bool,
-    (>) : a -> a -> Bool,
-    (>=) : a -> a -> Bool,
-    (<=) : a -> a -> Bool
+    rel pub Ord a =
+        (<) : a -> a -> Bool,
+        (>) : a -> a -> Bool,
+        (>=) : a -> a -> Bool,
+        (<=) : a -> a -> Bool
 
-rel pub Enum a =
-    fromEnum : a->Int,
-    toEnum : Int->a
+    rel pub Enum a =
+        fromEnum : a->Int,
+        toEnum : Int->a
 
 
-inst Num Int {
-    def (+) = \a,b->_addInt(a,b)
-    def (-) = \a,b->_subInt(a,b)
-    def (*) = \a,b->_mulInt(a,b)
-    def (/) = \a,b->_divInt(a,b)
-}
+    inst Num Int {
+        def (+) = \a,b->_addInt(a,b)
+        def (-) = \a,b->_subInt(a,b)
+        def (*) = \a,b->_mulInt(a,b)
+        def (/) = \a,b->_divInt(a,b)
+    }
 
-inst Eq Int {
-    def (==) = \a,b->_equInt(a,b)
-    def (!=)= \a,b->_neqInt(a,b)
-}
+    inst Eq Int {
+        def (==) = \a,b->_equInt(a,b)
+        def (!=)= \a,b->_neqInt(a,b)
+    }
 
-inst Ord Int {
-    def (<) = \a,b->_greInt(b,a)
-    def (>) = \a,b->_greInt(a,b)
-    def (<=)= \a,b->_leqInt(a,b)
-    def (>=)= \a,b->_leqInt(b,a)
-}
+    inst Ord Int {
+        def (<) = \a,b->_greInt(b,a)
+        def (>) = \a,b->_greInt(a,b)
+        def (<=)= \a,b->_leqInt(a,b)
+        def (>=)= \a,b->_leqInt(b,a)
+    }
 
-inst Enum Int {
-    def toEnum = id
-    def fromEnum = id
-}
+    inst Enum Int {
+        def toEnum = id
+        def fromEnum = id
+    }
 
-inst Enum Chr {
-    def toEnum = _convItoC
-    def fromEnum = _convCtoI
-}
+    inst Enum Chr {
+        def toEnum = _convItoC
+        def fromEnum = _convCtoI
+    }
+} use pub Numerics
 
-mod pub List {
+mod Monad {
+    rel pub Functor f = fmap : forall a b. (a -> b) -> f a -> f b
+    rel pub Monad m =
+        return : forall a. a -> m a,
+        bind : forall a b. m a -> (a -> m b) -> m b
+
+    def pub (>>=) = bind
+    def pub (>>) = \m, m' -> m >>= \_ -> m'
+
+    inst forall m. {Monad m} => Functor m {
+        def fmap = \f, m -> bind m (\x->return (f x))
+    }
+} use pub Monad
+
+mod List {
     data pub List a
         = Nil
         | Cons a (List a)
@@ -124,10 +141,14 @@ mod pub List {
     def pub (..=) : forall a. {Enum a} => a -> a -> List a
         = \from, to ->
             innerdotdot (fromEnum from) (fromEnum to + 1)
-}
-use pub List
 
-mod pub Show {
+
+    def pub sequence = \lm -> put lm
+        | Nil -> return Nil
+        | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (Cons a as)
+} use pub List
+
+mod Show {
     rel pub Show a = show : a -> List Chr
 
     inst Show () {
@@ -183,19 +204,62 @@ mod pub Show {
     inst forall a. {Show a} => Show (List a) {
         def show = showList
     }
-}
-use pub Show
+} use pub Show
 
-mod pub IO {
-    def pub putChr = _putChr
-    def pub getChr = _getChr
-    def pub putStr = \s ->
-        put s
-        | Nil -> ()
-        | Cons c cs ->
-            let _ = (putChr c, putStr cs) -> ()
-    def pub putStrLn = \s ->
-        let _ = (putStr s, putChr '\n') -> ()
+mod pub State {
+    data pub State s a = State (s -> (a, s))
+
+    inst forall s. Monad (State s) {
+        def return = \a -> State(\s -> (a, s))
+        def bind = \State st, sf -> State (\s->
+                let (a, s') = st s ->
+                let State st' = sf a ->
+                st' s'
+            )
+    }
+
+    def pub gets = State (\s->(s, s))
+    def pub puts = \ns -> State (\_->((), ns))
+
+    def pub runState = \is, State st -> st is
 }
-use pub IO
-# NOTA: Ovviamente serve tanta roba, come le funzioni liftM2, cose su liste, monadi, moduli...
+
+mod IO {
+    data RealWorld = RealWorld
+    data pub IO a = IO (State.State RealWorld a)
+
+    inst Functor IO {
+        def fmap = \f, IO s -> IO (fmap f s)
+    }
+    inst Monad IO {
+        def return = \a -> IO (return a)
+        def bind = \IO s, iof -> IO (bind s (\a ->
+            let IO b = iof a -> b))
+    }
+
+    mod pub UnsafeIO {
+        def pub putChr = _putChr
+        def pub getChr = _getChr
+        def pub putStr = \s ->
+            put s
+            | Nil -> ()
+            | Cons c cs ->
+                let _ = (putChr c, putStr cs) -> ()
+        def pub putStrLn = \s ->
+            let _ = (putStr s, putChr '\n') -> ()
+        def pub getLn = \() ->
+            put (_getChr ())
+            | '\n' -> Nil
+            | c -> Cons c (getLn ())
+
+        def pub runIO = \IO s -> let (a, _) = State.runState RealWorld s -> a
+    }
+
+    def pub putChr = \c -> IO(State.State(\s->(UnsafeIO.putChr c, s)))
+    def pub getChr = IO(State.State(\s->(UnsafeIO.getChr (), s)))
+    def pub putStr = \l -> IO(State.State(\s->(UnsafeIO.putStr l, s)))
+    def pub putStrLn = \l -> IO(State.State(\s->(UnsafeIO.putStrLn l, s)))
+    def pub getLn = IO(State.State(\s->(UnsafeIO.getLn (), s)))
+
+    def pub print = show |> putStrLn
+} use pub IO

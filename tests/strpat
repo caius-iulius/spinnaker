@@ -7,7 +7,6 @@ def strtonum = \s -> put s
     | _     -> -1
 
 def main =
-    putStrLn $
-    show $
+    print $
     map strtonum
         ["uno", "due", "tre", "nonvalido", "un", "ue"]

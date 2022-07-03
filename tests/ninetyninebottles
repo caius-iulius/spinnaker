@@ -13,4 +13,4 @@ def verse = \n ->
         ++ " of beer on the wall, " ++ bottles n ++ " of beer.\nTake one down, pass it around, "
         ++ bottles (n - 1) ++ " of beer on the wall.\n"
 
-def main = foldl (\_->putStrLn <| verse) () $ reverse $ 0..100
+def main = foldl (\s, n -> s >> putStrLn $ verse n) (return ()) $ reverse $ 0..100

@@ -4,4 +4,4 @@ def fac = \n ->
     if n == 0 then 1
     else n * fac (n - 1)
 
-def main = fac 5
+def main = print $ fac 5

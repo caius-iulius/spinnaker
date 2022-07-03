@@ -45,7 +45,7 @@ toTreeSynExpr (c, SynExprListNil) = Node (show c ++ " Empty List") []
 toTreeSynExpr (c, SynExprListConss es final) = Node (show c ++ " List") (map toTreeSynExpr es ++ [Node "With final elems" [toTreeSynExpr final]])
 toTreeSynExpr (c, SynExprIfThenElse cond iftrue iffalse) = Node (show c ++ " IfThenElse") [Node "Condition" [toTreeSynExpr cond], Node "If True" [toTreeSynExpr iftrue], Node "If False" [toTreeSynExpr iffalse]]
 toTreeSynExpr (c, SynExprInlineUse path e) = Node (show c ++ "Inline use: " ++ show path) [toTreeSynExpr e]
-
+toTreeSynExpr (c, SynExprBind pat me fe) = Node (show c ++ "Monadic bind to pattern: " ++ show pat) [toTreeSynExpr me, toTreeSynExpr fe]
 
 toTreeSynValDef (SynValDef c v s te e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s ++ " typehint: " ++ show te) [toTreeSynExpr e]
 

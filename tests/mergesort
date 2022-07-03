@@ -36,4 +36,4 @@ mod pub Sort {
             merge (mergesort left, mergesort right)
 }
 
-def main = putStrLn $ show $ Sort.mergesort (reverse $ -5..10)
+def main = print $ Sort.mergesort (reverse $ -5..10)

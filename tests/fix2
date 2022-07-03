@@ -1,0 +1,7 @@
+use Core
+
+def fix2 = \f, g, x -> f (fix2 g f) x
+
+def main =
+    let fix2even = fix2 (\f, x -> if x == 0 then True else f (x - 1)) (\f, x -> if x == 0 then False else f (x - 1)) ->
+    print $ map fix2even (0..4)

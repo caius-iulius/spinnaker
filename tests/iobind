@@ -1,0 +1,6 @@
+use Core
+
+def main : IO ()
+         = _ <- putStr "Scrivi il tuo nome: ";
+           n <- getLn;
+           putStrLn ("Ciao, " ++ n ++ "!")

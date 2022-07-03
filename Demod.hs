@@ -129,6 +129,14 @@ demodExpr env (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env (c, --T
 demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
     env' <- getPathEnv c env (path ++ [labl])
     demodExpr (envsUnionLeft env' env) e
+demodExpr env (c, SynExprBind pat me fe) = do
+    (DemodEnv _ vs _ _ _) <- getPathEnv c env ["Core"]
+    case Map.lookup "bind" vs of
+        Nothing -> fail $ show c ++ " The Core module does not provide a definition for bind"
+        Just (_, nlabl) -> do
+            me' <- demodExpr env me
+            lam <- demodExpr env (c, SynExprLambda pat fe)
+            return (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprLabel nlabl) me') lam)
 
 -- definizioni dei valori globali
 demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState (Qual DataType)

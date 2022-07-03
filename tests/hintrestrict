@@ -1,3 +1,4 @@
 use Core
 
-def main : Int -> Int = \x->x
+def hinted : Int -> Int = \x->x
+def main = print $ hinted 5
