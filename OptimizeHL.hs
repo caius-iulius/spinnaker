@@ -27,15 +27,18 @@ exprSize :: HLExpr -> Int
 exprSize (_, _, ExprLiteral _) = 1
 exprSize (_, _, ExprApp f a) = exprSize f + exprSize a --TODO: +1?
 exprSize (_, _, ExprLabel _) = 1
-exprSize (_, _, ExprConstructor _ es) = sum $ map exprSize es --TODO: +1?
+exprSize (_, _, ExprConstructor _ es) = 1 + sum (map exprSize es)
 exprSize (_, _, ExprLambda p e) = 1 + exprSize e --TODO patSize p?
 exprSize (_, _, ExprPut v pses) = length pses + exprSize v + sum (map (exprSize . snd) pses) --TODO patsize pses?
+
+programSize :: Program -> Int
+programSize (ep, defs) = exprSize ep + sum (map (exprSize . snd) defs)
 
 inlineHeuristic :: HLExpr -> Int -> Bool
 inlineHeuristic e appears =
     let size = exprSize e
         addedSize = size*(appears - 1) - 1
-    in size < 8 || addedSize < size
+    in size < 8 || addedSize <= 2
 
 inline :: String -> HLExpr -> HLExpr -> HLExpr
 inline l ie e@(_, _, ExprLiteral _) = e
@@ -61,3 +64,80 @@ inlineProgram (ep, defs) = loop ep [] defs
             | otherwise = loop (inline l e myep) (inlineDefs l e procd) (inlineDefs l e defs')
         inlineDefs l ie [] = []
         inlineDefs l ie ((ld, e):defs') = (ld, inline l ie e):inlineDefs l ie defs'
+
+data SieveRes
+    = Always [(String, HLExpr)]
+    | Maybe
+    | Never
+concatRess [] = Always []
+concatRess (Never:_) = Never
+concatRess (Maybe:_) = Maybe
+concatRess (Always bs:rs) = case concatRess rs of
+    Never -> Never
+    Maybe -> Maybe
+    Always bs' -> Always (bs ++ bs')
+
+
+sievePatternInner :: HLPatternData -> HLExpr -> SieveRes
+sievePatternInner PatWildcard _ = Always []
+sievePatternInner (PatLiteral plit) (_, _, ExprLiteral elit) =
+    if plit == elit then Always [] else Never
+sievePatternInner (PatVariant pvar ps) (_, _, ExprConstructor evar es) =
+    if pvar == evar then
+        let maps = zipWith sievePattern ps es
+            in concatRess maps
+    else Never
+sievePatternInner p e = Maybe
+
+sievePattern :: HLPattern -> HLExpr -> SieveRes
+sievePattern (_, Nothing, patdata) e = sievePatternInner patdata e
+sievePattern (_, Just l, patdata) e =
+    let inner = sievePatternInner patdata e
+        in concatRess [Always[(l, e)],inner]
+
+sievePatterns :: HLExpr -> [(HLPattern, HLExpr)] -> [(HLPattern, HLExpr)]
+sievePatterns v = reverse . loop []
+    where loop pses' [] = pses'
+          loop pses' ((p, e):pses) =
+            case sievePattern p v of
+                Always _ -> (p, e):pses'
+                Maybe -> loop ((p, e):pses') pses
+                Never -> loop pses' pses
+
+optimizeExpr :: HLExpr -> HLExpr
+optimizeExpr e@(_, _, ExprLiteral _) = e
+optimizeExpr (c, t, ExprApp f a) =
+    let f' = optimizeExpr f
+        a' = optimizeExpr a
+    in case f' of
+        (_, _, ExprLambda pat inner) ->
+            case sievePattern pat a' of
+                Always bs -> optimizeExpr $
+                    --TODO: questo effettua inline con qualsiasi espressione che appare un qualsiasi numero di volte, fa esplodere la dimensione
+                    foldl (\e (l,e')->inline l e' e) inner bs
+                _ -> (c, t, ExprApp f' a')
+        _ -> (c, t, ExprApp f' a') --TODO: ottimizzazioni dei builtin tipo _addInt (3, 5) --> 8
+optimizeExpr e@(_, _, ExprLabel _) = e
+optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
+optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput
+    let val' = optimizeExpr val
+        pses' = sievePatterns val' pses
+        pses'' = map (\(p,e)->(p,optimizeExpr e)) pses'
+    in case pses'' of
+        (p, e):[] -> case sievePattern p val' of
+            Always bs -> optimizeExpr $
+                --TODO: questo effettua inline con qualsiasi espressione che appare un qualsiasi numero di volte, fa esplodere la dimensione
+                foldl (\me (l,e')->inline l e' me) e bs
+            _ -> (c, t, ExprPut val' pses'')
+        _ -> (c, t, ExprPut val' pses'')
+        --error $ "OPTIMIZED val " ++ show val' ++ "\npses " ++ show pses ++ "\npses'" ++ show pses'
+optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
+
+optimizeProgram :: Program -> Program
+optimizeProgram p =
+    let p' = optimizeDefExprs $! p
+        p'' = inlineProgram $! p'
+        p''' = optimizeDefExprs $! p''
+    in p'''
+    where optimizeDefExprs (ep, defs) = (optimizeExpr ep,
+            map (\(l,e)->(l,optimizeExpr e)) defs)

@@ -1,0 +1,30 @@
+use Core
+
+mod Church {
+    def pub true = \a, b -> a
+    def pub false = \a, b -> b
+
+    def pub zero= \f, x -> x
+    def pub succ= \a, f, x -> a f (f x)
+    def pub one = succ zero
+
+    def pub add = \a, b, f, x -> a f (b f x)
+    def pub mul = \a, b, f, x -> a (b f) x
+    def pub exp = \a, b -> b a
+
+    # def pub pred : forall n. ((n -> n) -> n -> n) -> (n -> n) -> n -> n
+    #             = \n, f, x -> n(\g, h->h (g f)) (\u->x) (\u->u)
+    # def pub sub = \a, b -> b pred a
+
+    def pub iszero = \n -> n (\x -> false) true
+
+    def pub ctoi = \a -> a ((+) 1) 0
+    def pub ctob = \a -> a True False
+} use Church
+
+def six = mul (succ one) (succ (succ one))
+
+def main =
+    print (ctoi $ exp six (succ one))
+    >> print (ctob $ iszero zero)
+    >> print (ctob $ iszero one)

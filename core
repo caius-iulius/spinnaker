@@ -9,6 +9,8 @@ def pub curry = \f,x,y->f(x,y)
 def pub uncurry = \f,(x,y)->f x y
 def pub id = \x->x
 def pub const = \x,_->x
+def pub fst = \(a,_)->a
+def pub snd = \(_,a)->a
 
 mod Numerics {
     rel pub Num a =
@@ -225,8 +227,7 @@ mod pub State {
 }
 
 mod IO {
-    data RealWorld = RealWorld
-    data pub IO a = IO (State.State RealWorld a)
+    data pub IO a = IO (State.State RealWorld_ a)
 
     inst Functor IO {
         def fmap = \f, IO s -> IO (fmap f s)
@@ -240,26 +241,31 @@ mod IO {
     mod pub UnsafeIO {
         def pub putChr = _putChr
         def pub getChr = _getChr
-        def pub putStr = \s ->
+        def pub putStr : (List Chr, RealWorld_) -> RealWorld_
+            = \(s, rw) ->
             put s
-            | Nil -> ()
+            | Nil -> rw
             | Cons c cs ->
-                let _ = (putChr c, putStr cs) -> ()
-        def pub putStrLn = \s ->
-            let _ = (putStr s, putChr '\n') -> ()
-        def pub getLn = \() ->
-            put (_getChr ())
-            | '\n' -> Nil
-            | c -> Cons c (getLn ())
+                let rw' = putChr (c, rw) ->
+                putStr (cs, rw')
+        def pub putStrLn = \srw ->
+            let rw' = putStr srw ->
+            putChr ('\n', rw')
+        def pub getLn = \rw ->
+            put getChr rw
+            | ('\n', rw') -> (Nil, rw')
+            | (c, rw') ->
+                let (s, rw'') = getLn rw' ->
+                (Cons c s, rw'')
 
-        def pub runIO = \IO s -> let (a, _) = State.runState RealWorld s -> a
+        def pub runIO = \IO s -> let (a, s') = State.runState RealWorld_ s -> s'
     }
 
-    def pub putChr = \c -> IO(State.State(\s->(UnsafeIO.putChr c, s)))
-    def pub getChr = IO(State.State(\s->(UnsafeIO.getChr (), s)))
-    def pub putStr = \l -> IO(State.State(\s->(UnsafeIO.putStr l, s)))
-    def pub putStrLn = \l -> IO(State.State(\s->(UnsafeIO.putStrLn l, s)))
-    def pub getLn = IO(State.State(\s->(UnsafeIO.getLn (), s)))
+    def pub putChr = \c -> IO(State.State (\s->(() , UnsafeIO.putChr (c,s))))
+    def pub getChr = IO(State.State UnsafeIO.getChr)
+    def pub putStr = \l -> IO(State.State(\s->((), UnsafeIO.putStr (l,s))))
+    def pub putStrLn = \l -> IO(State.State(\s->((), UnsafeIO.putStrLn (l,s))))
+    def pub getLn = IO(State.State UnsafeIO.getLn)
 
     def pub print = show |> putStrLn
 } use pub IO

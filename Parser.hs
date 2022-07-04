@@ -16,7 +16,7 @@ opChar = anyChar ":;!$%&*+/-<=>?@\\^|~."
 
 validSymbols = ["->", "|", "\\", ".", "=>", ";", "<-"]
 
-keywords = ["_", "put", "let", "if", "then", "else", "pub", "and", "forall", "def", "data", "typesyn", "rel", "inst", "use", "mod"]
+keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "typesyn", "rel", "inst", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -248,7 +248,7 @@ getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| d
     return (opc, SynExprApp (opc, SynExprApp (opc, SynExprLabel $ Path [] op) expr) meta)
 } <|| getExpr
 
-getBindSyn = do {
+getBindSyn = thisSyntaxElem "do" >> require (do {
     p@(c, _, _) <- getPatternExpr;
     thisSyntaxElem "<-";
     require $ do {
@@ -257,7 +257,7 @@ getBindSyn = do {
         fe <- getMeta;
         return (c, SynExprBind p me fe)
     }
-}
+})
 
 getLet = do
     (c, _) <- thisSyntaxElem "let"

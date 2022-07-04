@@ -69,13 +69,13 @@ builtinApply "_leqInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitI
 builtinApply "_greInt#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = return $ ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") []
 builtinApply "_convItoC#BI" (_, _, ExprLiteral (LitInteger i)) = return $ ExprLiteral $ LitCharacter (chr i)
 builtinApply "_convCtoI#BI" (_, _, ExprLiteral (LitCharacter c)) = return $ ExprLiteral $ LitInteger (ord c)
-builtinApply "_putChr#BI" (_, _, ExprLiteral (LitCharacter c)) = do
+builtinApply "_putChr#BI" (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitCharacter c)):(_,_,rw):[])) = do
     lift $ putChar c
-    return $ ExprConstructor "()0" []
-builtinApply "_getChr#BI" (_, _, ExprConstructor "()0" []) = do
+    return rw
+builtinApply "_getChr#BI" rw@(c,_,_) = do
     lift $ hFlush stdout
-    c <- lift getChar
-    return $ ExprLiteral $ LitCharacter c
+    char <- lift getChar
+    return $ ExprConstructor "()2" [(c, DataTypeName "Chr#BI" KType, ExprLiteral $ LitCharacter char),rw]
 
 builtinApply l e = error $ "TODO builtinApply: " ++ l
 

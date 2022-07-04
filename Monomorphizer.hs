@@ -59,7 +59,7 @@ findGenerator l t = getMostSpecific
             let matching = catMaybes [match dummyStdCoord te t >> Just (te, e) | (te, e) <- tses]
                 specifics = reduceMostSpecifics [] matching
             in case specifics of
-                [] -> error $ "No matching istances of: " ++ show l ++ " with type: " ++ show t
+                [] -> error $ "No matching generators of: " ++ show l ++ " with type: " ++ show t
                 ((te, e):[]) -> do
                     s <- match dummyStdCoord te t
                     Just (substApplyExpr s e)
@@ -116,11 +116,11 @@ monomorphizeInner _ (ExprPut v pses) = do
     return (ExprPut v' pses')
 
 monomorphize :: HLExpr -> MonoState HLExpr
-monomorphize e@(_, t, _) = do
+monomorphize e@(c, t, _) = do
     let monoSubst = Map.fromList $ map (\q -> (q, buildTupType [])) $ Set.toList (freetyvars t)
-        (c, t, ed) = substApplyExpr monoSubst e
-    ed' <- monomorphizeInner t ed
-    return (c, t, ed')
+        (_, t', ed) = substApplyExpr monoSubst e
+    ed' <- monomorphizeInner t' ed
+    return (c, t', ed')
 
 myListMerge :: Eq k => [(k,v)]->[(k,[v])]
 myListMerge [] = []

@@ -106,6 +106,7 @@ intT = DataTypeName "Int#BI" KType
 fltT = DataTypeName "Flt#BI" KType
 boolT = DataTypeName "Bool#BI" KType
 chrT = DataTypeName "Chr#BI" KType
+realworldT = DataTypeName "RealWorld_#BI" KType
 
 -- Infrastruttura monadica
 

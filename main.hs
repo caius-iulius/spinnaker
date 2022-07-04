@@ -51,7 +51,8 @@ testCompile = do {
 main = do {
     (_, ep, b) <- testCompile;
     prog <- monomorphizeProgram (ep, b);
-    (ep', mono) <- return $ inlineProgram prog;
+    (ep', mono) <- return $ optimizeProgram prog;
     putStrLn $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
+    putStrLn $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
     evalProgram (ep', mono);
 }

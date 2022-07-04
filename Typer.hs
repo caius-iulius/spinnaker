@@ -14,11 +14,11 @@ import TypeTyper
 import VariantComplete
 
 --Definizioni builtin per Demod
-builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr"]
+builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr", "RealWorld_"]
 builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt",
                     "_putChr", "_getChr",
                     "_convItoC", "_convCtoI"]
-builtinDemodVars = ["True", "False"]
+builtinDemodVars = ["True", "False", "RealWorld_"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
 buildBIDemodMap = Map.fromList . map buildBIDemod
@@ -32,6 +32,7 @@ builtinTypingTypes =
     ,   ("Flt#BI", KType)
     ,   ("Bool#BI", KType)
     ,   ("Chr#BI", KType)
+    ,   ("RealWorld_#BI", KType)
     ]
 builtinTypingVals =
     [   ("_addInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
@@ -45,12 +46,13 @@ builtinTypingVals =
     ,   ("_convItoC#BI", TyScheme [] (Qual [] $ buildFunType intT chrT))
     ,   ("_convCtoI#BI", TyScheme [] (Qual [] $ buildFunType chrT intT))
     --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType chrT (buildTupType [])))
-    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType []) chrT))
+    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [chrT, realworldT]) realworldT))
+    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType realworldT (buildTupType [chrT, realworldT])))
     ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT
     ,   VariantData "False#BI" [] [] boolT
+    ,   VariantData "RealWorld_#BI" [] [] realworldT
     ]
 builtinTypingRels = []
 initTypingEnv = TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) (Map.fromList builtinTypingRels)
@@ -76,7 +78,7 @@ typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
 
 entryPointBlock env = do
     hle <- demodExpr env syne
-    let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] (buildTupType []))) [] hle
+    let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] realworldT)) [] hle
     return $ BlockProgram [] [] [[entryPointVDef]] []
     where c = Coord "entryPoint" 0 0
           syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runIO")) (c, SynExprLabel (Path [] "main")))
@@ -89,4 +91,4 @@ typeProgram core program = do
     let block' = concatBlockPrograms block entry
     lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block')
     (env, tyblock) <- typeBlockProgram block'
-    return (env, (Coord "entryPoint" 0 0, buildTupType [], ExprLabel "entryPoint#BI"), tyblock)
+    return (env, (Coord "entryPoint" 0 0, realworldT, ExprLabel "entryPoint#BI"), tyblock)

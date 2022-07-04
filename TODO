@@ -1,3 +1,5 @@
+ATTENZIONE: L'ottimizzatore non elimina dei branch ovvi in "tests/church"
+
 sistema il file di highlighting, fa casini con gli apostrofi
 
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
@@ -19,7 +21,12 @@ Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implement
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
 supporto multifile
+
+crea una stdlib
+
 incorpora file core
+
+considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe essere rinominato Field)
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel
@@ -39,11 +46,11 @@ incorpora file core
 4. monomorfizzazione
     - [OK] valori, relazioni
     - datatype (come fa MLTon, selettiva sulle varianti usate)
-5. [OK] notazione do
+5. [TEST] notazione do, sto usando una guardia 'do' che non vorrei che ci fosse nella sintassi finale
 6. defunzionalizzazione e semplificazione a un branch per putexpr
-7. compilazione a C
-8. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors"
+7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors"
     - [TEST] inlining globale
     - inlining locale
     - putofput
     - application
+8. compilazione a C
