@@ -1,5 +1,6 @@
 module OptimizeHL where
 import HLDefs
+import Data.Char (ord, chr)
 
 type Definitions = [(String, HLExpr)]
 type Program = (HLExpr, Definitions)
@@ -38,7 +39,7 @@ inlineHeuristic :: HLExpr -> Int -> Bool
 inlineHeuristic e appears =
     let size = exprSize e
         addedSize = size*(appears - 1) - 1
-    in size < 8 || addedSize <= 2
+    in size < 8 || addedSize <= (2*size)
 
 inline :: String -> HLExpr -> HLExpr -> HLExpr
 inline l ie e@(_, _, ExprLiteral _) = e
@@ -104,6 +105,18 @@ sievePatterns v = reverse . loop []
                 Maybe -> loop ((p, e):pses') pses
                 Never -> loop pses' pses
 
+optimizeBI c t (_, _, ExprLabel "_addInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0+i1)))
+optimizeBI c t (_, _, ExprLabel "_subInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0-i1)))
+optimizeBI c t (_, _, ExprLabel "_mulInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0*i1)))
+optimizeBI c t (_, _, ExprLabel "_divInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (div i0 i1)))
+optimizeBI c t (_, _, ExprLabel "_equInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 == i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_neqInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_leqInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_greInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_convItoC#BI") (_, _, ExprLiteral (LitInteger i)) = (c, t, ExprLiteral (LitCharacter (chr i)))
+optimizeBI c t (_, _, ExprLabel "_convCtoI#BI") (_, _, ExprLiteral (LitCharacter ch)) = (c, t, ExprLiteral (LitInteger (ord ch)))
+optimizeBI c t f a = (c, t, ExprApp f a)
+
 optimizeExpr :: HLExpr -> HLExpr
 optimizeExpr e@(_, _, ExprLiteral _) = e
 optimizeExpr (c, t, ExprApp f a) =
@@ -116,7 +129,8 @@ optimizeExpr (c, t, ExprApp f a) =
                     --TODO: questo effettua inline con qualsiasi espressione che appare un qualsiasi numero di volte, fa esplodere la dimensione
                     foldl (\e (l,e')->inline l e' e) inner bs
                 _ -> (c, t, ExprApp f' a')
-        _ -> (c, t, ExprApp f' a') --TODO: ottimizzazioni dei builtin tipo _addInt (3, 5) --> 8
+        _ -> optimizeBI c t f' a'
+        --(c, t, ExprApp f' a') --TODO: ottimizzazioni dei builtin tipo _addInt (3, 5) --> 8
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
 optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput
