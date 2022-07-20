@@ -135,11 +135,6 @@ instantiate scm@(TyScheme qs t) = do
     lift $ lift $ putStrLn $ "Instantiating: " ++ show scm ++ " with subst: " ++ show subst
     return $ substApply subst t
 
-insts :: TypingEnv -> String -> [InstData]
-insts (TypingEnv _ _ _ rels) l =
-    case Map.lookup l rels of
-        Just (RelData _ _ idatas) -> idatas
-
 --Algoritmo MGU
 quantBind :: MonadFail m => StdCoord -> TyQuant -> DataType -> m Subst
 quantBind c q t
@@ -197,6 +192,11 @@ data ChooseInstRes --TODO: Questa interfaccia non è corretta
     | NoUnifiers
     | PossibleUnifiers [InstData]
     deriving Show
+
+insts :: TypingEnv -> String -> [InstData]
+insts (TypingEnv _ _ _ rels) l =
+    case Map.lookup l rels of
+        Just (RelData _ _ idatas) -> idatas
 
 chooseInst :: TypingEnv -> Pred -> ChooseInstRes
 chooseInst env p@(Pred l ts) =

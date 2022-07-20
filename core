@@ -83,11 +83,13 @@ mod List {
         = Nil
         | Cons a (List a)
 
-    def reverse_internal = \acc, l ->
+    def pub (::) = Cons
+
+    def reverseAux = \acc, l ->
         put l
         | Nil -> acc
-        | Cons x xs -> reverse_internal (Cons x acc) xs
-    def pub reverse = reverse_internal Nil
+        | Cons x xs -> reverseAux (x :: acc) xs
+    def pub reverse = reverseAux Nil
 
     def pub head = \Cons x xs -> x
     def pub tail = \Cons x xs -> xs
@@ -99,7 +101,7 @@ mod List {
     def pub map = \f, l ->
         put l
         | Nil -> Nil
-        | Cons x xs -> Cons (f x) (map f xs)
+        | Cons x xs -> f x :: map f xs
 
     def pub foldl = \f, s, l ->
         put l
@@ -111,32 +113,32 @@ mod List {
         | Nil -> s
         | Cons x xs -> f x (foldr f s xs)
 
-    def pub length = \l ->
-        put l
-        | Nil -> 0
-        | Cons _ xs -> 1 + length xs
+    def lengthAux = \n, l -> put l
+        | Nil -> n
+        | Cons _ xs -> lengthAux (n + 1) xs
+    def pub length = lengthAux 0
 
     def pub zip = \l, l' ->
         put (l, l')
         | (Nil, _) -> Nil
         | (_, Nil) -> Nil
-        | (Cons x xs, Cons x' xs') -> Cons (x, x') (zip xs xs')
+        | (Cons x xs, Cons x' xs') -> (x, x') :: zip xs xs'
 
     def pub zipWith = \f, l, l' ->
         put (l, l')
         | (Nil, _) -> Nil
         | (_, Nil) -> Nil
-        | (Cons x xs, Cons x' xs') -> Cons (f x x') (zipWith f xs xs')
+        | (Cons x xs, Cons x' xs') -> f x x' :: zipWith f xs xs'
 
     def pub (++) = \l, l' ->
         put l
         | Nil -> l'
-        | Cons x xs -> Cons x (xs ++ l')
+        | Cons x xs -> x :: (xs ++ l')
 
     def innerdotdot = \from, to ->
         put from >= to
         | True -> Nil
-        | _ -> Cons (toEnum from) (innerdotdot (from+1) to)
+        | _ -> toEnum from :: innerdotdot (from+1) to
     def pub (..) : forall a. {Enum a} => a -> a -> List a
         = \from, to ->
             innerdotdot (fromEnum from) (fromEnum to)
@@ -147,61 +149,61 @@ mod List {
 
     def pub sequence = \lm -> put lm
         | Nil -> return Nil
-        | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (Cons a as)
+        | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (a :: as)
 } use pub List
 
 mod Show {
     rel pub Show a = show : a -> List Chr
 
     inst Show () {
-        def show = \() -> Cons '(' (Cons ')' Nil)
+        def show = \() -> '('::')':: Nil
     }
 
     inst Show Bool {
         def show = \b -> put b
-            | True -> Cons 'T' (Cons 'r' (Cons 'u' (Cons 'e' Nil)))
-            | False -> Cons 'F' (Cons 'a' (Cons 'l' (Cons 's' (Cons 'e' Nil))))
+            | True -> 'T'::'r'::'u'::'e'::Nil
+            | False -> 'F'::'a'::'l'::'s'::'e'::Nil
     }
 
     def showDigit : Int -> Chr = \i -> toEnum (48 + i)
 
-    def showNonNeg = \i ->
-        put i < 10
-        | True -> Cons (showDigit i) Nil
+    def showNonNegAux = \s, i -> put (i < 10)
+        | True -> showDigit i :: s
         | _ ->
             let div10 = i/10 ->
-            let prev = showNonNeg div10 ->
-            prev ++ Cons (showDigit $ i - div10*10) Nil
+            let mod10 = i - div10*10 ->
+            showNonNegAux (showDigit mod10 :: s) div10
+    def showNonNeg = showNonNegAux Nil
 
     def showInt = \i ->
         put i < 0
-        | True -> Cons '-' (showNonNeg (0-i))
+        | True -> '-' :: showNonNeg (0-i)
         | _ -> showNonNeg i
 
     inst Show Int { def show = showInt }
 
     def escapeChr = \c -> put c
-        | '\n' -> Cons '\\' (Cons 'n' Nil)
-        | '\\' -> Cons '\\' (Cons '\\' Nil)
-        | '\'' -> Cons '\\' (Cons '\'' Nil)
-        | '"' -> Cons '\\' (Cons '"' Nil)
-        | _ -> Cons c Nil #Solo se 32 <= fromEnum c <= 126
+        | '\n' -> '\\'::'n'::Nil
+        | '\\' -> '\\'::'\\'::Nil
+        | '\'' -> '\\'::'\''::Nil
+        | '"' -> '\\'::'"'::Nil
+        | _ -> c::Nil #Solo se 32 <= fromEnum c <= 126
 
     inst Show Chr {
-        def show = \c -> Cons '\'' (escapeChr c) ++ (Cons '\'' Nil)
+        def show = \c -> Cons '\'' (escapeChr c) ++ ('\''::Nil)
     }
 
     inst Show (List Chr) {
-        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChr c) Nil l) ++ Cons '"' Nil
+        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChr c) Nil l) ++ ('"'::Nil)
     }
 
-    def showListInternal = \l ->
+    def showListAux = \l ->
         put l
-        | Nil -> Cons ']' Nil
-        | Cons x Nil -> show x ++ Cons ']' Nil
-        | Cons x xs -> show x ++ Cons ',' (Cons ' ' Nil) ++ showListInternal xs
+        | Nil -> ']' :: Nil
+        | Cons x Nil -> show x ++ (']' :: Nil)
+        | Cons x xs -> show x ++ Cons ',' (Cons ' ' Nil) ++ showListAux xs
 
-    def showList = \l -> Cons '[' (showListInternal l)
+    def showList = \l -> '[' :: showListAux l
 
     inst forall a. {Show a} => Show (List a) {
         def show = showList
@@ -256,7 +258,7 @@ mod IO {
             | ('\n', rw') -> (Nil, rw')
             | (c, rw') ->
                 let (s, rw'') = getLn rw' ->
-                (Cons c s, rw'')
+                (c :: s, rw'')
 
         def pub runIO = \IO s -> let (a, s') = State.runState RealWorld_ s -> s'
     }

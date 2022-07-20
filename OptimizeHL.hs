@@ -123,14 +123,8 @@ optimizeExpr (c, t, ExprApp f a) =
     let f' = optimizeExpr f
         a' = optimizeExpr a
     in case f' of
-        (_, _, ExprLambda pat inner) ->
-            case sievePattern pat a' of
-                Always bs -> optimizeExpr $
-                    --TODO: questo effettua inline con qualsiasi espressione che appare un qualsiasi numero di volte, fa esplodere la dimensione
-                    foldl (\e (l,e')->inline l e' e) inner bs
-                _ -> (c, t, ExprApp f' a')
+        (_, _, ExprLambda pat inner) -> optimizeExpr (c, t, ExprPut a' [(pat, inner)])
         _ -> optimizeBI c t f' a'
-        --(c, t, ExprApp f' a') --TODO: ottimizzazioni dei builtin tipo _addInt (3, 5) --> 8
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
 optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput

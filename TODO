@@ -37,6 +37,7 @@ considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe esse
     - [OK] gestione dell'hinting e dei predicati nei gruppi di valdef
     - [OK] tipizzazione istanze
     - [OK] riscrivi l'interprete per propagare i tipi e scegliere da vtable
+    - implementa un sistema di superrel (come le superclass di Haskell)
     - aggiungi controlli per limitare overlap
         - rilevamento istanze identiche
         - le istanze devono trattare una relazione o un tipo definiti nel proprio modulo
@@ -48,7 +49,7 @@ considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe esse
     - datatype (come fa MLTon, selettiva sulle varianti usate)
 5. [TEST] notazione do, sto usando una guardia 'do' che non vorrei che ci fosse nella sintassi finale
 6. defunzionalizzazione e semplificazione a un branch per putexpr
-7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors"
+7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors")
     - [TEST] inlining globale
     - inlining locale
     - putofput

@@ -266,7 +266,7 @@ demodModDef env@(DemodEnv ms vs ts cs rs) (ModMod c v l m)
     | Map.member l ms = fail $ show c ++ " Module: " ++ show l ++ " already defined"
     | otherwise = do
         (menv, demodded) <- demodModule (envSetPrivate env) m
-        lift $ lift $ putStrLn $ "Final module env of " ++ show l ++ ": " ++ show (envGetPubs menv)
+        --lift $ lift $ putStrLn $ "Final module env of " ++ show l ++ ": " ++ show (envGetPubs menv)
         return (DemodEnv (Map.insert l (v, envGetPubs menv) ms) vs ts cs rs, demodded)
 demodModDef env (ModUse c v (Path p l)) =
     let setVisib = case v of
@@ -315,9 +315,9 @@ demodModule env (Module defs) = demodModDefs env defs
 demodProgram :: DemodEnv -> SyntaxModule -> SyntaxModule -> TyperState (DemodEnv, BlockProgram)
 demodProgram initCoreDemodEnv core mod = do
     (coreEnv, coreBlock) <- demodModule initCoreDemodEnv core
-    lift $ lift $ putStrLn $ "coreEnv: " ++ show coreEnv
+    --lift $ lift $ putStrLn $ "coreEnv: " ++ show coreEnv
     (modEnv, modBlock) <- demodModule (DemodEnv (Map.singleton "Core" (Private, envGetPubs coreEnv)) Map.empty Map.empty Map.empty Map.empty) mod
-    lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
+    --lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
     --lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
     --lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
     return (modEnv, concatBlockPrograms coreBlock modBlock)

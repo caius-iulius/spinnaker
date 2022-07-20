@@ -2,8 +2,6 @@
 use Core
 
 mod pub Sort {
-    def (::) = Cons
-
     def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
     = \(curra, currb), lst ->
         put lst
