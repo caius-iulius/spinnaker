@@ -105,16 +105,16 @@ sievePatterns v = reverse . loop []
                 Maybe -> loop ((p, e):pses') pses
                 Never -> loop pses' pses
 
-optimizeBI c t (_, _, ExprLabel "_addInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0+i1)))
-optimizeBI c t (_, _, ExprLabel "_subInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0-i1)))
-optimizeBI c t (_, _, ExprLabel "_mulInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0*i1)))
-optimizeBI c t (_, _, ExprLabel "_divInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (div i0 i1)))
-optimizeBI c t (_, _, ExprLabel "_equInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 == i1 then "True#BI" else "False#BI") [])
-optimizeBI c t (_, _, ExprLabel "_neqInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") [])
-optimizeBI c t (_, _, ExprLabel "_leqInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") [])
-optimizeBI c t (_, _, ExprLabel "_greInt#BI") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") [])
-optimizeBI c t (_, _, ExprLabel "_convItoC#BI") (_, _, ExprLiteral (LitInteger i)) = (c, t, ExprLiteral (LitCharacter (chr i)))
-optimizeBI c t (_, _, ExprLabel "_convCtoI#BI") (_, _, ExprLiteral (LitCharacter ch)) = (c, t, ExprLiteral (LitInteger (ord ch)))
+optimizeBI c t (_, _, ExprLabel "_addInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0+i1)))
+optimizeBI c t (_, _, ExprLabel "_subInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0-i1)))
+optimizeBI c t (_, _, ExprLabel "_mulInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (i0*i1)))
+optimizeBI c t (_, _, ExprLabel "_divInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprLiteral (LitInteger (div i0 i1)))
+optimizeBI c t (_, _, ExprLabel "_equInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 == i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_neqInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_leqInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_greInt#EXT") (_, _, ExprConstructor "()2" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[])) = (c, t, ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") [])
+optimizeBI c t (_, _, ExprLabel "_convItoC#EXT") (_, _, ExprLiteral (LitInteger i)) = (c, t, ExprLiteral (LitCharacter (chr i)))
+optimizeBI c t (_, _, ExprLabel "_convCtoI#EXT") (_, _, ExprLiteral (LitCharacter ch)) = (c, t, ExprLiteral (LitInteger (ord ch)))
 optimizeBI c t f a = (c, t, ExprApp f a)
 
 optimizeExpr :: HLExpr -> HLExpr

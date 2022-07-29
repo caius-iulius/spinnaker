@@ -94,6 +94,8 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
     deriving Show
 
 --Definizioni utili
+extSuffix = "#EXT"
+
 buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
 buildTupType ts =
     let len = length ts

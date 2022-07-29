@@ -122,6 +122,15 @@ typeDataDefGroups env (ddefs:ddefss) = do
     (s', env'', ddefss') <- typeDataDefGroups env' ddefss
     return (composeKSubst s' s, env'', map (substApplyDataDef s') ddefs':ddefss') --TODO: è necessaro? se non sbaglio l'env è senza variabili
 
+typeExtDefs :: TypingEnv -> [HLExtDef] -> TyperState [HLExtDef]
+typeExtDefs env edefs = mapM (\(ExtDef c el il ta tr)-> do 
+    (_, ta':tr':[]) <- typeTyExprsStar env (map (\mt->(c,mt)) (ta:tr:[]))
+    --TODO controlla monomorfizzazione
+    return (ExtDef c el il (snd ta') (snd tr'))) edefs
+extDefsInEnv :: TypingEnv -> [HLExtDef] -> TypingEnv
+extDefsInEnv env@(TypingEnv ts ks vs rs) edefs =
+    let ltpairs = map (\(ExtDef c el il ta tr) -> (il, TyScheme [] $ Qual [] $ buildFunType ta tr)) edefs
+    in TypingEnv (Map.union (Map.fromList ltpairs) ts) ks vs rs
 
 typeRelDecls :: TypingEnv  -> [(StdCoord, String, Qual DataType)] -> TyperState (KindSubst, [(StdCoord, String, Qual DataType)])
 typeRelDecls env decls = do

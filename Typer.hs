@@ -15,15 +15,12 @@ import VariantComplete
 
 --Definizioni builtin per Demod
 builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr", "RealWorld_"]
-builtinDemodVals = ["_addInt", "_subInt", "_mulInt", "_divInt", "_equInt", "_neqInt", "_leqInt", "_greInt",
-                    "_putChr", "_getChr",
-                    "_convItoC", "_convCtoI"]
 builtinDemodVars = ["True", "False", "RealWorld_"]
 
 buildBIDemod l = (l, (Public, l++"#BI"))
 buildBIDemodMap = Map.fromList . map buildBIDemod
 
-initCoreDemodEnv = DemodEnv Map.empty (buildBIDemodMap builtinDemodVals) (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars) Map.empty
+initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars) Map.empty
 
 --Definizioni builtin per Typing
 builtinTypingTypes =
@@ -34,52 +31,38 @@ builtinTypingTypes =
     ,   ("Chr#BI", KType)
     ,   ("RealWorld_#BI", KType)
     ]
-builtinTypingVals =
-    [   ("_addInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_subInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_mulInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_divInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) intT))
-    ,   ("_equInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_neqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_leqInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_greInt#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [intT, intT]) boolT))
-    ,   ("_convItoC#BI", TyScheme [] (Qual [] $ buildFunType intT chrT))
-    ,   ("_convCtoI#BI", TyScheme [] (Qual [] $ buildFunType chrT intT))
-    --TEMPORANEI
-    ,   ("_putChr#BI", TyScheme [] (Qual [] $ buildFunType (buildTupType [chrT, realworldT]) realworldT))
-    ,   ("_getChr#BI", TyScheme [] (Qual [] $ buildFunType realworldT (buildTupType [chrT, realworldT])))
-    ]
 builtinTypingVars =
     [   VariantData "True#BI" [] [] boolT
     ,   VariantData "False#BI" [] [] boolT
     ,   VariantData "RealWorld_#BI" [] [] realworldT
     ]
-builtinTypingRels = []
-initTypingEnv = TypingEnv (Map.fromList builtinTypingVals) (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) (Map.fromList builtinTypingRels)
+initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty
 
 --Programma typer
-typeBlockProgram (BlockProgram ddefgroups reldefs vdefgroups instdefs) = do
+typeBlockProgram (BlockProgram ddefgroups extdefs reldefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
-    vdefgroups' <- completeVariantValDefGroups e vdefgroups
-    instdefs' <- completeVariantInstDefs e instdefs
-    (ks', e', reldefs') <- typeRelDefs e reldefs
-    (ks'', e'', instdefs'') <- typeKInstDefs (addRelDecls e') instdefs'
+    extdefs' <- typeExtDefs e extdefs
+    let e' = extDefsInEnv e extdefs'
+    vdefgroups' <- completeVariantValDefGroups e' vdefgroups
+    instdefs' <- completeVariantInstDefs e' instdefs
+    (ks', e'', reldefs') <- typeRelDefs e' reldefs
+    (ks'', e''', instdefs'') <- typeKInstDefs (addRelDecls e'') instdefs'
     vdefgroups'' <- typeValDefHints e'' vdefgroups'
-    (ts, e''', vdefgroups''') <- typeValDefGroups e'' vdefgroups''
-    instdefs''' <- typeInstDefs e''' instdefs''
+    (ts, e'''', vdefgroups''') <- typeValDefGroups e''' vdefgroups''
+    instdefs''' <- typeInstDefs e'''' instdefs''
     lift $ lift $ putStrLn $ "Final kind substitution (datas): " ++ show ks
     lift $ lift $ putStrLn $ "Final kind substitution (rels): " ++ show ks'
     lift $ lift $ putStrLn $ "Final kind substitution (insts): " ++ show ks''
     lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
-    lift $ lift $ putStrLn $ "Final env: " ++ show e'''
-    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e''')
-    return (e''', BlockProgram ddefgroups' reldefs' vdefgroups''' instdefs''')
+    lift $ lift $ putStrLn $ "Final env: " ++ show e''''
+    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e'''')
+    return (e'''', BlockProgram ddefgroups' extdefs' reldefs' vdefgroups''' instdefs''')
 
 
 entryPointBlock env = do
     hle <- demodExpr env syne
     let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] realworldT)) [] hle
-    return $ BlockProgram [] [] [[entryPointVDef]] []
+    return $ BlockProgram [] [] [] [[entryPointVDef]] []
     where c = Coord "entryPoint" 0 0
           syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runIO")) (c, SynExprLabel (Path [] "main")))
 

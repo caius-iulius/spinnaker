@@ -16,7 +16,7 @@ opChar = anyChar ":;!$%&*+/-<=>?@\\^|~."
 
 validSymbols = ["->", "|", "\\", ".", "=>", ";", "<-"]
 
-keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "typesyn", "rel", "inst", "use", "mod"]
+keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "ext", "typesyn", "rel", "inst", "use", "mod"]
 
 lineComment = do {
     thisChar '#';
@@ -400,6 +400,15 @@ getValDefinitions = do {
     return $ ModValGroup defs
 }
 
+getExternalDef = thisSyntaxElem "ext" >> (require $ do {
+    v <- getVisibility;
+    (c, label) <- getLabel;
+    thisSyntaxElem ":";
+    ta <-getTypeExpr;
+    thisSyntaxElem "->";
+    tr <- getTypeExpr;
+    return $ ModExt c v label ta tr
+})
 -- Parser vari per datatype
 getVariant = do {
     (c, label) <- getCapitalLabel;
@@ -504,7 +513,7 @@ getTypeSyn = do {
     }
 }
 getModuleInnerDefs = do {
-    res <- munch (getValDefinitions <|| getDataDefinitions <|| getTypeSyn <|| getUse <|| getModuleDef <|| getRelDef <|| getInst);
+    res <- munch (getValDefinitions <|| getExternalDef <|| getDataDefinitions <|| getTypeSyn <|| getUse <|| getModuleDef <|| getRelDef <|| getInst);
     return $ Module res
 }
 --Entry point (da modificare)

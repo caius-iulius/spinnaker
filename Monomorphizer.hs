@@ -42,7 +42,7 @@ newMonoSuffix = do
     (u, defs, e) <- get
     put (u+1, defs, e)
     return ('#':show u)
-isGlobal :: String -> MonoState Bool
+isGlobal :: String -> MonoState Bool --True per definizioni globali, false per locali, builtin e esterni
 isGlobal l = do
     (_, _, e) <- get
     return $ isJust $ Map.lookup l e
@@ -129,7 +129,7 @@ myListMerge ((k,v):kvs) =
         in (k, v:map snd isk):myListMerge isntk
 
 monomorphizeProgram :: (HLExpr, BlockProgram) -> IO (HLExpr, Definitions)
-monomorphizeProgram (entryPoint, BlockProgram datagroups reldefs valgroups instdefs) =
+monomorphizeProgram (entryPoint, BlockProgram datagroups extdefs reldefs valgroups instdefs) =
     let
         valbinds = join valgroups
         valVtables = map (\(ValDef _ l _ _ e@(_, t, _))->(l, [(t, e)])) valbinds

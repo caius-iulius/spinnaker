@@ -29,6 +29,9 @@ data HLValDef
     = ValDef StdCoord String (Maybe (Qual DataType)) [Pred] HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
+data HLExtDef = ExtDef StdCoord String String DataType DataType
+    deriving Show
+
 data HLDataVariant
     = DataVariant StdCoord String [(StdCoord, DataType)]
     deriving Show
@@ -45,4 +48,4 @@ data HLInstDef
     = InstDef StdCoord (Qual Pred) [(StdCoord, String, HLExpr)]
     deriving Show
 
-data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [[HLValDef]] [HLInstDef]
+data BlockProgram = BlockProgram [[HLDataDef]] [HLExtDef] [HLRelDef] [[HLValDef]] [HLInstDef]

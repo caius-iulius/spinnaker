@@ -1,5 +1,18 @@
 # TODO:Questo file andrà copiato in una stringa nel compilatore
 
+ext pub _addInt : (Int, Int) -> Int
+ext pub _subInt : (Int, Int) -> Int
+ext pub _mulInt : (Int, Int) -> Int
+ext pub _divInt : (Int, Int) -> Int
+ext pub _equInt : (Int, Int) -> Bool
+ext pub _neqInt : (Int, Int) -> Bool
+ext pub _leqInt : (Int, Int) -> Bool
+ext pub _greInt : (Int, Int) -> Bool
+ext pub _convItoC : Int -> Chr
+ext pub _convCtoI : Chr -> Int
+ext pub _putChr : (Chr, RealWorld_) -> RealWorld_
+ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
+
 def pub (|>) = \f,g,x->g(f x)
 def pub (<|) = \f,g,x->f(g x)
 def pub (|->) = \x,f->f x
@@ -208,6 +221,11 @@ mod Show {
     inst forall a. {Show a} => Show (List a) {
         def show = showList
     }
+
+    inst forall a b. {Show a, Show b} => Show (a, b) {
+        def show = \(a, b) -> '(' :: show a ++ (','::Nil) ++ show b ++ (')'::Nil)
+    }
+
 } use pub Show
 
 mod pub State {

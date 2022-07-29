@@ -274,22 +274,22 @@ demodModDef env (ModUse c v (Path p l)) =
             Private -> envSetPrivate
     in do
         useEnv <- getPathEnv c env (p++[l])
-        return $ (envsUnionLeft (setVisib useEnv) env, BlockProgram [] [] [] [])
+        return (envsUnionLeft (setVisib useEnv) env, BlockProgram [] [] [] [] [])
 demodModDef env (ModValGroup vvdefs) = do
     (env', vdefs) <- valDefGroupEnv env vvdefs
     vdefs' <- mapM (demodValDef env') vdefs
-    return (env', BlockProgram [] [] [vdefs'] [])
+    return (env', BlockProgram [] [] [] [vdefs'] [])
 demodModDef env (ModDataGroup ddefs) = do
     (env', ddefs') <- dataDefGroupEnv env ddefs
     ddefs'' <- mapM (demodDataDef env') ddefs'
-    return (env', BlockProgram [ddefs''] [] [] [])
+    return (env', BlockProgram [ddefs''] [] [] [] [])
 demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls)
     | Map.member l rs = fail $ show c ++ " Rel: " ++ show l ++ " already defined"
     | otherwise = do
         suffix <- newUniqueSuffix
         (qmap, qlist) <- buildQmapQlist c qls
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
-        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
+        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
 demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
     (qmap, qlist) <- buildQmapQlist c qls
     preds' <- mapM (demodPred env qmap) preds
@@ -298,12 +298,18 @@ demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) =
     let relenv = case Map.lookup rlabl rs of
             Just (_, (_, relenv)) -> relenv
     defs' <- demodInstDefs c rpl env relenv defs
-    return (env, BlockProgram [] [] [] [InstDef c (Qual preds' pred') defs'])
+    return (env, BlockProgram [] [] [] [] [InstDef c (Qual preds' pred') defs'])
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
+demodModDef env@(DemodEnv ms vs ts cs rs) (ModExt c visib l ta tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
+    | Map.member l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
+    | otherwise = do
+        ta' <- demodTypeExpr env Map.empty ta
+        tr' <- demodTypeExpr env Map.empty tr
+        return (DemodEnv ms (Map.insert l (visib, l++extSuffix) vs) ts cs rs, BlockProgram [] [ExtDef c l (l++extSuffix) ta' tr'] [] [] [])
 
-concatBlockPrograms (BlockProgram datagroups reldefs valgroups instdefs) (BlockProgram datagroups' reldefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (valgroups++valgroups') (instdefs++instdefs')
+concatBlockPrograms (BlockProgram datagroups extdefs reldefs valgroups instdefs) (BlockProgram datagroups' extdefs' reldefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (extdefs++extdefs') (reldefs++reldefs') (valgroups++valgroups') (instdefs++instdefs')
 
-demodModDefs env [] = return (env, BlockProgram [] [] [] [])
+demodModDefs env [] = return (env, BlockProgram [] [] [] [] [])
 demodModDefs env (def:defs) = do
     (env', block) <- demodModDef env def
     (env'', block') <- demodModDefs env' defs

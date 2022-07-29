@@ -2,36 +2,54 @@
 use Core
 
 mod pub Sort {
-    def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
-    = \(curra, currb), lst ->
-        put lst
-        | [x, xp | xs] -> split_internal (x :: curra, xp :: currb) xs
-        | [x] -> (x::curra, currb)
-        | [] -> (curra, currb)
+    # def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
+    # = \(curra, currb), lst ->
+    #     put lst
+    #     | [x, xp | xs] -> split_internal (x :: curra, xp :: currb) xs
+    #     | [x] -> (x::curra, currb)
+    #     | [] -> (curra, currb)
 
-    def split : forall a . List a -> (List a, List a)
-    = \lst -> split_internal ([], []) (reverse lst)
+    # def split : forall a . List a -> (List a, List a)
+    # = \lst -> split_internal ([], []) (reverse lst)
+    def splitAt = \n, lst -> put (n, lst)
+        | (0, _) -> ([], lst)
+        | (_, Cons x xs) ->
+            let (f, s) = splitAt (n - 1) xs ->  (x::f, s)
+    def split = \l -> splitAt (length l / 2) l
 
-    def merge = \lists ->
+    def merge = \cmp, lists ->
         put lists
         | (l, Nil) -> l
         | (Nil, l) -> l
         | (Cons xa xsa, Cons xb xsb) -> (
-            put xa <= xb
-            | True -> xa :: merge (xsa, (xb::xsb))
-            | _ -> xb :: merge ((xa::xsa), xsb)
+            put cmp xa xb
+            | True -> xa :: merge cmp (xsa, (xb::xsb))
+            | False -> xb :: merge cmp ((xa::xsa), xsb)
         )
 
-    def mytest = \lists ->
-        put lists
-        | (Cons xa xsa, Cons xb xsb) -> (xa::xsb, xb::xsa)
-
-    def pub mergesort = \list ->
+    def pub sortBy = \cmp, list ->
         put list
         | Nil -> Nil
         | Cons x Nil -> list
         | _ -> let (left, right) = split list ->
-            merge (mergesort left, mergesort right)
+            merge cmp (sortBy cmp left, sortBy cmp right)
+
+    def pub sort = sortBy (<=)
 }
 
-def main = print $ Sort.mergesort (reverse $ -5..10)
+def joinSplit = \l, x, xs -> put x
+    | [] -> joinAux l xs
+    | [x'|xs'] -> joinSplit (x'::l) xs' xs
+and joinAux = \l, l' -> put l'
+    | [] -> l
+    | [x|xs] -> joinSplit l x xs
+def join = reverse <| joinAux []
+
+def ordleft = \(a,_),(b,_)->a <= b
+def ordright = \(_,a),(_,b)->a <= b
+
+def main = print $
+        Sort.sortBy ordleft $
+        Sort.sortBy ordright $
+        join $
+        map (\x -> map (\y -> (x, y)) (reverse $ 0..10)) ((0 - 5)..0)
