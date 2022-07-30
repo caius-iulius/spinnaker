@@ -283,13 +283,14 @@ demodModDef env (ModDataGroup ddefs) = do
     (env', ddefs') <- dataDefGroupEnv env ddefs
     ddefs'' <- mapM (demodDataDef env') ddefs'
     return (env', BlockProgram [ddefs''] [] [] [] [])
-demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib l qls decls)
+demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib preds l qls decls)
     | Map.member l rs = fail $ show c ++ " Rel: " ++ show l ++ " already defined"
     | otherwise = do
         suffix <- newUniqueSuffix
         (qmap, qlist) <- buildQmapQlist c qls
+        preds' <- mapM (demodPred env qmap) preds
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
-        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [] [RelDef c (l++suffix) (map snd qlist) decls'] [] [])
+        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [] [RelDef c (l++suffix) (map snd qlist) preds' decls'] [] [])
 demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
     (qmap, qlist) <- buildQmapQlist c qls
     preds' <- mapM (demodPred env qmap) preds

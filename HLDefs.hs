@@ -41,7 +41,7 @@ data HLDataDef
     deriving Show
 
 data HLRelDef
-    = RelDef StdCoord String [TyQuant] [(StdCoord, String, Qual DataType)]
+    = RelDef StdCoord String [TyQuant] [Pred] [(StdCoord, String, Qual DataType)]
     deriving Show
 
 data HLInstDef

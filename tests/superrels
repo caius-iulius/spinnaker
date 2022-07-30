@@ -1,0 +1,16 @@
+use Core
+
+rel Rel0 a = el0:a
+rel {Rel0 a} => Rel1 a = el1:a
+
+inst Rel0 Flt {def el0=0.0}
+inst Rel1 Int {def el1=0}
+
+# Rel0 serve per Rel1, ma viene definito dopo. Questo potrebbe essere un bug. Succede perché i controlli di superrel vengono effettuati durante i controlli delle definizioni, non il typecheck delle istanze
+inst Rel0 Int {def el0=0}
+
+def somef = fmap id <| return
+def eq : forall a. {Ord a} => a -> a -> Bool
+    = (==)
+
+def main = fmap id (print ())

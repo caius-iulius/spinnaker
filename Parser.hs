@@ -18,14 +18,9 @@ validSymbols = ["->", "|", "\\", ".", "=>", ";", "<-"]
 
 keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "ext", "typesyn", "rel", "inst", "use", "mod"]
 
-lineComment = do {
-    thisChar '#';
-    munch (stdSatisfy (not . ('\n'==)) "");
-}
+lineComment = thisChar '#' >> munch (stdSatisfy (not . ('\n'==)) "")
 
-skipUseless = do {
-    munch (discard whiteSpace <|| discard lineComment);
-}
+skipUseless = munch (discard whiteSpace <|| discard lineComment)
 
 thisUsefulChar c = skipUseless >> thisChar c
 
@@ -362,8 +357,8 @@ getTyConstraint = do {
 
 getTyConstraints = do {
     thisUsefulChar '{';
-    constrs <- sepBy1 getTyConstraint (thisUsefulChar ',');
     require $ do {
+        constrs <- sepBy1 getTyConstraint (thisUsefulChar ',');
         thisUsefulChar '}';
         thisSyntaxElem "=>";
         return constrs
@@ -443,11 +438,12 @@ getRelDef = do {
     (c, _) <- thisSyntaxElem "rel";
     require $ do {
         visib <- getVisibility;
+        constrs <- getTyConstraints;
         (_, label) <- getCapitalLabel;
         typevars <- munch getTypeVar;
         thisSyntaxElem "=";
         defs <- sepBy getRelValDecl (thisUsefulChar ',');
-        return $ ModRel c visib label (map snd typevars) defs
+        return $ ModRel c visib constrs label (map snd typevars) defs
     }
 }
 

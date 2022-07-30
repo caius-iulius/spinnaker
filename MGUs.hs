@@ -196,7 +196,17 @@ data ChooseInstRes --TODO: Questa interfaccia non è corretta
 insts :: TypingEnv -> String -> [InstData]
 insts (TypingEnv _ _ _ rels) l =
     case Map.lookup l rels of
-        Just (RelData _ _ idatas) -> idatas
+        Just (RelData _ _ _ idatas) -> idatas
+
+supers :: TypingEnv -> Pred -> [Pred]
+supers (TypingEnv _ _ _ rels) (Pred l ts) =
+    case Map.lookup l rels of
+        Just (RelData qs ps _ _) ->
+            let s = Map.fromList (zip qs ts) in
+                map (substApply s) ps
+
+bySuper :: TypingEnv -> Pred -> [Pred]
+bySuper env p = p:concat [bySuper env p' | p' <- supers env p]
 
 chooseInst :: TypingEnv -> Pred -> ChooseInstRes
 chooseInst env p@(Pred l ts) =
@@ -229,9 +239,18 @@ chooseInst env p@(Pred l ts) =
                 in reduceToSpecifics [] uniInsts
 
 entail :: TypingEnv -> [Pred] -> Pred -> Bool
-entail env ps p = elem p ps || case chooseInst env p of
-    OneMatch qs -> all (entail env ps) qs
-    _ -> False
+entail env ps p
+    = any (elem p) (map (bySuper env) ps)
+    || case chooseInst env p of
+        OneMatch qs -> all (entail env ps) qs
+        _ -> False
+
+entailInsts :: TypingEnv -> [Pred] -> Pred -> Bool
+entailInsts env ps p
+    = elem p ps
+    || case chooseInst env p of
+        OneMatch qs -> all (entailInsts env ps) qs -- forse dovrei usare entail
+        _ -> False
 
 simplify env = loop []
     where

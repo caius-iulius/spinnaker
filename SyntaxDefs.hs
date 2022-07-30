@@ -64,7 +64,7 @@ data SyntaxModDef
     | ModTypeSyn StdCoord Visibility String [String] SyntaxTypeExpr
     | ModValGroup [SyntaxValDef]
     | ModDataGroup [SyntaxDataDef]
-    | ModRel StdCoord Visibility String [String] [SyntaxModRelValDecl] --visibilità, nome, tyvars, corpo
+    | ModRel StdCoord Visibility [SyntaxTyPred] String [String] [SyntaxModRelValDecl] --visibilità, superrels, nome, tyvars, corpo
     | ModInst StdCoord [String] [SyntaxTyPred] SyntaxTyPred [(StdCoord, String, SyntaxExpr)]-- visibilità, predicato quantificato da constraints con forall, definizioni
     | ModExt StdCoord Visibility String SyntaxTypeExpr SyntaxTypeExpr
     deriving Show

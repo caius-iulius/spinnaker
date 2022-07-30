@@ -36,7 +36,7 @@ mod Numerics {
         (==) : a -> a -> Bool,
         (!=) : a -> a -> Bool
 
-    rel pub Ord a =
+    rel pub {Eq a} => Ord a =
         (<) : a -> a -> Bool,
         (>) : a -> a -> Bool,
         (>=) : a -> a -> Bool,
@@ -79,7 +79,7 @@ mod Numerics {
 
 mod Monad {
     rel pub Functor f = fmap : forall a b. (a -> b) -> f a -> f b
-    rel pub Monad m =
+    rel pub {Functor m} => Monad m =
         return : forall a. a -> m a,
         bind : forall a b. m a -> (a -> m b) -> m b
 
@@ -115,6 +115,7 @@ mod List {
         put l
         | Nil -> Nil
         | Cons x xs -> f x :: map f xs
+    inst Functor List {def fmap = map}
 
     def pub foldl = \f, s, l ->
         put l
@@ -158,7 +159,6 @@ mod List {
     def pub (..=) : forall a. {Enum a} => a -> a -> List a
         = \from, to ->
             innerdotdot (fromEnum from) (fromEnum to + 1)
-
 
     def pub sequence = \lm -> put lm
         | Nil -> return Nil
@@ -230,6 +230,13 @@ mod Show {
 
 mod pub State {
     data pub State s a = State (s -> (a, s))
+
+    inst forall s. Functor (State s) {
+        def fmap = \f, State st -> State (\s->
+                let (a, s') = st s ->
+                    (f a, s')
+            )
+    }
 
     inst forall s. Monad (State s) {
         def return = \a -> State(\s -> (a, s))

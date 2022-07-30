@@ -228,10 +228,15 @@ typeValDefGroups env (vdefs:vdefss) = do
 
 typeInstDef env@(TypingEnv _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
     case Map.lookup l rs of
-        Just (RelData qs decls _) -> do
+        Just (RelData qs preds decls _) -> do --TODO: controlla validità dei preds
             let instSubst = Map.fromList $ zip qs ts
                 substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
             defs' <- typeInstMembers (Map.fromList substdecls) [] defs
+            mapM (\p ->
+                if entailInsts env (h:ps) p --TODO: invece di (h:ps) forse dovrei usare solo [h]
+                    then return ()
+                    else fail $ show c ++ " L'istanza " ++ show qh ++ " non verifica il predicato: " ++ show p
+                ) (map (substApply instSubst) preds)
             return $ InstDef c qh defs'
     where typeInstMembers declmap final [] = return $ reverse final
           typeInstMembers declmap final ((dc,dl,e):members) =

@@ -85,7 +85,7 @@ data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome dell
 
 -- Definizioni rel
 type InstData = Qual Pred
-data RelData = RelData [TyQuant] [(String, Qual DataType)] [InstData]
+data RelData = RelData [TyQuant] [Pred] [(String, Qual DataType)] [InstData]
     deriving Show
 type RelEnv = Map.Map String RelData
 

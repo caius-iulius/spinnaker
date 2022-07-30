@@ -139,19 +139,21 @@ typeRelDecls env decls = do
     return (composeKSubst s' s, zipWith (\(_,l,_) (c, t)->(c,l, kSubstApply s' t)) decls csts)
 
 
-addRel :: String -> [TyQuant] -> [(StdCoord, String, Qual DataType)] -> TypingEnv -> TypingEnv
-addRel l qs decls (TypingEnv ts ks vs rs) =
+addRel :: String -> [TyQuant] -> [Pred] ->  [(StdCoord, String, Qual DataType)] -> TypingEnv -> TypingEnv
+addRel l qs preds decls (TypingEnv ts ks vs rs) =
     let relpred = Pred l (map DataQuant qs)
         declpairs = map (\(_,d,Qual ps t)->(d, Qual (relpred:ps) t)) decls
-        in TypingEnv ts ks vs (Map.insert l (RelData qs declpairs []) rs)
+        in TypingEnv ts ks vs (Map.insert l (RelData qs preds declpairs []) rs)
 
-typeRelDef env (RelDef c l qs decls) = do
-    (s, decls') <- typeRelDecls env decls
-    let s' = Map.unions $ map (kindMonomorphize . kind . kSubstApply s) qs
-        s'' = composeKSubst s' s
-        decls'' = substApplyRelDecls s'' decls'
-        qs' = map (kSubstApply s'') qs
-        in return (s'', substApplyKindEnv s'' (addRel l qs' decls'' env), RelDef c l qs' decls'') --TODO: è necessario? se non sbaglio l'env è senza variabili.
+typeRelDef env (RelDef c l qs preds decls) = do
+    (s, preds') <- typePreds c env preds
+    (s', decls') <- typeRelDecls env (substApplyRelDecls s decls)
+    let s'' = Map.unions $ map (kindMonomorphize . kind . kSubstApply (composeKSubst s' s)) qs
+        s''' = composeKSubst s'' (composeKSubst s' s)
+        preds'' = map (substApplyPred s''') preds'
+        decls'' = substApplyRelDecls s''' decls'
+        qs' = map (kSubstApply s''') qs
+        in return (s''', (addRel l qs' preds'' decls'' (substApplyKindEnv s''' env)), RelDef c l qs' preds'' decls'') --TODO: è necessario? se non sbaglio l'env è senza variabili.
 
 typeRelDefs :: TypingEnv -> [HLRelDef] -> TyperState (KindSubst, TypingEnv, [HLRelDef])
 typeRelDefs env [] = return (nullKSubst, env, [])
@@ -163,7 +165,7 @@ typeRelDefs env (reldef:reldefs) = do
 typePred :: StdCoord -> TypingEnv -> Pred -> TyperState (KindSubst, Pred)
 typePred c env@(TypingEnv _ _ _ rs) (Pred l ts) =
     case Map.lookup l rs of
-        Just (RelData qs _ _) -> do
+        Just (RelData qs _ _ _) -> do
             if length qs /= length ts
             then fail $ show c ++ " TypeRel: " ++ show l ++ " applied to wrong number of arguments"
             else do
@@ -188,13 +190,13 @@ typeQualType c env (Qual preds a) = do
     (s', k, a') <- typeTyExpr c env (kSubstApply s a)
     return (composeKSubst s' s, k, Qual (map (substApplyPred s') preds') a')
 
-addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs decls insts)->RelData qs decls (p:insts)) l rs
+addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs preds decls insts)->RelData qs preds decls (p:insts)) l rs
 
 --TODO: Sposta in altro file
 --TODO: Controlla qui che non ci siano qualificatori liberi nelle definizioni
 addRelDecls :: TypingEnv -> TypingEnv
 addRelDecls env@(TypingEnv ts ks vs rs) =
-    let general_decl_pairs = concat $ map (\(_, RelData _ lqts _)->map (\(l, qt)->(l, generalize env qt)) lqts) $ Map.toList rs
+    let general_decl_pairs = concat $ map (\(_, RelData _ _ lqts _)->map (\(l, qt)->(l, generalize env qt)) lqts) $ Map.toList rs
         general_decls_map = Map.fromList general_decl_pairs
         in TypingEnv (Map.union ts general_decls_map) ks vs rs
 
