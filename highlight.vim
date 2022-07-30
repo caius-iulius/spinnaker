@@ -17,10 +17,7 @@ syn match mylangNumber "\v[0-9][0-9_]*"
 syn match mylangFloat "\v[0-9][0-9_]*\.[0-9_]+"
 syn keyword mylangTodo TODO FIXME NOTE contained
 syn match mylangLineComment "#.*$" contains=mylangTodo
-" syn region mylangChar start=+'+ skip=+\\\\\|\\'+ end=+'+
-"   \ contains=@Spell
 syn match mylangIdentifier "[_a-z][a-zA-Z0-9_']*"
-"FIXME: cosa significano esattamente \< e \> ? li posso usare in very magic mode?
 syn match mylangChar "'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'"
 syn region mylangString start=+"+ skip=+\\\\\|\\"+ end=+"+
   \ contains=@Spell
