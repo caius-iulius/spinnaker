@@ -20,6 +20,7 @@ data HLExprData
     | ExprApp HLExpr HLExpr --Funzione, argomento
     | ExprLabel String --Riferimento a label
     | ExprConstructor String [HLExpr] -- Riferimento a una variante e argomenti "applicati"
+    | ExprCombinator String [HLExpr] -- Riferimento al combinatore e argomenti
     | ExprLambda HLPattern HLExpr --Argomento(anche "smontato") e valore interno
     | ExprPut HLExpr [(HLPattern, HLExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
     deriving Show
@@ -29,7 +30,7 @@ data HLValDef
     = ValDef StdCoord String (Maybe (Qual DataType)) [Pred] HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
-data HLExtDef = ExtDef StdCoord String String DataType DataType
+data HLExtDef = ExtDef StdCoord String [DataType] DataType
     deriving Show
 
 data HLDataVariant
@@ -48,4 +49,4 @@ data HLInstDef
     = InstDef StdCoord (Qual Pred) [(StdCoord, String, HLExpr)]
     deriving Show
 
-data BlockProgram = BlockProgram [[HLDataDef]] [HLExtDef] [HLRelDef] [[HLValDef]] [HLInstDef]
+data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [HLExtDef] [[HLValDef]] [HLInstDef]

@@ -36,10 +36,10 @@ builtinTypingVars =
     ,   VariantData "False#BI" [] [] boolT
     ,   VariantData "RealWorld_#BI" [] [] realworldT
     ]
-initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty
+initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty Map.empty
 
 --Programma typer
-typeBlockProgram (BlockProgram ddefgroups extdefs reldefs vdefgroups instdefs) = do
+typeBlockProgram (BlockProgram ddefgroups reldefs extdefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
     extdefs' <- typeExtDefs e extdefs
     let e' = extDefsInEnv e extdefs'
@@ -56,7 +56,7 @@ typeBlockProgram (BlockProgram ddefgroups extdefs reldefs vdefgroups instdefs) =
     lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
     lift $ lift $ putStrLn $ "Final env: " ++ show e''''
     lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e'''')
-    return (e'''', BlockProgram ddefgroups' extdefs' reldefs' vdefgroups''' instdefs''')
+    return (e'''', BlockProgram ddefgroups' reldefs' extdefs' vdefgroups''' instdefs''')
 
 
 entryPointBlock env = do

@@ -1,16 +1,16 @@
 # TODO:Questo file andrà copiato in una stringa nel compilatore
 
-ext pub _addInt : (Int, Int) -> Int
-ext pub _subInt : (Int, Int) -> Int
-ext pub _mulInt : (Int, Int) -> Int
-ext pub _divInt : (Int, Int) -> Int
-ext pub _equInt : (Int, Int) -> Bool
-ext pub _neqInt : (Int, Int) -> Bool
-ext pub _leqInt : (Int, Int) -> Bool
-ext pub _greInt : (Int, Int) -> Bool
+ext pub _addInt : Int, Int -> Int
+ext pub _subInt : Int, Int -> Int
+ext pub _mulInt : Int, Int -> Int
+ext pub _divInt : Int, Int -> Int
+ext pub _equInt : Int, Int -> Bool
+ext pub _neqInt : Int, Int -> Bool
+ext pub _leqInt : Int, Int -> Bool
+ext pub _greInt : Int, Int -> Bool
 ext pub _convItoC : Int -> Chr
 ext pub _convCtoI : Chr -> Int
-ext pub _putChr : (Chr, RealWorld_) -> RealWorld_
+ext pub _putChr : Chr, RealWorld_ -> RealWorld_
 ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
 
 def pub (|>) = \f,g,x->g(f x)
@@ -48,22 +48,22 @@ mod Numerics {
 
 
     inst Num Int {
-        def (+) = \a,b->_addInt(a,b)
-        def (-) = \a,b->_subInt(a,b)
-        def (*) = \a,b->_mulInt(a,b)
-        def (/) = \a,b->_divInt(a,b)
+        def (+) = _addInt
+        def (-) = _subInt
+        def (*) = _mulInt
+        def (/) = _divInt
     }
 
     inst Eq Int {
-        def (==) = \a,b->_equInt(a,b)
-        def (!=)= \a,b->_neqInt(a,b)
+        def (==) = _equInt
+        def (!=) = _neqInt
     }
 
     inst Ord Int {
-        def (<) = \a,b->_greInt(b,a)
-        def (>) = \a,b->_greInt(a,b)
-        def (<=)= \a,b->_leqInt(a,b)
-        def (>=)= \a,b->_leqInt(b,a)
+        def (<) = \a,b->_greInt b a
+        def (>) = _greInt
+        def (<=)= _leqInt
+        def (>=)= \a,b->_leqInt b a
     }
 
     inst Enum Int {
@@ -273,11 +273,11 @@ mod IO {
             put s
             | Nil -> rw
             | Cons c cs ->
-                let rw' = putChr (c, rw) ->
+                let rw' = putChr c rw ->
                 putStr (cs, rw')
         def pub putStrLn = \srw ->
             let rw' = putStr srw ->
-            putChr ('\n', rw')
+            putChr '\n' rw'
         def pub getLn = \rw ->
             put getChr rw
             | ('\n', rw') -> (Nil, rw')
@@ -288,7 +288,7 @@ mod IO {
         def pub runIO = \IO s -> let (a, s') = State.runState RealWorld_ s -> s'
     }
 
-    def pub putChr = \c -> IO(State.State (\s->(() , UnsafeIO.putChr (c,s))))
+    def pub putChr = \c -> IO(State.State (\s->(() , UnsafeIO.putChr c s)))
     def pub getChr = IO(State.State UnsafeIO.getChr)
     def pub putStr = \l -> IO(State.State(\s->((), UnsafeIO.putStr (l,s))))
     def pub putStrLn = \l -> IO(State.State(\s->((), UnsafeIO.putStrLn (l,s))))

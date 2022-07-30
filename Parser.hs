@@ -399,10 +399,10 @@ getExternalDef = thisSyntaxElem "ext" >> (require $ do {
     v <- getVisibility;
     (c, label) <- getLabel;
     thisSyntaxElem ":";
-    ta <-getTypeExpr;
+    tas <- sepBy getTypeExpr (thisUsefulChar ',');
     thisSyntaxElem "->";
     tr <- getTypeExpr;
-    return $ ModExt c v label ta tr
+    return $ ModExt c v label tas tr
 })
 -- Parser vari per datatype
 getVariant = do {

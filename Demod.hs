@@ -290,7 +290,7 @@ demodModDef env@(DemodEnv ms vs ts cs rs) (ModRel c visib preds l qls decls)
         (qmap, qlist) <- buildQmapQlist c qls
         preds' <- mapM (demodPred env qmap) preds
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap visib decls
-        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [] [RelDef c (l++suffix) (map snd qlist) preds' decls'] [] [])
+        return (DemodEnv ms' vs' ts' cs' (Map.insert l (visib, (l++suffix, relenv)) rs'), BlockProgram [] [RelDef c (l++suffix) (map snd qlist) preds' decls'] [] [] [])
 demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
     (qmap, qlist) <- buildQmapQlist c qls
     preds' <- mapM (demodPred env qmap) preds
@@ -301,14 +301,19 @@ demodModDef env (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) =
     defs' <- demodInstDefs c rpl env relenv defs
     return (env, BlockProgram [] [] [] [] [InstDef c (Qual preds' pred') defs'])
 demodModDef env (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
-demodModDef env@(DemodEnv ms vs ts cs rs) (ModExt c visib l ta tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
+demodModDef env@(DemodEnv ms vs ts cs rs) (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
     | Map.member l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
     | otherwise = do
-        ta' <- demodTypeExpr env Map.empty ta
+        tas' <- mapM (demodTypeExpr env Map.empty) tas
         tr' <- demodTypeExpr env Map.empty tr
-        return (DemodEnv ms (Map.insert l (visib, l++extSuffix) vs) ts cs rs, BlockProgram [] [ExtDef c l (l++extSuffix) ta' tr'] [] [] [])
+        defsuffix <- newUniqueSuffix
+        suffixes <- mapM (\_->newUniqueSuffix) [0..length tas-1]
+        let vnames = map ("_v"++) suffixes
+            ves = map (\myl->(c,DataNOTHING,ExprLabel myl)) vnames
+            finale = foldr (\myl e->(c,DataNOTHING, ExprLambda (c, Just myl, PatWildcard) e)) (c, DataNOTHING, ExprCombinator l ves) vnames
+        return (DemodEnv ms (Map.insert l (visib, l++defsuffix) vs) ts cs rs, BlockProgram [] [] [ExtDef c l tas' tr'] [[ValDef c (l++defsuffix) Nothing [] finale]] [])
 
-concatBlockPrograms (BlockProgram datagroups extdefs reldefs valgroups instdefs) (BlockProgram datagroups' extdefs' reldefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (extdefs++extdefs') (reldefs++reldefs') (valgroups++valgroups') (instdefs++instdefs')
+concatBlockPrograms (BlockProgram datagroups reldefs extdefs valgroups instdefs) (BlockProgram datagroups' reldefs' extdefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (extdefs++extdefs') (valgroups++valgroups') (instdefs++instdefs')
 
 demodModDefs env [] = return (env, BlockProgram [] [] [] [] [])
 demodModDefs env (def:defs) = do

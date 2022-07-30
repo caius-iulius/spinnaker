@@ -19,6 +19,9 @@ completeVariant env (c, t, ExprConstructor l es) = do
             addenames = map ("_v"++) addesuffixes
             addees = map (\myl -> (c, DataNOTHING, ExprLabel myl)) addenames
         in foldr (\myl e -> (c, DataNOTHING, ExprLambda (c, Just myl, PatWildcard) e)) (c, DataNOTHING, ExprConstructor l (es' ++ addees)) addenames
+completeVariant env (c, t, ExprCombinator l es) = do
+    es' <- mapM (completeVariant env) es
+    return (c, t, ExprCombinator l es')
 completeVariant env (c, t, ExprLambda p e) = do
     e' <- completeVariant env e
     return (c, t, ExprLambda p e')

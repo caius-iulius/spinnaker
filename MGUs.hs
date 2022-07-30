@@ -99,8 +99,8 @@ instance Types TyScheme where
     substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
 
 instance Types TypingEnv where
-    freetyvars (TypingEnv ts _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
-    substApply s (TypingEnv ts ks vs rs) = TypingEnv (Map.map (substApply s) ts) ks vs rs
+    freetyvars (TypingEnv ts _ _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
+    substApply s (TypingEnv ts ks vs cs rs) = TypingEnv (Map.map (substApply s) ts) ks vs cs rs
 
 
 composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
@@ -112,13 +112,13 @@ nullSubst = Map.empty
 --TODO: Sposta in altro file, sono funzioni per l'env
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
 tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
-tyBindAdd c (TypingEnv ts ks vs rs) labl scheme =
+tyBindAdd c (TypingEnv ts ks vs cs rs) labl scheme =
     case Map.lookup labl ts of
         --Just _ -> fail $ show c ++ " Variable already bound: " ++ labl
         Nothing -> --do
             --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             --return $
-            TypingEnv (Map.insert labl scheme ts) ks vs rs
+            TypingEnv (Map.insert labl scheme ts) ks vs cs rs
 
 generalize :: TypingEnv -> Qual DataType -> TyScheme
 generalize env t =
@@ -194,12 +194,12 @@ data ChooseInstRes --TODO: Questa interfaccia non è corretta
     deriving Show
 
 insts :: TypingEnv -> String -> [InstData]
-insts (TypingEnv _ _ _ rels) l =
+insts (TypingEnv _ _ _ _ rels) l =
     case Map.lookup l rels of
         Just (RelData _ _ _ idatas) -> idatas
 
 supers :: TypingEnv -> Pred -> [Pred]
-supers (TypingEnv _ _ _ rels) (Pred l ts) =
+supers (TypingEnv _ _ _ _ rels) (Pred l ts) =
     case Map.lookup l rels of
         Just (RelData qs ps _ _) ->
             let s = Map.fromList (zip qs ts) in

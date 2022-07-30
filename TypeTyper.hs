@@ -1,4 +1,5 @@
 module TypeTyper where
+import System.IO
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -14,7 +15,7 @@ getVariantData _ _ l@('(':')':slen) =
     in do
         qs <- mapM (\_->newTyQuant KType) [1..len]
         let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
-getVariantData c (TypingEnv _ _ vs _) l =
+getVariantData c (TypingEnv _ _ vs _ _) l =
     case Map.lookup l vs of
         --Nothing -> fail $ show c ++ " Unbound constructor: " ++ l
         Just vdata -> do
@@ -75,7 +76,7 @@ typeConsAbstraction c env argts es = --NOTE: Funziona solo se i combinatori sono
 typeExprInternal :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
 typeExprInternal _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, [], dt, (c, dt, ExprLiteral lit))
-typeExprInternal (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
+typeExprInternal (TypingEnv env _ _ _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> fail $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do
@@ -90,6 +91,12 @@ typeExprInternal env (c, _, ExprConstructor l es) = do
     (s, ps, es') <- typeConsAbstraction c env argts' es
     let dt'' = substApply s dt'
     return (s, ps, dt'', (c, dt'', ExprConstructor l es'))
+typeExprInternal env@(TypingEnv _ _ _ cs _) (c, _, ExprCombinator l es) = do
+    case Map.lookup l cs of
+        Just (tas, tr) -> do
+            (s, ps, es') <- typeConsAbstraction c env tas es
+            let tr' = substApply s tr
+            return (s, ps, tr', (c, tr', ExprCombinator l es'))
 typeExprInternal env (c, _, ExprApp f a) = do
     q <- freshType KType
     (s1, ps1, t1, f') <- typeExpr env f
@@ -155,6 +162,7 @@ substApplyExpr s (c, dt, ExprLiteral l) = (c, substApply s dt, ExprLiteral l)
 substApplyExpr s (c, dt, ExprApp f a) = (c, substApply s dt, ExprApp (substApplyExpr s f) (substApplyExpr s a))
 substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
 substApplyExpr s (c, dt, ExprConstructor l es) = (c, substApply s dt, ExprConstructor l (map (substApplyExpr s) es))
+substApplyExpr s (c, dt, ExprCombinator l es) = (c, substApply s dt, ExprCombinator l (map (substApplyExpr s) es))
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
 
@@ -184,7 +192,7 @@ addValDefsEnv env vdefs = foldl
             tyBindAdd c e l (generalize e (Qual ps t))
         ) env vdefs
 
-unionValDefEnv (TypingEnv ts _ _ _) (ValDef c l _ ps (_, t, _)) = do
+unionValDefEnv (TypingEnv ts _ _ _ _) (ValDef c l _ ps (_, t, _)) = do
     Qual ps' tFromEnv <- case Map.lookup l ts of --TODO: Sto dimenticando i predicati, è giusto?
         Just scheme -> instantiate scheme
     s <- mgu c t tFromEnv
@@ -201,7 +209,7 @@ checkHintPreds c env pshint pst = mapM checkHintPred pst
 
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _ _:vdefs) = checkValDefsHint env vdefs
-checkValDefsHint env@(TypingEnv ts _ _ _) (ValDef c l (Just (Qual _ hint)) ps (_, t, _):vdefs) = do
+checkValDefsHint env@(TypingEnv ts _ _ _ _) (ValDef c l (Just (Qual _ hint)) ps (_, t, _):vdefs) = do
     s <- checkHintType c env hint t
     s' <- checkValDefsHint (substApply s env) (map (substApplyValDef s) vdefs)
     return (composeSubst s' s)
@@ -238,7 +246,7 @@ typeValDefGroups env (vdefs:vdefss) = do
     (s', env'', vdefss') <- typeValDefGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
 
-typeInstDef env@(TypingEnv _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
+typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
     case Map.lookup l rs of
         Just (RelData qs preds decls _) -> do --TODO: controlla validità dei preds
             let instSubst = Map.fromList $ zip qs ts

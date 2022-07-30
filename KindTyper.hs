@@ -7,7 +7,7 @@ import HLDefs
 import TypingDefs
 import MGUs
 
-substApplyKindEnv s (TypingEnv ts ks vs rs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs rs
+substApplyKindEnv s (TypingEnv ts ks vs cs rs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs cs rs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
 substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(c,t)->(c, kSubstApply s t)) ts)
 substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
@@ -21,7 +21,7 @@ getTyData _ _ l@('(':')':slen) =
         len = read slen
     in return $
         foldr (\_->KFun KType) KType [0..len - 1]
-getTyData c (TypingEnv _ ks _ _) l =
+getTyData c (TypingEnv _ ks _ _ _) l =
     case Map.lookup l ks of
         Nothing -> fail $ show c ++ " Unbound typename: " ++ l
         Just k -> return k
@@ -88,11 +88,11 @@ addDataDefsEnv env ddefs =
             Map.singleton l (VariantData l (map snd qs) (map snd ts) t)
         getvariantdatas ddef@(DataDef _ l qs vs) =
             Map.unions $ map (varianttovdata (datadeftotype ddef) qs) vs
-    in foldl (\(TypingEnv ts ks vs rs) ddef@(DataDef c l qs _)->
-            TypingEnv ts (Map.insert l (qstokind qs) ks) (Map.union vs (getvariantdatas ddef)) rs
+    in foldl (\(TypingEnv ts ks vs cs rs) ddef@(DataDef c l qs _)->
+            TypingEnv ts (Map.insert l (qstokind qs) ks) (Map.union vs (getvariantdatas ddef)) cs rs
         ) env ddefs
 
-unionDataDefEnv (TypingEnv _ ks _ _) (DataDef c l qs _) = 
+unionDataDefEnv (TypingEnv _ ks _ _ _) (DataDef c l qs _) = 
     case Map.lookup l ks of
         Just kFromEnv -> do
             s <- kindmgu c (qstokind qs) kFromEnv
@@ -123,14 +123,15 @@ typeDataDefGroups env (ddefs:ddefss) = do
     return (composeKSubst s' s, env'', map (substApplyDataDef s') ddefs':ddefss') --TODO: è necessaro? se non sbaglio l'env è senza variabili
 
 typeExtDefs :: TypingEnv -> [HLExtDef] -> TyperState [HLExtDef]
-typeExtDefs env edefs = mapM (\(ExtDef c el il ta tr)-> do 
-    (_, ta':tr':[]) <- typeTyExprsStar env (map (\mt->(c,mt)) (ta:tr:[]))
+typeExtDefs env edefs = mapM (\(ExtDef c l tas tr)-> do 
+    (_, tr':tas') <- typeTyExprsStar env (map (\mt->(c,mt)) (tr:tas))
     --TODO controlla monomorfizzazione
-    return (ExtDef c el il (snd ta') (snd tr'))) edefs
+    return (ExtDef c l (map snd tas') (snd tr'))) edefs
+
 extDefsInEnv :: TypingEnv -> [HLExtDef] -> TypingEnv
-extDefsInEnv env@(TypingEnv ts ks vs rs) edefs =
-    let ltpairs = map (\(ExtDef c el il ta tr) -> (il, TyScheme [] $ Qual [] $ buildFunType ta tr)) edefs
-    in TypingEnv (Map.union (Map.fromList ltpairs) ts) ks vs rs
+extDefsInEnv env@(TypingEnv ts ks vs cs rs) edefs =
+    let ltpairs = map (\(ExtDef c l tas tr) -> (l, (tas, tr))) edefs
+    in TypingEnv ts ks vs (Map.union (Map.fromList ltpairs) cs) rs
 
 typeRelDecls :: TypingEnv  -> [(StdCoord, String, Qual DataType)] -> TyperState (KindSubst, [(StdCoord, String, Qual DataType)])
 typeRelDecls env decls = do
@@ -140,10 +141,10 @@ typeRelDecls env decls = do
 
 
 addRel :: String -> [TyQuant] -> [Pred] ->  [(StdCoord, String, Qual DataType)] -> TypingEnv -> TypingEnv
-addRel l qs preds decls (TypingEnv ts ks vs rs) =
+addRel l qs preds decls (TypingEnv ts ks vs cs rs) =
     let relpred = Pred l (map DataQuant qs)
         declpairs = map (\(_,d,Qual ps t)->(d, Qual (relpred:ps) t)) decls
-        in TypingEnv ts ks vs (Map.insert l (RelData qs preds declpairs []) rs)
+        in TypingEnv ts ks vs cs (Map.insert l (RelData qs preds declpairs []) rs)
 
 typeRelDef env (RelDef c l qs preds decls) = do
     (s, preds') <- typePreds c env preds
@@ -163,7 +164,7 @@ typeRelDefs env (reldef:reldefs) = do
     return (composeKSubst s' s, env'', reldef':reldefs') --TODO: è necessario? se non sbaglio l'env è senza variabili. TODO: se è necessario qui c'è un bug, non viene applicata la sostituzione s' a reldef'
 
 typePred :: StdCoord -> TypingEnv -> Pred -> TyperState (KindSubst, Pred)
-typePred c env@(TypingEnv _ _ _ rs) (Pred l ts) =
+typePred c env@(TypingEnv _ _ _ _ rs) (Pred l ts) =
     case Map.lookup l rs of
         Just (RelData qs _ _ _) -> do
             if length qs /= length ts
@@ -190,15 +191,15 @@ typeQualType c env (Qual preds a) = do
     (s', k, a') <- typeTyExpr c env (kSubstApply s a)
     return (composeKSubst s' s, k, Qual (map (substApplyPred s') preds') a')
 
-addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs rs) = TypingEnv ts ks vs $ Map.adjust (\(RelData qs preds decls insts)->RelData qs preds decls (p:insts)) l rs
+addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs cs rs) = TypingEnv ts ks vs cs $ Map.adjust (\(RelData qs preds decls insts)->RelData qs preds decls (p:insts)) l rs
 
 --TODO: Sposta in altro file
 --TODO: Controlla qui che non ci siano qualificatori liberi nelle definizioni
 addRelDecls :: TypingEnv -> TypingEnv
-addRelDecls env@(TypingEnv ts ks vs rs) =
+addRelDecls env@(TypingEnv ts ks vs cs rs) =
     let general_decl_pairs = concat $ map (\(_, RelData _ _ lqts _)->map (\(l, qt)->(l, generalize env qt)) lqts) $ Map.toList rs
         general_decls_map = Map.fromList general_decl_pairs
-        in TypingEnv (Map.union ts general_decls_map) ks vs rs
+        in TypingEnv (Map.union ts general_decls_map) ks vs cs rs
 
 typeKInstDef :: TypingEnv -> HLInstDef -> TyperState (KindSubst, TypingEnv, HLInstDef)
 typeKInstDef env (InstDef c qualhead defs) = do

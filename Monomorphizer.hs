@@ -106,6 +106,9 @@ monomorphizeInner t (ExprLabel l) = do
 monomorphizeInner _ (ExprConstructor c es) = do
     es' <- mapM monomorphize es
     return (ExprConstructor c es')
+monomorphizeInner _ (ExprCombinator l es) = do
+    es' <- mapM monomorphize es
+    return (ExprCombinator l es')
 monomorphizeInner _ (ExprLambda pat e) = do
     pat' <- monomorphizePat pat
     e' <- monomorphize e

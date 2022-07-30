@@ -83,19 +83,18 @@ instance Show TyScheme where
 data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome della variante, quantificatori generici, argomenti, datatype di appartenenza
     deriving Show
 
+type CombData = ([DataType], DataType)
 -- Definizioni rel
 type InstData = Qual Pred
 data RelData = RelData [TyQuant] [Pred] [(String, Qual DataType)] [InstData]
     deriving Show
 type RelEnv = Map.Map String RelData
 
--- contesto dei tipi (Types), specie (Kinds) e costruttori (Variants)
-data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) RelEnv --NOTE: Il nome della variante qui è duplicato
+-- contesto dei tipi (Types), specie (Kinds), costruttori (Variants), combinatori e relazioni
+data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.Map String VariantData) (Map.Map String CombData) RelEnv --NOTE: Il nome della variante qui è duplicato
     deriving Show
 
 --Definizioni utili
-extSuffix = "#EXT"
-
 buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
 buildTupType ts =
     let len = length ts
