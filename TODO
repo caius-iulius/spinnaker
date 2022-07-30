@@ -35,6 +35,10 @@ considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe esse
     - [OK] riscrivi l'interprete per propagare i tipi e scegliere da vtable
     - [TEST] implementa un sistema di superrel (come le superclass di Haskell)
         - il controllo forse è effettuato troppo tardi, viene usato entailInsts che non è detto che sia corretto
+    - aggiungi feedback e test migliori per quando
+        - due istanze hanno gli head identici
+        - un predicato non ha un'istanza più specifica
+        - un predicato è free
     - aggiungi controlli per limitare overlap
         - rilevamento istanze identiche
         - le istanze devono trattare una relazione o un tipo definiti nel proprio modulo

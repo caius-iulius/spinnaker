@@ -1,12 +1,8 @@
 use Core
 
-inst forall a b. {Show a, Show b} => Show (a, b) {
-    def show = \(a, b) -> "(" ++ show a ++ ", " ++ show b ++ ")"
-}
-
 def main =
     let s = "Ciao\\\nMondo!" ->
-    _ <- print ((True, 10), (s, ()));
-    _ <- putStrLn s;
-    print [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9]]
+    print ((True, 10), (s, ()))
+    >> putStrLn s
+    >> print [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9]]
 

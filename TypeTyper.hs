@@ -58,6 +58,20 @@ patVarsInEnv gf env (c, Just labl, pdata) dt =
     in innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
+typeExprs env [] = return (nullSubst, [], [], [])
+typeExprs env (e:es) = do
+    (s, ps, t, e') <- typeExpr env e
+    (s', ps', ts, es') <- typeExprs (substApply s env) es
+    return (composeSubst s' s, ps ++ ps', t:ts, e':es')
+typeConsAbstraction c env argts es = --NOTE: Funziona solo se i combinatori sono monomorfici
+    if length argts /= length es then
+        fail $ show c ++ " Constructor is applied to wrong number of arguments" --TODO: generalizza messaggio di errore?
+    else do
+    (s, ps, ts, es') <- typeExprs env es
+    s' <- liftUnionList mgu c (zip (map (substApply s) argts) ts)
+    let s'' = composeSubst s' s
+    return (s'', map (substApply s'') ps, es')
+
 typeExprInternal :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
 typeExprInternal _ (c, _, ExprLiteral lit) = do
     let dt = typeLit lit in return (nullSubst, [], dt, (c, dt, ExprLiteral lit))
@@ -68,16 +82,14 @@ typeExprInternal (TypingEnv env _ _ _) (c, _, ExprLabel labl) =
                           lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
                           Qual ps t <- instantiate scheme
                           return (nullSubst, ps, t, (c, t, ExprLabel labl))
-typeExprInternal env (c, _, ExprConstructor l []) = do
+typeExprInternal env (c, _, ExprConstructor l es) = do
     (VariantData _ qs argts dt) <- getVariantData c env l
-    s <- getInstantiationSubst qs
-    let mydt = substApply s (foldr buildFunType dt argts)
-    lift $ lift $ putStrLn $ "CONSTRUCTOR DT " ++ show l ++ show mydt
-    return (nullSubst, [], mydt, (c, mydt, ExprConstructor l []))
-typeExprInternal env (c, _, ExprConstructor l es) = do --TODO: Da testare
-    (s, ps, t, (_, _, ExprApp (_, _, ExprConstructor l' es') e')) <- typeExpr env (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprConstructor l (init es)) (last es))
-    return (s, ps, t, (c, t, ExprConstructor l' (es' ++ [e'])))
-    --typeExpr env (foldl (\e0 e1 -> (c, DataNOTHING, ExprApp e0 e1)) (c, DataNOTHING, ExprConstructor l []) es)
+    is <- getInstantiationSubst qs
+    let argts' = map (substApply is) argts
+        dt' = substApply is dt
+    (s, ps, es') <- typeConsAbstraction c env argts' es
+    let dt'' = substApply s dt'
+    return (s, ps, dt'', (c, dt'', ExprConstructor l es'))
 typeExprInternal env (c, _, ExprApp f a) = do
     q <- freshType KType
     (s1, ps1, t1, f') <- typeExpr env f
