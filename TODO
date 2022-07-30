@@ -1,5 +1,3 @@
-sistema il file di highlighting, fa casini con gli apostrofi
-
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
 
 phantom types per determinare se un programma è stato tipizzato? (oppure a che livello di tipizzazione è un'ipotetica rappresentazione uniforme)

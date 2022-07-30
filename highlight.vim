@@ -13,18 +13,18 @@ syn keyword mylangTopAccess pub
 syn keyword mylangKeyword let put forall
 syn keyword mylangConditional if then else
 syn match mylangOperator "\v[:!$%&\*\+/\-<=>\?@\\^|~.]+"
-" syn match haskellChar "\<'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'\>"
-"FIXME: cosa significano esattamente \< e \> ? li posso usare in very magic mode?
-syn match mylangType "\<[A-Z][a-zA-Z0-9_']*\>"
-syn match mylangIdentifier "\<[_a-z][a-zA-Z0-9_']*\>"
 syn match mylangNumber "\v[0-9][0-9_]*"
 syn match mylangFloat "\v[0-9][0-9_]*\.[0-9_]+"
 syn keyword mylangTodo TODO FIXME NOTE contained
 syn match mylangLineComment "#.*$" contains=mylangTodo
-syn region mylangChar start=+'+ skip=+\\\\\|\\'+ end=+'+
-  \ contains=@Spell
+" syn region mylangChar start=+'+ skip=+\\\\\|\\'+ end=+'+
+"   \ contains=@Spell
+syn match mylangIdentifier "[_a-z][a-zA-Z0-9_']*"
+"FIXME: cosa significano esattamente \< e \> ? li posso usare in very magic mode?
+syn match mylangChar "'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'"
 syn region mylangString start=+"+ skip=+\\\\\|\\"+ end=+"+
   \ contains=@Spell
+syn match mylangType "[A-Z][a-zA-Z0-9_']*"
 syn region mylangParens matchgroup=mylangDelimiter start="(" end=")" contains=TOP,@Spell
 syn region mylangBrackets matchgroup=mylangDelimiter start="\[" end="]" contains=TOP,@Spell
 syn region mylangBlock matchgroup=mylangDelimiter start="{" end="}" contains=TOP,@Spell
@@ -42,11 +42,10 @@ highlight def link mylangFloat Float
 highlight def link mylangOperator Operator
 highlight def link mylangTodo Todo
 highlight def link mylangLineComment Comment
-highlight def link mylangChar Character
+highlight def link mylangChar String
 highlight def link mylangString String
 highlight def link mylangDelimiter Delimiter
 highlight def link mylangSeparator Delimiter
 
-" syn keyword mylangForall forall
 " in A.B.c A e B devono essere blu (Include)
 " highlight per |, ->, \
