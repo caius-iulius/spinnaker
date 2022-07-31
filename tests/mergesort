@@ -37,19 +37,12 @@ mod pub Sort {
     def pub sort = sortBy (<=)
 }
 
-def joinSplit = \l, x, xs -> put x
-    | [] -> joinAux l xs
-    | [x'|xs'] -> joinSplit (x'::l) xs' xs
-and joinAux = \l, l' -> put l'
-    | [] -> l
-    | [x|xs] -> joinSplit l x xs
-def join = reverse <| joinAux []
-
 def ordleft = \(a,_),(b,_)->a <= b
 def ordright = \(_,a),(_,b)->a <= b
 
 def main = print $
         Sort.sortBy ordleft $
         Sort.sortBy ordright $
-        join $
-        map (\x -> map (\y -> (x, y)) (reverse $ 0..10)) ((0 - 5)..0)
+            x <- -5..0;
+            y <- reverse $ 0..10;
+            return (x, y)

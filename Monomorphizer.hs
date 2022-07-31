@@ -42,7 +42,7 @@ newMonoSuffix = do
     (u, defs, e) <- get
     put (u+1, defs, e)
     return ('#':show u)
-isGlobal :: String -> MonoState Bool --True per definizioni globali, false per locali, builtin e esterni
+isGlobal :: String -> MonoState Bool
 isGlobal l = do
     (_, _, e) <- get
     return $ isJust $ Map.lookup l e

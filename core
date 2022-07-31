@@ -110,12 +110,29 @@ mod List {
         put l
         | Cons x Nil -> x
         | Cons x xs -> last xs
+    def pub init = \l ->
+        put l
+        | Cons x Nil -> Nil
+        | Cons x xs -> x :: (init xs)
 
     def pub map = \f, l ->
         put l
         | Nil -> Nil
         | Cons x xs -> f x :: map f xs
+
+    def pub (++) = \l, l' ->
+        put l
+        | Nil -> l'
+        | Cons x xs -> x :: (xs ++ l')
+
     inst Functor List {def fmap = map}
+    inst Monad List {
+        def return = \x -> x :: Nil
+        def bind = \l, f->
+            put l
+            | Nil -> Nil
+            | Cons x xs -> f x ++ bind xs f
+    }
 
     def pub foldl = \f, s, l ->
         put l
@@ -143,11 +160,6 @@ mod List {
         | (Nil, _) -> Nil
         | (_, Nil) -> Nil
         | (Cons x xs, Cons x' xs') -> f x x' :: zipWith f xs xs'
-
-    def pub (++) = \l, l' ->
-        put l
-        | Nil -> l'
-        | Cons x xs -> x :: (xs ++ l')
 
     def innerdotdot = \from, to ->
         put from >= to

@@ -166,7 +166,14 @@ getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> {-require $-} (thisUsef
     return (c, Nothing, SynPatListConss es final)
 })
 
-getPatternTerm = describeError "Expected pattern term" $ do {
+
+sepByWeak p sep = do {
+    e <- p;
+    es <- munch (sep >> p);
+    return (e:es)
+} <|| return []
+
+getPatternTerm = {-describeError "Expected pattern term" $ -}do {
     (c, s) <- getString;
     return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitCharacter char)) s) (c, Nothing, SynPatListNil))
 } <|| do {
@@ -179,14 +186,14 @@ getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- getPathCapitalLabel;
     return (c, Nothing, SynPatVariant l [])
 } <|| do {
-    (c, k) <- getKeyword;
-    if k == "_" then return (c, Nothing, SynPatWildcard)
-    else pfail ""
+    (c, _) <- thisSyntaxElem "_";
+    return (c, Nothing, SynPatWildcard)
 } <|| getListPat
   <|| do {
     (c, _) <- thisUsefulChar '(';
-    m <- sepBy getPatternExpr (thisUsefulChar ',');
-    {-require $ -}thisUsefulChar ')'; --TODO: Assicurarsi che non avere il require non causi backtracking indesiderato
+    --TODO: il sepByWeak è giusto?
+    m <- sepByWeak getPatternExpr (thisUsefulChar ',');
+    thisUsefulChar ')'; --TODO: il require mancante fa casini?
 
     if length m == 1
     then return $ head m
@@ -243,7 +250,7 @@ getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| d
     return (opc, SynExprApp (opc, SynExprApp (opc, SynExprLabel $ Path [] op) expr) meta)
 } <|| getExpr
 
-getBindSyn = thisSyntaxElem "do" >> require (do {
+getBindSyn = do {
     p@(c, _, _) <- getPatternExpr;
     thisSyntaxElem "<-";
     require $ do {
@@ -252,7 +259,7 @@ getBindSyn = thisSyntaxElem "do" >> require (do {
         fe <- getMeta;
         return (c, SynExprBind p me fe)
     }
-})
+}
 
 getLet = do
     (c, _) <- thisSyntaxElem "let"

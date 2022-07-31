@@ -48,7 +48,7 @@ considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe esse
 4. monomorfizzazione
     - [OK] valori, relazioni
     - datatype (come fa MLTon, selettiva sulle varianti usate)
-5. [TEST] notazione do, sto usando una guardia 'do' che non vorrei che ci fosse nella sintassi finale
+5. [TEST] notazione bind, il parser per i pattern non va in fatal quando forse dovrebbe, serve per accomodare il parsing dei bind semplici
 6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors")
     - [TEST] inlining globale

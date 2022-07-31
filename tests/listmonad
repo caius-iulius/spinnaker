@@ -1,0 +1,6 @@
+use Core
+
+def main = print $
+    x <- 0..5;
+    y <- 0..4;
+    return (x, y)
