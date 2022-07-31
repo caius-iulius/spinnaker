@@ -1,5 +1,6 @@
 module Interpreter where
 import System.IO
+import System.Exit
 import qualified Data.Map as Map
 import Control.Monad.Reader
 import Data.Char
@@ -77,6 +78,7 @@ builtinApply "_getChr" (rw@(c,_,_):[]) = do
     lift $ hFlush stdout
     char <- lift getChar
     return $ ExprConstructor "()2" [(c, DataTypeName "Chr#BI" KType, ExprLiteral $ LitCharacter char),rw]
+builtinApply "_exit" (rw@(c,_,_):[]) = lift $ exitSuccess
 
 builtinApply l e = error $ "TODO builtinApply: " ++ l
 

@@ -1,6 +1,7 @@
 use Core
 
 def main = print $
-    x <- 0..5;
-    y <- 0..4;
+    x <- 0..=5;
+    y <- 0..=4;
+    _ <- Monad.guard (5 >= x+y);
     return (x, y)

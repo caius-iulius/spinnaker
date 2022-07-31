@@ -1,36 +1,57 @@
 # TODO:Questo file andrà copiato in una stringa nel compilatore
 
-ext pub _addInt : Int, Int -> Int
-ext pub _subInt : Int, Int -> Int
-ext pub _mulInt : Int, Int -> Int
-ext pub _divInt : Int, Int -> Int
-ext pub _equInt : Int, Int -> Bool
-ext pub _neqInt : Int, Int -> Bool
-ext pub _leqInt : Int, Int -> Bool
-ext pub _greInt : Int, Int -> Bool
-ext pub _convItoC : Int -> Chr
-ext pub _convCtoI : Chr -> Int
-ext pub _putChr : Chr, RealWorld_ -> RealWorld_
-ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
+mod Builtins {
+    # Combinatori primitivi
 
-def pub (|>) = \f,g,x->g(f x)
-def pub (<|) = \f,g,x->f(g x)
-def pub (|->) = \x,f->f x
-def pub ($) = \a,b->a b
-def pub flip = \f,x,y->f y x
-def pub curry = \f,x,y->f(x,y)
-def pub uncurry = \f,(x,y)->f x y
-def pub id = \x->x
-def pub const = \x,_->x
-def pub fst = \(a,_)->a
-def pub snd = \(_,a)->a
+    ext pub _addInt : Int, Int -> Int
+    ext pub _subInt : Int, Int -> Int
+    ext pub _mulInt : Int, Int -> Int
+    ext pub _divInt : Int, Int -> Int
+    ext pub _equInt : Int, Int -> Bool
+    ext pub _neqInt : Int, Int -> Bool
+    ext pub _leqInt : Int, Int -> Bool
+    ext pub _greInt : Int, Int -> Bool
 
-mod Numerics {
+    ext pub _convItoC : Int -> Chr
+    ext pub _convCtoI : Chr -> Int
+
+    ext pub _putChr : Chr, RealWorld_ -> RealWorld_
+    ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
+    ext pub _exit : RealWorld_ -> RealWorld_
+}
+
+def pub (|>) : forall a b c. (a -> b) -> (b -> c) -> (a -> c)
+    = \f,g,x->g(f x)
+def pub (<|) : forall a b c. (b -> c) -> (a -> b) -> (a -> c)
+    = \f,g,x->f(g x)
+def pub (|->) : forall a b. a -> (a -> b) -> b
+    = \x,f->f x
+def pub ($) : forall a b. (a -> b) -> a -> b
+    = \a,b->a b
+def pub flip : forall a b c. (a -> b -> c) -> b -> a -> c
+    = \f,x,y->f y x
+def pub curry : forall a b c. ((a, b) -> c) -> a -> b -> c
+    = \f,x,y->f(x,y)
+def pub uncurry : forall a b c. (a -> b -> c) -> (a, b) -> c
+    = \f,(x,y)->f x y
+def pub id : forall a. a -> a
+    = \x->x
+def pub const : forall a b. a -> b -> a
+    = \x,_->x
+def pub fst : forall a b. (a, b) -> a
+    = \(a,_)->a
+def pub snd : forall a b. (a, b) -> b
+    = \(_,b)->b
+
+mod NumCore {
+    # Relazioni e istanze dei numerici builtin
+
     rel pub Num a =
         (+) : a -> a -> a,
         (-) : a -> a -> a,
         (*) : a -> a -> a,
-        (/) : a -> a -> a
+        (/) : a -> a -> a,
+        fromInt : Int -> a
 
     rel pub Eq a =
         (==) : a -> a -> Bool,
@@ -43,15 +64,18 @@ mod Numerics {
         (<=) : a -> a -> Bool
 
     rel pub Enum a =
-        fromEnum : a->Int,
-        toEnum : Int->a
+        fromEnum : a -> Int,
+        toEnum : Int -> a
 
+
+    use Builtins
 
     inst Num Int {
         def (+) = _addInt
         def (-) = _subInt
         def (*) = _mulInt
         def (/) = _divInt
+        def fromInt = id
     }
 
     inst Eq Int {
@@ -75,57 +99,58 @@ mod Numerics {
         def toEnum = _convItoC
         def fromEnum = _convCtoI
     }
-} use pub Numerics
+} use pub NumCore
 
-mod Monad {
-    rel pub Functor f = fmap : forall a b. (a -> b) -> f a -> f b
+mod MonadCore {
+    # Definizione di Monade e delle strutture da cui dipende
+
+    rel pub Functor f =
+        # LAWS
+        # 1. fmap id = id
+        # 2. fmap (f <| g) = fmap f <| fmap g
+        fmap : forall a b. (a -> b) -> f a -> f b
+
     rel pub {Functor m} => Monad m =
+        # LAWS
+        # 1. bind (return a) k = k a
+        # 2. bind m return = m
+        # 3. bind m (\x -> bind (k x) h) = bind (bind m k) h
+        # 4. fmap f m = bind m (\x -> return f x)
         return : forall a. a -> m a,
         bind : forall a b. m a -> (a -> m b) -> m b
 
-    def pub (>>=) = bind
-    def pub (>>) = \m, m' -> m >>= \_ -> m'
+    def pub (>>=) : forall m a b. {Monad m} => m a -> (a -> m b) -> m b
+        = bind
+    def pub (>>) : forall m a b. {Monad m} => m a -> m b -> m b
+        = \m, m' -> m >>= \_ -> m'
 
     inst forall m. {Monad m} => Functor m {
         def fmap = \f, m -> bind m (\x->return (f x))
     }
-} use pub Monad
+} use pub MonadCore
 
-mod List {
+mod ListCore {
+    # Definizione di lista e alcuni primitivi molto utili
+
     data pub List a
         = Nil
         | Cons a (List a)
 
-    def pub (::) = Cons
+    def pub (::) : forall a. a -> List a -> List a
+        = Cons
 
-    def reverseAux = \acc, l ->
-        put l
-        | Nil -> acc
-        | Cons x xs -> reverseAux (x :: acc) xs
-    def pub reverse = reverseAux Nil
-
-    def pub head = \Cons x xs -> x
-    def pub tail = \Cons x xs -> xs
-    def pub last = \l ->
-        put l
-        | Cons x Nil -> x
-        | Cons x xs -> last xs
-    def pub init = \l ->
-        put l
-        | Cons x Nil -> Nil
-        | Cons x xs -> x :: (init xs)
-
-    def pub map = \f, l ->
-        put l
+    def pub map : forall a b. (a -> b) -> List a -> List b
+        = \f, l -> put l
         | Nil -> Nil
         | Cons x xs -> f x :: map f xs
 
-    def pub (++) = \l, l' ->
-        put l
+    inst Functor List {def fmap = map}
+
+    def pub (++) : forall a. List a -> List a -> List a
+        = \l, l' -> put l
         | Nil -> l'
         | Cons x xs -> x :: (xs ++ l')
 
-    inst Functor List {def fmap = map}
     inst Monad List {
         def return = \x -> x :: Nil
         def bind = \l, f->
@@ -134,50 +159,58 @@ mod List {
             | Cons x xs -> f x ++ bind xs f
     }
 
-    def pub foldl = \f, s, l ->
+    def pub head : forall a. List a -> a
+        = \Cons x xs -> x
+    def pub tail : forall a. List a -> List a
+        = \Cons x xs -> xs
+    def pub last : forall a. List a -> a
+        = \l -> put l
+        | Cons x Nil -> x
+        | Cons x xs -> last xs
+    def pub init : forall a. List a -> List a
+        = \l -> put l
+        | Cons x Nil -> Nil
+        | Cons x xs -> x :: (init xs)
+
+    def reverseAux = \acc, l ->
         put l
+        | Nil -> acc
+        | Cons x xs -> reverseAux (x :: acc) xs
+    def pub reverse : forall a. List a -> List a
+        = reverseAux Nil
+
+    def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
+        = \f, s, l -> put l
         | Nil -> s
         | Cons x xs -> foldl f (f s x) xs
 
-    def pub foldr = \f, s, l ->
-        put l
+    def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
+        = \f, s, l -> put l
         | Nil -> s
         | Cons x xs -> f x (foldr f s xs)
 
     def lengthAux = \n, l -> put l
         | Nil -> n
         | Cons _ xs -> lengthAux (n + 1) xs
-    def pub length = lengthAux 0
+    def pub length : forall a. List a -> Int
+        = lengthAux 0
 
-    def pub zip = \l, l' ->
-        put (l, l')
+    def pub zip : forall a b. List a -> List b -> List (a, b)
+        = \l, l' -> put (l, l')
         | (Nil, _) -> Nil
         | (_, Nil) -> Nil
         | (Cons x xs, Cons x' xs') -> (x, x') :: zip xs xs'
 
-    def pub zipWith = \f, l, l' ->
-        put (l, l')
+    def pub zipWith : forall a b c. (a -> b -> c) -> List a -> List b -> List c
+        = \f, l, l' -> put (l, l')
         | (Nil, _) -> Nil
         | (_, Nil) -> Nil
         | (Cons x xs, Cons x' xs') -> f x x' :: zipWith f xs xs'
+} use pub ListCore
 
-    def innerdotdot = \from, to ->
-        put from >= to
-        | True -> Nil
-        | _ -> toEnum from :: innerdotdot (from+1) to
-    def pub (..) : forall a. {Enum a} => a -> a -> List a
-        = \from, to ->
-            innerdotdot (fromEnum from) (fromEnum to)
-    def pub (..=) : forall a. {Enum a} => a -> a -> List a
-        = \from, to ->
-            innerdotdot (fromEnum from) (fromEnum to + 1)
+mod ShowCore {
+    # Definizione di Show e delle sue istanze sui tipi builtin
 
-    def pub sequence = \lm -> put lm
-        | Nil -> return Nil
-        | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (a :: as)
-} use pub List
-
-mod Show {
     rel pub Show a = show : a -> List Chr
 
     inst Show () {
@@ -237,10 +270,11 @@ mod Show {
     inst forall a b. {Show a, Show b} => Show (a, b) {
         def show = \(a, b) -> '(' :: show a ++ (','::Nil) ++ show b ++ (')'::Nil)
     }
-
-} use pub Show
+} use pub ShowCore
 
 mod pub State {
+    # Definizione del monade State, usato per definire IO
+
     data pub State s a = State (s -> (a, s))
 
     inst forall s. Functor (State s) {
@@ -259,13 +293,18 @@ mod pub State {
             )
     }
 
-    def pub gets = State (\s->(s, s))
-    def pub puts = \ns -> State (\_->((), ns))
+    def pub gets : forall s. State s s
+        = State (\s->(s, s))
+    def pub puts : forall s. s -> State s ()
+        = \ns -> State (\_->((), ns))
 
-    def pub runState = \is, State st -> st is
+    def pub runState : forall s a. s -> State s a -> (a, s)
+        = \is, State st -> st is
 }
 
-mod IO {
+mod IOCore {
+    # Definizione del monade IO e delle operazioni primitive
+
     data pub IO a = IO (State.State RealWorld_ a)
 
     inst Functor IO {
@@ -278,17 +317,20 @@ mod IO {
     }
 
     mod pub UnsafeIO {
+        use Builtins
+
         def pub putChr = _putChr
         def pub getChr = _getChr
-        def pub putStr : (List Chr, RealWorld_) -> RealWorld_
-            = \(s, rw) ->
-            put s
+        def pub exit = _exit
+
+        def pub putStr : List Chr -> RealWorld_ -> RealWorld_
+            = \s, rw -> put s
             | Nil -> rw
             | Cons c cs ->
                 let rw' = putChr c rw ->
-                putStr (cs, rw')
-        def pub putStrLn = \srw ->
-            let rw' = putStr srw ->
+                putStr cs rw'
+        def pub putStrLn = \s, rw ->
+            let rw' = putStr s rw ->
             putChr '\n' rw'
         def pub getLn = \rw ->
             put getChr rw
@@ -300,11 +342,69 @@ mod IO {
         def pub runIO = \IO s -> let (a, s') = State.runState RealWorld_ s -> s'
     }
 
-    def pub putChr = \c -> IO(State.State (\s->(() , UnsafeIO.putChr c s)))
-    def pub getChr = IO(State.State UnsafeIO.getChr)
-    def pub putStr = \l -> IO(State.State(\s->((), UnsafeIO.putStr (l,s))))
-    def pub putStrLn = \l -> IO(State.State(\s->((), UnsafeIO.putStrLn (l,s))))
-    def pub getLn = IO(State.State UnsafeIO.getLn)
+    def pub putChr : Chr -> IO ()
+        = \c -> IO(State.State (\s->(() , UnsafeIO.putChr c s)))
+    def pub getChr : IO Chr
+        = IO(State.State UnsafeIO.getChr)
+    def pub putStr : List Chr -> IO ()
+        = \l -> IO(State.State(\s->((), UnsafeIO.putStr l s)))
+    def pub putStrLn : List Chr -> IO ()
+        = \l -> IO(State.State(\s->((), UnsafeIO.putStrLn l s)))
+    def pub getLn : IO (List Chr)
+        = IO(State.State UnsafeIO.getLn)
 
-    def pub print = show |> putStrLn
-} use pub IO
+    def pub print : forall a. {Show a} => a -> IO ()
+        = show |> putStrLn
+
+    def errorAux : forall a. List Chr -> RealWorld_ -> a
+        = \s, rw -> errorAux s (UnsafeIO.exit (UnsafeIO.putStrLn s rw))
+    def pub error : forall a. List Chr -> a
+        = \s -> errorAux ('e'::'r'::'r'::'o'::'r'::':'::' '::s) RealWorld_
+} use pub IOCore
+
+mod pub Monad {
+    def pub sequence : forall m a. {Monad m} => List (m a) -> m (List a)
+        = \lm -> put lm
+        | Nil -> return Nil
+        | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (a :: as)
+
+    rel pub {Monad m} => MonadPlus m =
+        # LAWS
+        # 1) MONOID
+        # 1.1) mplus mzero a = a
+        # 1.2) mplus a mzero = a
+        # 1.3) mplus (mplus a b) c = mplus a (mplus b c)
+        # 2) mzero >>= f = mzero
+        # 3) m >> mzero = mzero
+        mzero : forall a. m a,
+        mplus : forall a. m a -> m a -> m a
+
+    def pub guard : forall m. {MonadPlus m} => Bool -> m ()
+        = \b -> put b
+        | True -> return ()
+        | False -> mzero
+
+    inst MonadPlus List {
+        def mzero = Nil
+        def mplus = (++)
+    }
+
+    rel pub {Monad m} => MonadFail m =
+        # Se {MonadPlus m} si può considerare: mzero = fail "mzero"
+        fail : forall a. List Chr -> m a
+
+    inst MonadFail IO {
+        def fail = error
+    }
+}
+
+def innerdotdot = \from, to ->
+    put from >= to
+    | True -> Nil
+    | _ -> toEnum from :: innerdotdot (from+1) to
+def pub (..) : forall a. {Enum a} => a -> a -> List a
+    = \from, to ->
+        innerdotdot (fromEnum from) (fromEnum to)
+def pub (..=) : forall a. {Enum a} => a -> a -> List a
+    = \from, to ->
+        innerdotdot (fromEnum from) (fromEnum to + 1)

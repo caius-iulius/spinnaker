@@ -1,0 +1,8 @@
+use Core
+
+def fac = \n ->
+    if n == fromInt 0
+    then fromInt 1
+    else n * fac (n - fromInt 1)
+
+def main = print $ fac 5
