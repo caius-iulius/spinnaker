@@ -108,6 +108,14 @@ demodExpr env (c, SynExprPut val pses) = do
         return (pat', e')
         ) pses
     return (c, DataNOTHING, ExprPut val' pses')
+demodExpr env (c, SynExprString s) = do
+    (DemodEnv _ vs _ cs _) <- getPathEnv c env ["Core"]
+    case Map.lookup "Cons" cs of
+        Nothing -> fail $ show c ++ " The Core module does not provide a definition for Cons"
+        Just (_, conslabl) -> case Map.lookup "strNil" vs of
+            Nothing -> fail $ show c ++ " The Core module does not provide a definition for strNil"
+            Just (_, nillabl) -> return $
+                foldr (\chr rest -> (c, DataNOTHING, ExprConstructor conslabl [(c, DataNOTHING, ExprLiteral (LitCharacter chr)), rest])) (c, DataNOTHING, ExprLabel nillabl) s
 demodExpr env (c, SynExprListNil) = do --TODO: Forse questo si può ridurre a un demodExpr di un SynExprConstructor
     (DemodEnv _ _ _ cs _) <- getPathEnv c env ["Core"]
     case Map.lookup "Nil" cs of

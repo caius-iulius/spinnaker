@@ -216,7 +216,7 @@ getListExpr = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulC
 
 getTerm = describeError "Expected term" $ do { --String
     (c, s) <- getString;
-    return (c, SynExprListConss (map (\char->(c, SynExprLiteral $ LitCharacter char)) s) (c, SynExprListNil))
+    return (c, SynExprString s)
 } <|| do { -- Literal
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)

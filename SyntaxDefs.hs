@@ -24,6 +24,7 @@ data SyntaxExprData
     | SynExprTuple [SyntaxExpr] --Elementi della n-tupla
     | SynExprLambda SyntaxPattern SyntaxExpr --Argomento(anche "smontato") e valore interno
     | SynExprPut SyntaxExpr [(SyntaxPattern, SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
+    | SynExprString String -- Costante stringa
     | SynExprListNil -- lista vuota
     | SynExprListConss [SyntaxExpr] SyntaxExpr -- primi elementi della lista, continuazione
     | SynExprIfThenElse SyntaxExpr SyntaxExpr SyntaxExpr -- condizione, branch per true, branch per false

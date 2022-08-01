@@ -43,6 +43,23 @@ def pub fst : forall a b. (a, b) -> a
 def pub snd : forall a b. (a, b) -> b
     = \(_,b)->b
 
+mod BoolCore {
+    def pub (&&) : Bool -> Bool -> Bool
+        = \a, b -> put (a, b)
+        | (True, True) -> True
+        | _ -> False
+
+    def pub (||) : Bool -> Bool -> Bool
+        = \a, b -> put (a, b)
+        | (False, False) -> False
+        | _ -> True
+
+    def pub not : Bool -> Bool
+        = \a -> put a
+        | True -> False
+        | False -> True
+} use pub BoolCore
+
 mod NumCore {
     # Relazioni e istanze dei numerici builtin
 
@@ -57,6 +74,12 @@ mod NumCore {
         (==) : a -> a -> Bool,
         (!=) : a -> a -> Bool
 
+    inst forall a b. {Eq a, Eq b} => Eq (a, b) {
+        def (==) = \(a, b), (a', b') -> (a == a') && (b == b')
+        def (!=) = \a, b -> not $ a == b
+    }
+
+
     rel pub {Eq a} => Ord a =
         (<) : a -> a -> Bool,
         (>) : a -> a -> Bool,
@@ -66,7 +89,6 @@ mod NumCore {
     rel pub Enum a =
         fromEnum : a -> Int,
         toEnum : Int -> a
-
 
     use Builtins
 
@@ -213,6 +235,7 @@ mod ShowCore {
 
     rel pub Show a = show : a -> List Chr
 
+    def pub strNil : List Chr = Nil
     inst Show () {
         def show = \() -> '('::')':: Nil
     }
@@ -398,6 +421,22 @@ mod pub Monad {
     }
 }
 
+def pub max : forall a. {Ord a} => a -> a -> a
+    = \a, b -> put a > b
+    | True -> a
+    | False -> b
+def pub any : forall a. (a -> Bool) -> List a -> Bool
+    = \bf, l -> put l
+    | Nil -> False
+    | Cons x xs -> put bf x
+        | True -> True
+        | _ -> any bf xs
+def pub elem : forall a. {Eq a} => a -> List a -> Bool
+    = \x -> any ((==) x)
+def pub nth : forall a. Int -> List a -> a
+    = \n, l -> put n
+    | 0 -> head l
+    | _ -> nth (n - 1) (tail l)
 def innerdotdot = \from, to ->
     put from >= to
     | True -> Nil
