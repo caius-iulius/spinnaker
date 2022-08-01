@@ -223,7 +223,7 @@ getTerm = describeError "Expected term" $ do { --String
 } <|| do { -- Label
     (c, l) <- getPathLabel;
     return (c, SynExprLabel l)
-} <|| do { -- CapitalLabel, identifica la variante, in futuro anche modulo (quando c'è il punto dopo)
+} <|| do { -- CapitalLabel
     (c, l) <- getPathCapitalLabel;
     return (c, SynExprConstructor l)
 } <|| getListExpr

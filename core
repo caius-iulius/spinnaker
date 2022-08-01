@@ -295,48 +295,25 @@ mod ShowCore {
     }
 } use pub ShowCore
 
-mod pub State {
-    # Definizione del monade State, usato per definire IO
-
-    data pub State s a = State (s -> (a, s))
-
-    inst forall s. Functor (State s) {
-        def fmap = \f, State st -> State (\s->
-                let (a, s') = st s ->
-                    (f a, s')
-            )
-    }
-
-    inst forall s. Monad (State s) {
-        def return = \a -> State(\s -> (a, s))
-        def bind = \State st, sf -> State (\s->
-                let (a, s') = st s ->
-                let State st' = sf a ->
-                st' s'
-            )
-    }
-
-    def pub gets : forall s. State s s
-        = State (\s->(s, s))
-    def pub puts : forall s. s -> State s ()
-        = \ns -> State (\_->((), ns))
-
-    def pub runState : forall s a. s -> State s a -> (a, s)
-        = \is, State st -> st is
-}
-
 mod IOCore {
     # Definizione del monade IO e delle operazioni primitive
 
-    data pub IO a = IO (State.State RealWorld_ a)
+    data pub IO a = IO (RealWorld_ -> (a, RealWorld_))
 
     inst Functor IO {
-        def fmap = \f, IO s -> IO (fmap f s)
+        def fmap = \f, IO tf -> IO (\rw->
+                let (a, rw') = tf rw ->
+                    (f a, rw')
+            )
     }
+
     inst Monad IO {
-        def return = \a -> IO (return a)
-        def bind = \IO s, iof -> IO (bind s (\a ->
-            let IO b = iof a -> b))
+        def return = \a -> IO(\rw -> (a, rw))
+        def bind = \IO tf, f -> IO (\rw->
+                let (a, rw') = tf rw ->
+                let IO tf' = f a ->
+                tf' rw'
+            )
     }
 
     mod pub UnsafeIO {
@@ -362,19 +339,19 @@ mod IOCore {
                 let (s, rw'') = getLn rw' ->
                 (c :: s, rw'')
 
-        def pub runIO = \IO s -> let (a, s') = State.runState RealWorld_ s -> s'
+        def pub runIO = \IO tf -> let (a, rw) = tf RealWorld_ -> rw
     }
 
     def pub putChr : Chr -> IO ()
-        = \c -> IO(State.State (\s->(() , UnsafeIO.putChr c s)))
+        = \c -> IO(\s->((), UnsafeIO.putChr c s))
     def pub getChr : IO Chr
-        = IO(State.State UnsafeIO.getChr)
+        = IO UnsafeIO.getChr
     def pub putStr : List Chr -> IO ()
-        = \l -> IO(State.State(\s->((), UnsafeIO.putStr l s)))
+        = \l -> IO(\s->((), UnsafeIO.putStr l s))
     def pub putStrLn : List Chr -> IO ()
-        = \l -> IO(State.State(\s->((), UnsafeIO.putStrLn l s)))
+        = \l -> IO(\s->((), UnsafeIO.putStrLn l s))
     def pub getLn : IO (List Chr)
-        = IO(State.State UnsafeIO.getLn)
+        = IO UnsafeIO.getLn
 
     def pub print : forall a. {Show a} => a -> IO ()
         = show |> putStrLn
