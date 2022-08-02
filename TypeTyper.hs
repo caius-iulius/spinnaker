@@ -253,7 +253,7 @@ typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) def
                 substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
             defs' <- typeInstMembers (Map.fromList substdecls) [] defs
             mapM (\p ->
-                if entailInsts env (h:ps) p --TODO: invece di (h:ps) forse dovrei usare solo [h]
+                if entail env ps p
                     then return ()
                     else fail $ show c ++ " L'istanza " ++ show qh ++ " non verifica il predicato: " ++ show p
                 ) (map (substApply instSubst) preds)

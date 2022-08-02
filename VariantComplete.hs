@@ -38,11 +38,3 @@ completeVariantInstDefs env =
     mapM (\(InstDef c qh defs)->(mapM (\(c', l, e)-> do
         e' <- completeVariant env e
         return (c', l, e')) defs) >>= return . InstDef c qh)
-
-{-completeVariantProgram :: TypingEnv -> BlockProgram -> TyperState BlockProgram
-completeVariantProgram env (BlockProgram datadefs reldefs valdefs instdefs) = do
-    instdefs' <- mapM (\(InstDef c qh defs)->(mapM (\(c', l, e)-> do
-        e' <- completeVariant env e
-        return (c', l, e')) defs) >>= return . InstDef c qh) instdefs
-    return (BlockProgram datadefs reldefs valdefs' instdefs')
--}

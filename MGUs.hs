@@ -245,13 +245,6 @@ entail env ps p
         OneMatch qs -> all (entail env ps) qs
         _ -> False
 
-entailInsts :: TypingEnv -> [Pred] -> Pred -> Bool
-entailInsts env ps p
-    = elem p ps
-    || case chooseInst env p of
-        OneMatch qs -> all (entailInsts env ps) qs -- forse dovrei usare entail
-        _ -> False
-
 simplify env = loop []
     where
         loop sps [] = sps

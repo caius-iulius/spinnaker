@@ -362,6 +362,7 @@ mod IOCore {
         = \s -> errorAux ('e'::'r'::'r'::'o'::'r'::':'::' '::s) RealWorld_
 } use pub IOCore
 
+# TODO: Tutta questa roba deve finire nella standard library esterna
 mod pub Monad {
     def pub sequence : forall m a. {Monad m} => List (m a) -> m (List a)
         = \lm -> put lm
