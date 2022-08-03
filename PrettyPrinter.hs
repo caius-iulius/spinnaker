@@ -64,6 +64,7 @@ toTreeSynDataDef (SynDataDef c v labl quants variants) = Node (show c ++ " Defin
 
 toTreeSynRelValDecl (c, l, te) = Node (show c ++ " Declare val: " ++ show l ++ " of type: " ++ show te) []
 toTreeSynModDef (ModMod c v l m) = Node (show c ++ " Defining " ++ show v ++ " module: " ++ show l) [toTreeSynMod m]
+toTreeSynModDef (ModFromFile c v l f) = Node (show c ++ " Importing " ++ show v ++ " module: " ++ show l ++ " from file " ++ show f) []
 toTreeSynModDef (ModUse c v p) = Node (show c ++ " Using " ++ show v ++ " module: " ++ show p) []
 toTreeSynModDef (ModTypeSyn c v l qs e) = Node (show c ++ " " ++ show v ++ " type synonym: " ++ show l ++ " tyargs: " ++ show qs) [toTreeSynTypeExpr e]
 toTreeSynModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeSynValDef vvdefs)

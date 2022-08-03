@@ -66,10 +66,10 @@ entryPointBlock env = do
     where c = Coord "entryPoint" 0 0
           syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runIO")) (c, SynExprLabel (Path [] "main")))
 
-typeProgram :: SyntaxModule -> SyntaxModule -> TyperState (TypingEnv, HLExpr, BlockProgram)
-typeProgram core program = do
+typeProgram :: String -> TyperState (TypingEnv, HLExpr, BlockProgram)
+typeProgram fname = do
     lift $ lift $ putStrLn $ "Init typing env: " ++ show initTypingEnv
-    (denv, block) <- demodProgram initCoreDemodEnv core program
+    (denv, block) <- demodProgram initCoreDemodEnv "stdlib/core" "stdlib/std" fname
     entry <- entryPointBlock denv
     let block' = concatBlockPrograms block entry
     lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block')

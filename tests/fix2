@@ -1,4 +1,4 @@
-use Core
+use Std
 
 def fix2 = \f, g, x -> f (fix2 g f) x
 

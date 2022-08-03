@@ -1,0 +1,49 @@
+use Core
+
+data pub Maybe a = None | Some a
+
+def pub isSome : forall a. Maybe a -> Bool
+    = \m -> put m
+    | None -> False
+    | Some _ -> True
+
+def pub isNone : forall a. Maybe a -> Bool
+    = \m -> put m
+    | None -> True
+    | Some _ -> False
+
+inst forall a. {Show a} => Show (Maybe a) { #NOTE: temporaneo, aggiunge parentesi di troppo
+    def show = \m -> put m
+        | None -> "None"
+        | Some a -> "Some (" ++ show a ++ ")"
+}
+
+inst Functor Maybe {
+    def fmap = \f, m -> put m
+        | None -> None
+        | Some a -> Some (f a)
+}
+inst Monad Maybe {
+    def return = \a -> Some a
+    def bind = \m, f -> put m
+        | None -> None
+        | Some a -> f a
+}
+
+# TODO: Da inserire quando si riscrive la libreria da zero
+
+# TODO: Da inserire quando si riscrive la libreria da zero
+
+# def pub maybe : forall a b. b -> (a -> b) -> Maybe a -> b
+#     = \b, f, m -> put m
+#     | None -> b
+#     | Some a -> f a
+
+# inst Monad.MonadPlus Maybe {
+#     def mzero = None
+#     def mplus = \a, b -> put a
+#         | None -> b
+#         | Some _ -> a
+# }
+# 
+# inst Monad.MonadFail Maybe { def fail = \_ -> None }

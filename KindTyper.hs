@@ -16,13 +16,10 @@ substApplyRelDecls s decls = map (\(c, l, t) -> (c, l, kSubstApply s t)) decls
 
 -- Funzioni di typing
 getTyData :: StdCoord -> TypingEnv -> String -> TyperState Kind
-getTyData _ _ l@('(':')':slen) =
-    let len::Int
-        len = read slen
-    in return $
-        foldr (\_->KFun KType) KType [0..len - 1]
-getTyData c (TypingEnv _ ks _ _ _) l =
-    case Map.lookup l ks of
+getTyData c (TypingEnv _ ks _ _ _) l
+    | fst $ isTupLabl l = let len = snd $ isTupLabl l in
+        return $ foldr (\_->KFun KType) KType [0..len - 1]
+    | otherwise = case Map.lookup l ks of
         Nothing -> fail $ show c ++ " Unbound typename: " ++ l
         Just k -> return k
 

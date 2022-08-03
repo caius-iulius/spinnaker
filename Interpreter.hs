@@ -77,7 +77,7 @@ builtinApply "_putChr" ((_, _, ExprLiteral (LitCharacter c)):(_,_,rw):[]) = do
 builtinApply "_getChr" (rw@(c,_,_):[]) = do
     lift $ hFlush stdout
     char <- lift getChar
-    return $ ExprConstructor "()2" [(c, DataTypeName "Chr#BI" KType, ExprLiteral $ LitCharacter char),rw]
+    return $ ExprConstructor (makeTupLabl 2) [(c, DataTypeName "Chr#BI" KType, ExprLiteral $ LitCharacter char),rw]
 builtinApply "_exit" (rw@(c,_,_):[]) = lift $ exitSuccess
 
 builtinApply l e = error $ "TODO builtinApply: " ++ l

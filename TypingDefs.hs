@@ -95,10 +95,19 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
     deriving Show
 
 --Definizioni utili
+isTupLabl :: String -> (Bool, Int) --TODO: usa un maybe
+isTupLabl "()" = (True, 0)
+isTupLabl ('(':rest) = (")" == (dropWhile (','==) rest), length rest)
+isTupLabl _ = (False, 0)
+
+makeTupLabl 0 = "()"
+makeTupLabl 1 = error "Tuples of length 1 are forbidden"
+makeTupLabl len = '(':take (len - 1) (repeat ',')++")"
+
 buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
 buildTupType ts =
     let len = length ts
-        labl = "()" ++ show len
+        labl = makeTupLabl len
     in foldl DataTypeApp (DataTypeName labl $ buildTupKind len) ts
 
 buildFunType a r =

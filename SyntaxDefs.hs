@@ -62,6 +62,7 @@ data Visibility = Public | Private
 type SyntaxModRelValDecl = (StdCoord, String, SyntaxTySchemeExpr)
 data SyntaxModDef
     = ModMod StdCoord Visibility String SyntaxModule
+    | ModFromFile StdCoord Visibility String String
     | ModUse StdCoord Visibility Path
     | ModTypeSyn StdCoord Visibility String [String] SyntaxTypeExpr
     | ModValGroup [SyntaxValDef]

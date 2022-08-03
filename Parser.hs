@@ -512,10 +512,12 @@ getModuleDef = do {
     require $ do {
         visib <- getVisibility;
         (_, label) <- getCapitalLabel;
-        thisUsefulChar '{';
-        mod <- getModuleInnerDefs;
-        thisUsefulChar '}';
-        return $ ModMod c visib label mod
+        do {
+            thisUsefulChar '{';
+            mod <- require $ getModuleInnerDefs;
+            require $ thisUsefulChar '}';
+            return $ ModMod c visib label mod
+        } <|| fmap (ModFromFile c visib label . snd) getString
     }
 }
 

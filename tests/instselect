@@ -1,5 +1,4 @@
 use Core
 
-def main =
-    print "Hello"
-    >> print [0, 1, 2, 3]
+def main = print "Hello"
+        >> print [0, 1, 2, 3]

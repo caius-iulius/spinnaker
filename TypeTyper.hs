@@ -9,14 +9,11 @@ import MGUs
 import HLDefs
 
 getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
-getVariantData _ _ l@('(':')':slen) =
-    let len :: Int
-        len = read slen
-    in do
-        qs <- mapM (\_->newTyQuant KType) [1..len]
-        let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
-getVariantData c (TypingEnv _ _ vs _ _) l =
-    case Map.lookup l vs of
+getVariantData c (TypingEnv _ _ vs _ _) l
+    | fst $ isTupLabl l = let len = snd $ isTupLabl l in do
+            qs <- mapM (\_->newTyQuant KType) [1..len]
+            let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
+    | otherwise = case Map.lookup l vs of
         --Nothing -> fail $ show c ++ " Unbound constructor: " ++ l
         Just vdata -> do
             lift $ lift $ putStrLn $ "VDATA " ++ show l ++ show vdata

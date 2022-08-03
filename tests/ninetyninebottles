@@ -1,4 +1,4 @@
-use Core
+use Std
 
 def bottles = \n ->
     put n

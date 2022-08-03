@@ -1,4 +1,4 @@
-use Core
+use Std
 
 mod pub Sort {
     # def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 

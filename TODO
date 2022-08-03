@@ -16,13 +16,9 @@ Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implement
 
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
-supporto multifile
-
-crea una stdlib
-
 incorpora file core
 
-considera l'aggiunta di idadd e idmul alla definizione di Num (che potrebbe essere rinominato Field)
+i file sono implementati in modo inefficiente e fragile
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel
