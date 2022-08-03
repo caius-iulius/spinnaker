@@ -122,16 +122,18 @@ getOperator = do {
 }
 
 getLabel = do {
-    thisUsefulChar '(';
-    op <- getOperator;
-    require $ describeError "Expected closing paren after operator section" $ thisUsefulChar ')';
-    return op
-} <|| do {
     (c, s) <- getLabelText;
     if elem s keywords
     then pfail "Expected label"
     else return (c, s)
 }
+
+getLabelOrOp = do {
+    thisUsefulChar '(';
+    op <- getOperator;
+    describeError "Expected closing paren after operator section" $ thisUsefulChar ')';
+    return op
+} <|| getLabel
 
 -- Raccoglie una keyword oppure un simbolo composto dai caratteri di operatore
 thisSyntaxElem test = describeError ("Expected keyword or symbol '" ++ test ++ "'") $ do {
@@ -145,7 +147,7 @@ getPath = munch $ do{l <- getModName; thisSyntaxElem "."; return l}
 
 getPathLabel = do {
     path <- getPath;
-    (c, label) <- getLabel;
+    (c, label) <- getLabelOrOp;
     return (if length path == 0 then c else fst $ head path, Path (map snd $ path) label)
 }
 
@@ -180,7 +182,7 @@ getPatternTerm = {-describeError "Expected pattern term" $ -}do {
     (c, l) <- getLiteral;
     return (c, Nothing, SynPatLiteral l)
 } <|| do {
-    (c, l) <- getLabel;
+    (c, l) <- difference getLabelOrOp (thisUsefulChar '(' >> getLiteral);
     return (c, Just l, SynPatWildcard)
 } <|| do {
     (c, l) <- getPathCapitalLabel;
@@ -220,10 +222,23 @@ getTerm = describeError "Expected term" $ do { --String
 } <|| do { -- Literal
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)
+} <|| do { -- First section
+    (c, _) <- thisUsefulChar '(';
+    e <- getExpr;
+    (c', op) <- getOperator;
+    thisUsefulChar ')';
+    return (c, SynExprApp (c', SynExprLabel (Path [] op)) e)
+} <|| difference (do { -- Section second
+    (c, _) <- thisUsefulChar '(';
+    (c', op) <- getOperator;
+    m <- getMeta;
+    require $ thisUsefulChar ')';
+    return (c, SynExprSndSection (Path [] op) m)
 } <|| do { -- Label
     (c, l) <- getPathLabel;
     return (c, SynExprLabel l)
-} <|| do { -- CapitalLabel
+}) (thisUsefulChar '(' >> getLiteral)
+  <|| do { -- CapitalLabel
     (c, l) <- getPathCapitalLabel;
     return (c, SynExprConstructor l)
 } <|| getListExpr
@@ -389,7 +404,7 @@ getTyScheme = do {
 -- Parser per le definizioni
 getValDefinition = require $ do {
     visib <- getVisibility;
-    (c, label) <- getLabel;
+    (c, label) <- getLabelOrOp;
     typehint <- option Nothing (thisSyntaxElem ":" >> (require $ getTyScheme >>= return . Just));
     thisSyntaxElem "=";
     meta <- getMeta;
@@ -433,7 +448,7 @@ getDataDefinitions = do {
 }
 
 getRelValDecl = do {
-    (c, label) <- getLabel;
+    (c, label) <- getLabelOrOp;
     require $ do {
         thisSyntaxElem ":";
         typeexpr <- getTyScheme;
@@ -457,7 +472,7 @@ getRelDef = do {
 getInstValDefinition = do {
     thisSyntaxElem "def";
     require $ do {
-        (c, label) <- getLabel;
+        (c, label) <- getLabelOrOp;
         thisSyntaxElem "=";
         meta <- getMeta;
         return (c, label, meta)

@@ -100,6 +100,12 @@ demodExpr env (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
     expr' <- demodExpr env' expr
     return (c, DataNOTHING, ExprLambda pat' expr')
+demodExpr env (c, SynExprSndSection op expr) = do
+    op' <- demodExpr env (c, SynExprLabel op)
+    expr' <- demodExpr env expr
+    suffix <- newUniqueSuffix
+    let label = "_v" ++ suffix
+    return (c, DataNOTHING, ExprLambda (c, Just label, PatWildcard) (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp op' (c, DataNOTHING, ExprLabel label)) expr'))
 demodExpr env (c, SynExprPut val pses) = do
     val' <- demodExpr env val
     pses' <- mapM (\(pat, e)->do

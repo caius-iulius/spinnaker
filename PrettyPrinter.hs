@@ -43,6 +43,7 @@ toTreeSynExpr (c, SynExprLabel l) = Node (show c ++ " Label: " ++ show l) []
 toTreeSynExpr (c, SynExprConstructor l) = Node (show c ++ " Constructor: " ++ show l) []
 toTreeSynExpr (c, SynExprTuple es) = Node (show c ++ " Tuple") (map toTreeSynExpr es)
 toTreeSynExpr (c, SynExprLambda p expr) = Node (show c ++ " Lambda") [Node "arg" [toTreeSynPattern p], Node "expr" [toTreeSynExpr expr]]
+toTreeSynExpr (c, SynExprSndSection op expr) = Node (show c ++ " Second section of operator: " ++ show op) [toTreeSynExpr expr]
 toTreeSynExpr (c, SynExprPut val branches) = Node (show c ++ " Put") [Node "val" [toTreeSynExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeSynPattern p], Node "expr" [toTreeSynExpr e]]) branches)]
 toTreeSynExpr (c, SynExprString s) = Node (show c ++ "String literal: " ++ show s) []
 toTreeSynExpr (c, SynExprListNil) = Node (show c ++ " Empty List") []

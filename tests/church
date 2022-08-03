@@ -18,7 +18,7 @@ mod Church {
 
     def pub iszero = \n -> n (\x -> false) true
 
-    def pub ctoi = \a -> a ((+) 1) 0
+    def pub ctoi = \a -> a (1+) 0
     def pub ctob = \a -> a True False
 } use Church
 

@@ -410,7 +410,7 @@ def pub any : forall a. (a -> Bool) -> List a -> Bool
         | True -> True
         | _ -> any bf xs
 def pub elem : forall a. {Eq a} => a -> List a -> Bool
-    = \x -> any ((==) x)
+    = \x -> any (x ==)
 def pub nth : forall a. Int -> List a -> a
     = \n, l -> put n
     | 0 -> head l
