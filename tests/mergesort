@@ -39,9 +39,9 @@ mod pub Sort {
 def ordleft = \(a,_),(b,_)->a <= b
 def ordright = \(_,a),(_,b)->a <= b
 
-def main = print $
-        Sort.sortBy ordleft $
-        Sort.sortBy ordright $
-            x <- -5..0;
-            y <- reverse $ 0..10;
-            return (x, y)
+def main =
+    Sort.sortBy ordleft $
+    Sort.sortBy ordright $
+        x <- -5..0;
+        y <- reverse $ 0..10;
+        return (x, y)

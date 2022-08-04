@@ -7,4 +7,4 @@ def fac = fix $ \f, n ->
     if n == 0 then 1
     else n * f (n - 1)
 
-def main = print $ fac 5
+def main = fac 5

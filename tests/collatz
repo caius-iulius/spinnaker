@@ -7,6 +7,5 @@ def collatz = \l, n ->
         | True -> (n / 2)
         | False -> (1 + 3*n))
 
-def main = print
-         $ reverse
+def main = reverse
          $ collatz [] 42

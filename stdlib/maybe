@@ -1,5 +1,7 @@
 use Core
 
+mod Monad "stdlib/monad"
+
 data pub Maybe a = None | Some a
 
 def pub isSome : forall a. Maybe a -> Bool
@@ -11,6 +13,13 @@ def pub isNone : forall a. Maybe a -> Bool
     = \m -> put m
     | None -> True
     | Some _ -> False
+
+# TODO: Da inserire quando si riscrive la libreria da zero
+
+# def pub maybe : forall a b. b -> (a -> b) -> Maybe a -> b
+#     = \b, f, m -> put m
+#     | None -> b
+#     | Some a -> f a
 
 inst forall a. {Show a} => Show (Maybe a) { #NOTE: temporaneo, aggiunge parentesi di troppo
     def show = \m -> put m
@@ -30,20 +39,11 @@ inst Monad Maybe {
         | Some a -> f a
 }
 
-# TODO: Da inserire quando si riscrive la libreria da zero
+inst Monad.MonadPlus Maybe {
+    def mzero = None
+    def mplus = \a, b -> put a
+        | None -> b
+        | Some _ -> a
+}
 
-# TODO: Da inserire quando si riscrive la libreria da zero
-
-# def pub maybe : forall a b. b -> (a -> b) -> Maybe a -> b
-#     = \b, f, m -> put m
-#     | None -> b
-#     | Some a -> f a
-
-# inst Monad.MonadPlus Maybe {
-#     def mzero = None
-#     def mplus = \a, b -> put a
-#         | None -> b
-#         | Some _ -> a
-# }
-# 
-# inst Monad.MonadFail Maybe { def fail = \_ -> None }
+inst Monad.MonadFail Maybe { def fail = \_ -> None }

@@ -1,6 +1,6 @@
 use Std
 
-def main = print $
+def main =
     x <- 0..=5;
     y <- 0..=4;
     _ <- Monad.guard (5 >= x+y);

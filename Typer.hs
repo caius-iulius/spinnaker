@@ -64,7 +64,8 @@ entryPointBlock env = do
     let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] realworldT)) [] hle
     return $ BlockProgram [] [] [] [[entryPointVDef]] []
     where c = Coord "entryPoint" 0 0
-          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runIO")) (c, SynExprLabel (Path [] "main")))
+          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runTopIO"))
+                    (c, SynExprApp (c, SynExprLabel (Path ["Core"] "runProgramTop")) (c, SynExprLabel (Path [] "main"))))
 
 typeProgram :: String -> TyperState (TypingEnv, HLExpr, BlockProgram)
 typeProgram fname = do
@@ -74,4 +75,5 @@ typeProgram fname = do
     let block' = concatBlockPrograms block entry
     lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block')
     (env, tyblock) <- typeBlockProgram block'
+    lift $ lift $ putStrLn $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
     return (env, (Coord "entryPoint" 0 0, realworldT, ExprLabel "entryPoint#BI"), tyblock)

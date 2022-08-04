@@ -92,6 +92,16 @@ mod NumCore {
 
     use Builtins
 
+    inst Enum Int {
+        def toEnum = id
+        def fromEnum = id
+    }
+
+    inst Enum Chr {
+        def toEnum = _convItoC
+        def fromEnum = _convCtoI
+    }
+
     inst Num Int {
         def (+) = _addInt
         def (-) = _subInt
@@ -105,21 +115,16 @@ mod NumCore {
         def (!=) = _neqInt
     }
 
+    inst Eq Chr {
+        def (==) = \a, b -> fromEnum a == fromEnum b
+        def (!=) = \a, b -> fromEnum a != fromEnum b
+    }
+
     inst Ord Int {
         def (<) = \a,b->_greInt b a
         def (>) = _greInt
         def (<=)= _leqInt
         def (>=)= \a,b->_leqInt b a
-    }
-
-    inst Enum Int {
-        def toEnum = id
-        def fromEnum = id
-    }
-
-    inst Enum Chr {
-        def toEnum = _convItoC
-        def fromEnum = _convCtoI
     }
 } use pub NumCore
 
@@ -339,7 +344,7 @@ mod IOCore {
                 let (s, rw'') = getLn rw' ->
                 (c :: s, rw'')
 
-        def pub runIO = \IO tf -> let (a, rw) = tf RealWorld_ -> rw
+        def pub runTopIO = \IO tf -> let ((), rw) = tf RealWorld_ -> rw
     }
 
     def pub putChr : Chr -> IO ()
@@ -361,3 +366,16 @@ mod IOCore {
     def pub error : forall a. List Chr -> a
         = \s -> errorAux ('e'::'r'::'r'::'o'::'r'::':'::' '::s) RealWorld_
 } use pub IOCore
+
+
+# TODO: inserisci in un modulo a sé
+
+rel pub ProgramTop a = runProgramTop : a -> IO ()
+
+inst ProgramTop (IO ()) { def runProgramTop = id }
+
+inst forall a. {Show a} => ProgramTop a { def runProgramTop = print }
+
+inst forall a. {ProgramTop a} => ProgramTop (IO a) {
+    def runProgramTop = (>>= runProgramTop)
+}

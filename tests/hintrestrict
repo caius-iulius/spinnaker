@@ -1,4 +1,4 @@
 use Core
 
 def hinted : Int -> Int = \x->x
-def main = print $ hinted 5
+def main = hinted (fromInt 5)

@@ -7,4 +7,4 @@ def fibInternal = \(seed0, seed1), n ->
 
 def fib = fibInternal (0, 1)
 
-def main = print $ fib 10
+def main = fib 10
