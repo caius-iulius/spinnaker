@@ -14,7 +14,7 @@ tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":;!$%&*+/-<=>?@\\^|~."
 
-validSymbols = ["->", "|", "\\", ".", "=>", ";", "<-"]
+validSymbols = ["=", "->", "|", "\\", ".", "=>", ";", "<-"]
 
 keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "ext", "typesyn", "rel", "inst", "use", "mod"]
 
