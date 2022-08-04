@@ -5,11 +5,10 @@ import System.IO
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import MPCL(parse, ParseResult(..), StdCoord(Coord))
+import Parser
 import TypingDefs
--- (KindQuant, Kind(..), TyQuantId, TyQuant(..), Kind, DataType(DataNOTHING))
 import HLDefs
 import SyntaxDefs
-import Parser
 
 data DemodEnv = DemodEnv 
     (Map.Map String (Visibility, DemodEnv)) -- Mods
@@ -18,6 +17,25 @@ data DemodEnv = DemodEnv
     (Map.Map String (Visibility, String)) -- Constructors
     (Map.Map String (Visibility, (String, Map.Map String String))) -- Rels
     deriving Show
+
+--Definizioni builtin per Demod
+builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr", "RealWorld_"]
+builtinDemodVars = ["True", "False", "RealWorld_"]
+
+buildBIDemod l = (l, (Public, l++"#BI"))
+buildBIDemodMap = Map.fromList . map buildBIDemod
+
+initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars) Map.empty
+
+entryPointBlock env = do
+    hle <- demodExpr env syne
+    let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] realworldT)) [] hle
+    return $ BlockProgram [] [] [] [[entryPointVDef]] []
+    where c = Coord "entryPoint" 0 0
+          syne = (c, SynExprApp (c, SynExprLabel (Path ["Core", "UnsafeIO"] "runTopIO"))
+                    (c, SynExprApp (c, SynExprLabel (Path ["Core"] "runProgramTop")) (c, SynExprLabel (Path [] "main"))))
+
+-- Demod vero e proprio
 
 envGetPubs (DemodEnv m v t c r) = (DemodEnv (filterpub m) (filterpub v) (filterpub t) (filterpub c) (filterpub r))
     where filterpub = Map.filter (\(v, _)->
@@ -366,15 +384,21 @@ demodFile fname core files = do
 
 emptyEnv = DemodEnv Map.empty Map.empty Map.empty Map.empty Map.empty
 
-demodProgram :: DemodEnv -> String -> String -> String -> TyperState (DemodEnv, BlockProgram)
-demodProgram initCoreDemodEnv corefname stdfname progfname = do
+demodStdlib :: String -> String -> TyperState (DemodEnv, FilesEnv, BlockProgram)
+demodStdlib corefname stdfname = do
     (coreEnv, _, coreBlock) <- demodFile corefname initCoreDemodEnv Map.empty
     let coreEnvExport = DemodEnv (Map.singleton "Core" (Private, envGetPubs coreEnv)) Map.empty Map.empty Map.empty Map.empty
     (stdEnv, stdfiles, stdBlock) <- demodFile stdfname coreEnvExport Map.empty
     let stdEnvExport = envsUnionLeft (DemodEnv (Map.singleton "Std" (Private, envGetPubs stdEnv)) Map.empty Map.empty Map.empty Map.empty) coreEnvExport
-    (progEnv, progfiles, progBlock) <- demodFile progfname stdEnvExport stdfiles
+    return (stdEnvExport, stdfiles, concatBlockPrograms coreBlock stdBlock)
+
+demodProgram :: String -> String -> String -> TyperState (DemodEnv, HLExpr, BlockProgram)
+demodProgram corefname stdfname progfname = do
+    (stdEnv, stdfiles, stdBlock) <- demodStdlib corefname stdfname
+    (progEnv, progfiles, progBlock) <- demodFile progfname stdEnv stdfiles
     --lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
     --lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
     --lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
     --lift $ lift $ putStrLn $ "progEnv: " ++ show progEnv
-    return (envsUnionLeft stdEnvExport progEnv, concatBlockPrograms coreBlock (concatBlockPrograms stdBlock progBlock))
+    entryBlock <- entryPointBlock progEnv
+    return (envsUnionLeft stdEnv progEnv, (Coord "entryPoint" 0 0, realworldT, ExprLabel "entryPoint#BI"), concatBlockPrograms stdBlock (concatBlockPrograms progBlock entryBlock))

@@ -1,20 +1,26 @@
 import System.IO
 import System.Environment
+import Data.Tree
+import Control.Monad.State
 
 import MPCL
 import Parser
 import PrettyPrinter
-import Data.Tree
+import Demod
 import Typer
 import Interpreter
 import HLDefs
 import TypingDefs
-import SyntaxDefs
 import OptimizeHL
 import Monomorphizer
 
 frontendCompile :: String -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
-frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ typeProgram fname
+frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
+    (denv, entry, block) <- demodProgram "stdlib/core" "stdlib/std" fname
+    lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
+    (env, tyblock) <- typeBlockProgram block
+    lift $ lift $ putStrLn $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
+    return (env, entry, tyblock)
 
 main = do {
     args <- getArgs;
