@@ -185,54 +185,6 @@ mod ListCore {
             | Nil -> Nil
             | Cons x xs -> f x ++ bind xs f
     }
-
-    def pub head : forall a. List a -> a
-        = \Cons x xs -> x
-    def pub tail : forall a. List a -> List a
-        = \Cons x xs -> xs
-    def pub last : forall a. List a -> a
-        = \l -> put l
-        | Cons x Nil -> x
-        | Cons x xs -> last xs
-    def pub init : forall a. List a -> List a
-        = \l -> put l
-        | Cons x Nil -> Nil
-        | Cons x xs -> x :: (init xs)
-
-    def reverseAux = \acc, l ->
-        put l
-        | Nil -> acc
-        | Cons x xs -> reverseAux (x :: acc) xs
-    def pub reverse : forall a. List a -> List a
-        = reverseAux Nil
-
-    def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
-        = \f, s, l -> put l
-        | Nil -> s
-        | Cons x xs -> foldl f (f s x) xs
-
-    def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
-        = \f, s, l -> put l
-        | Nil -> s
-        | Cons x xs -> f x (foldr f s xs)
-
-    def lengthAux = \n, l -> put l
-        | Nil -> n
-        | Cons _ xs -> lengthAux (n + 1) xs
-    def pub length : forall a. List a -> Int
-        = lengthAux 0
-
-    def pub zip : forall a b. List a -> List b -> List (a, b)
-        = \l, l' -> put (l, l')
-        | (Nil, _) -> Nil
-        | (_, Nil) -> Nil
-        | (Cons x xs, Cons x' xs') -> (x, x') :: zip xs xs'
-
-    def pub zipWith : forall a b c. (a -> b -> c) -> List a -> List b -> List c
-        = \f, l, l' -> put (l, l')
-        | (Nil, _) -> Nil
-        | (_, Nil) -> Nil
-        | (Cons x xs, Cons x' xs') -> f x x' :: zipWith f xs xs'
 } use pub ListCore
 
 mod ShowCore {
@@ -280,7 +232,7 @@ mod ShowCore {
     }
 
     inst Show (List Chr) {
-        def show = \l -> Cons '"' (foldl (\s, c -> s ++ escapeChr c) Nil l) ++ ('"'::Nil)
+        def show = \l -> Cons '"' (l >>= escapeChr) ++ ('"'::Nil)
     }
 
     def showListAux = \l ->

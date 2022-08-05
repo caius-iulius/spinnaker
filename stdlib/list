@@ -1,0 +1,71 @@
+use Core
+
+def pub head : forall a. List a -> a
+    = \Cons x xs -> x
+def pub tail : forall a. List a -> List a
+    = \Cons x xs -> xs
+def pub last : forall a. List a -> a
+    = \l -> put l
+    | [x] -> x
+    | [x | xs] -> last xs
+def pub init : forall a. List a -> List a
+    = \l -> put l
+    | [x] -> []
+    | [x | xs] -> x :: (init xs)
+
+def reverseAux = \acc, l ->
+    put l
+    | [] -> acc
+    | [x | xs] -> reverseAux (x :: acc) xs
+def pub reverse : forall a. List a -> List a
+    = reverseAux []
+
+def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
+    = \f, s, l -> put l
+    | [] -> s
+    | [x | xs] -> foldl f (f s x) xs
+
+def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
+    = \f, s, l -> put l
+    | [] -> s
+    | [x | xs] -> f x (foldr f s xs)
+
+def lengthAux = \n, l -> put l
+    | [] -> n
+    | [_ | xs] -> lengthAux (n + 1) xs
+def pub length : forall a. List a -> Int
+    = lengthAux 0
+
+def pub zip : forall a b. List a -> List b -> List (a, b)
+    = \l, l' -> put (l, l')
+    | ([], _) -> []
+    | (_, []) -> []
+    | (Cons x xs, Cons x' xs') -> (x, x') :: zip xs xs'
+
+def pub zipWith : forall a b c. (a -> b -> c) -> List a -> List b -> List c
+    = \f, l, l' -> put (l, l')
+    | ([], _) -> []
+    | (_, []) -> []
+    | ([x | xs], [x' | xs']) -> f x x' :: zipWith f xs xs'
+
+def pub any : forall a. (a -> Bool) -> List a -> Bool
+    = \bf, l -> put l
+    | [] -> False
+    | [x | xs] -> put bf x
+        | True -> True
+        | _ -> any bf xs
+
+def pub all : forall a. (a -> Bool) -> List a -> Bool
+    = \bf, l -> put l
+    | [] -> True
+    | [x | xs] -> put bf x
+        | False -> False
+        | _ -> all bf xs
+
+def pub elem : forall a. {Eq a} => a -> List a -> Bool
+    = \x -> any (x ==)
+
+def pub nth : forall a. Int -> List a -> a
+    = \n, l -> put n
+    | 0 -> head l
+    | _ -> nth (n - 1) (tail l)

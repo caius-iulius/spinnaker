@@ -1,4 +1,5 @@
 use Std
+use List
 
 def main = let list = [0, 123, 13, 5, 523] ->
     zipWith (+) (0..length list) list

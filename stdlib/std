@@ -2,24 +2,15 @@ use pub Core
 
 mod pub Monad "stdlib/monad"
 
+mod pub List "stdlib/list"
+
 mod pub Maybe "stdlib/maybe"
 
 def pub max : forall a. {Ord a} => a -> a -> a
     = \a, b -> put a > b
     | True -> a
     | False -> b
-def pub any : forall a. (a -> Bool) -> List a -> Bool
-    = \bf, l -> put l
-    | Nil -> False
-    | Cons x xs -> put bf x
-        | True -> True
-        | _ -> any bf xs
-def pub elem : forall a. {Eq a} => a -> List a -> Bool
-    = \x -> any (x ==)
-def pub nth : forall a. Int -> List a -> a
-    = \n, l -> put n
-    | 0 -> head l
-    | _ -> nth (n - 1) (tail l)
+
 def innerdotdot = \from, to ->
     put from >= to
     | True -> Nil

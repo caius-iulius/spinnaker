@@ -1,4 +1,4 @@
-use Core
+use Std
 
 def collatz = \l, n ->
     if n == 1 then Cons 1 l else
@@ -7,5 +7,5 @@ def collatz = \l, n ->
         | True -> (n / 2)
         | False -> (1 + 3*n))
 
-def main = reverse
+def main = List.reverse
          $ collatz [] 42

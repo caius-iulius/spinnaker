@@ -1,4 +1,5 @@
 use Std
+use List
 
 mod pub Sort {
     # def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
@@ -12,15 +13,15 @@ mod pub Sort {
     # = \lst -> split_internal ([], []) (reverse lst)
     def splitAt = \n, lst -> put (n, lst)
         | (0, _) -> ([], lst)
-        | (_, Cons x xs) ->
+        | (_, [x | xs]) ->
             let (f, s) = splitAt (n - 1) xs ->  (x::f, s)
     def split = \l -> splitAt (length l / 2) l
 
     def merge = \cmp, lists ->
         put lists
-        | (l, Nil) -> l
-        | (Nil, l) -> l
-        | (Cons xa xsa, Cons xb xsb) -> (
+        | (l, []) -> l
+        | ([], l) -> l
+        | ([xa | xsa], [xb | xsb]) -> (
             put cmp xa xb
             | True -> xa :: merge cmp (xsa, (xb::xsb))
             | False -> xb :: merge cmp ((xa::xsa), xsb)
@@ -28,8 +29,8 @@ mod pub Sort {
 
     def pub sortBy = \cmp, list ->
         put list
-        | Nil -> Nil
-        | Cons x Nil -> list
+        | [] -> []
+        | [x] -> list
         | _ -> let (left, right) = split list ->
             merge cmp (sortBy cmp left, sortBy cmp right)
 
