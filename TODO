@@ -30,7 +30,7 @@ i file sono implementati in modo inefficiente e fragile
     - [OK] tipizzazione istanze
     - [OK] riscrivi l'interprete per propagare i tipi e scegliere da vtable
     - [TEST] implementa un sistema di superrel (come le superclass di Haskell)
-        - il controllo forse è effettuato troppo tardi, viene usato entailInsts che non è detto che sia corretto
+        - il controllo forse è effettuato troppo tardi
     - aggiungi feedback e test migliori per quando
         - due istanze hanno gli head identici
         - un predicato non ha un'istanza più specifica

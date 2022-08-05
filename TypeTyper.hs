@@ -3,6 +3,7 @@ import System.IO
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Maybe(isJust)
 import MPCL (StdCoord)
 import TypingDefs
 import MGUs
@@ -172,10 +173,15 @@ typeValDef env (ValDef c l t _ e) = do --TODO: Qui dimentico i predicati già pr
     return (s, ValDef c l t ps e')
 
 quantifiedValDefEnv init_env [] = return init_env
-quantifiedValDefEnv env (ValDef c l _ _ _:vdefs) = do
-    t <- freshType KType
+quantifiedValDefEnv env (ValDef c l mhint _ _:vdefs) = do
+    t <- case mhint of
+        Nothing -> fmap (Qual []) (freshType KType)
+        Just hint -> return hint -- do
+            -- let qs = Set.toList $ Set.difference (freetyvars hint) (freetyvars env)
+            -- s <- getInstantiationSubst qs
+            -- return $ substApply s hint
     lift $ lift $ putStrLn $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
-    env' <- return $ tyBindAdd c env l (TyScheme [] (Qual [] t))
+    env' <- return $ tyBindAdd c env l (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
 typeValDefsLoop _ [] = return (nullSubst, [])
@@ -246,6 +252,13 @@ typeValDefGroups env (vdefs:vdefss) = do
 typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
     case Map.lookup l rs of
         Just (RelData qs preds decls _) -> do --TODO: controlla validità dei preds
+            -- TODO: questo controllo va fatto prima di aggiungere l'istanza al contesto
+            -- let currInsts = map (\(Qual _ mp)->mp) $ insts env l
+            -- mapM (\i->
+            --     if isJust (matchPred h i) && isJust (matchPred i h)
+            --         then fail $ show c ++ " L'istanza " ++ show qh ++ " è identica a un'altra già definita: " ++ show i
+            --         else return ()
+            --     ) currInsts
             let instSubst = Map.fromList $ zip qs ts
                 substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
             defs' <- typeInstMembers (Map.fromList substdecls) [] defs
