@@ -342,13 +342,28 @@ getVisibility = option Private (thisSyntaxElem "pub" >> return Public)
 -- Parser per i tipi
 getTypeVar = getLabel
 
+getParenTyName = do {
+    (c, _) <- thisUsefulChar '(';
+    {- do {
+        commas <- munch1 $ thisUsefulChar ',';
+        require $ thisUsefulChar ')';
+        return (c, SynTypeExprName $ Path [] $ '(':map snd commas++")")
+    } <|| -}
+    do {
+        thisSyntaxElem "->";
+        require $ thisUsefulChar ')';
+        return (c, SynTypeExprName $ Path [] "->")
+    }
+}
+
 getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
     return (c, SynTypeExprQuantifier l)
 } <|| do { --Tipo data
     (c, l) <- getPathCapitalLabel;
     return (c, SynTypeExprName l)
-} <|| do {
+} <|| getParenTyName
+  <|| do {
     (c, _) <- thisUsefulChar '(';
     types <- sepBy getTypeMeta (thisUsefulChar ',');
     require $ thisUsefulChar ')';

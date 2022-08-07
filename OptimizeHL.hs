@@ -63,6 +63,8 @@ inlineProgram (ep, defs) = loop ep [] defs
     where
         loop myep procd [] = (myep, procd)
         loop myep procd ((l, e):defs')
+            | (appears l myep + appearsDefs l (procd ++ defs')) == 0
+                = loop myep procd defs'
             | appears l e /= 0 || not (inlineHeuristic e (appears l myep + appearsDefs l procd + appearsDefs l defs'))
                 = loop myep ((l, e):procd) defs'
             | otherwise = loop (inline l e myep) (inlineDefs l e procd) (inlineDefs l e defs')
@@ -147,9 +149,9 @@ optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
 
 optimizeProgram :: Program -> Program
 optimizeProgram p =
-    let p' = optimizeDefExprs $! p
-        p'' = inlineProgram $! p'
-        p''' = optimizeDefExprs $! p''
-    in p'''
+    let p' = optimizeDefExprs p
+        p'' = inlineProgram p'
+        p''' = optimizeDefExprs p''
+    in p''' -- inlineProgram p'''
     where optimizeDefExprs (ep, defs) = (optimizeExpr ep,
             map (\(l,e)->(l,optimizeExpr e)) defs)

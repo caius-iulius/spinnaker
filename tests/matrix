@@ -1,0 +1,28 @@
+use Std
+use List
+
+def transpose = \ls -> put ls
+    | [] -> []
+    | [[] | _] -> []
+    | [l | ls'] -> (head l :: map head ls') :: transpose (tail l :: map tail ls')
+
+def mxmul = \ma, mb -> let tmb = transpose mb ->
+    map (\rowa -> map (foldl (+) (fromInt 0) <| zipWith (*) rowa) tmb) ma
+
+def mxadd = \ma, mb -> zipWith (zipWith (+)) ma mb
+
+
+def derive_mx : List (Int, Int) -> List (List Int)
+    = \edges -> let mxlen = 1+ foldl max 0 $ map (uncurry max) edges ->
+        map (\x -> map (\y -> if elem (x, y) edges then 1 else 0) (0..mxlen)) (0..mxlen)
+
+def reach : Int -> List (List Int) -> List (List Int)
+    = \n, mx -> put n
+    | 1 -> mx
+    | _ -> mxadd mx $ mxmul mx $ reach (n - 1) mx
+
+def cycles : List (List Int) -> List Int = \mx ->
+        let reaches = reach (length mx) mx ->
+        map (\n -> nth n (nth n reaches)) (0..length reaches)
+
+def main = cycles $ derive_mx [(0, 1), (1, 2), (2, 0), (3, 0)]

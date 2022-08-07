@@ -21,3 +21,6 @@ def pub (..) : forall a. {Enum a} => a -> a -> List a
 def pub (..=) : forall a. {Enum a} => a -> a -> List a
     = \from, to ->
         innerdotdot (fromEnum from) (fromEnum to + 1)
+
+def pub todo : forall a. a
+    = error "TODO"
