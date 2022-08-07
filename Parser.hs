@@ -175,7 +175,7 @@ sepByWeak p sep = do {
     return (e:es)
 } <|| return []
 
-getPatternTerm = {-describeError "Expected pattern term" $ -}do {
+getPatternTerm = describeError "Expected pattern term" $ do {
     (c, s) <- getString;
     return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitCharacter char)) s) (c, Nothing, SynPatListNil))
 } <|| do {

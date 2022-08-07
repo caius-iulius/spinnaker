@@ -1,2 +1,0 @@
-def fixl = \f, g, x -> f (fixr f g) x
-and fixr = \f, g, x -> g (fixl f g) x
