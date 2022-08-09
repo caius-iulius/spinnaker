@@ -31,6 +31,7 @@ data SyntaxExprData
     | SynExprIfThenElse SyntaxExpr SyntaxExpr SyntaxExpr -- condizione, branch per true, branch per false
     | SynExprInlineUse Path SyntaxExpr -- modulo da portare nel contesto, espressione
     | SynExprBind SyntaxPattern SyntaxExpr SyntaxExpr --assegnazione, monade, funzione di trasformazione
+    | SynExprHint SyntaxTypeExpr SyntaxExpr --type hint di un'espressione
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
 

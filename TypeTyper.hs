@@ -122,6 +122,11 @@ typeExprInternal env (c, _, ExprPut val pses) = do
         finalps = map (substApply finals) (ps++ps'')
         finalt = substApply finals texpr
         in return (finals, finalps, finalt, (c, finalt, ExprPut val' pses'))
+typeExprInternal env (c, _, ExprHint hint e) = do
+    (s, ps, t, e') <- typeExpr env e
+    s' <- match c t hint
+    let t' = substApply s' t
+    return (composeSubst s' s, map (substApply s') ps, t', (c, t', ExprHint hint e'))
 
 typeExpr :: TypingEnv -> HLExpr -> TyperState (Subst, [Pred], DataType, HLExpr)
 typeExpr env expr@(c, _, _) = do
@@ -163,6 +168,7 @@ substApplyExpr s (c, dt, ExprConstructor l es) = (c, substApply s dt, ExprConstr
 substApplyExpr s (c, dt, ExprCombinator l es) = (c, substApply s dt, ExprCombinator l (map (substApplyExpr s) es))
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
 substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
+substApplyExpr s (c, dt, ExprHint hint e) = (c, substApply s dt, ExprHint hint (substApplyExpr s e))
 
 substApplyValDef s (ValDef c l t ps e) = ValDef c l t (map (substApply s) ps) (substApplyExpr s e)
 
@@ -176,10 +182,7 @@ quantifiedValDefEnv init_env [] = return init_env
 quantifiedValDefEnv env (ValDef c l mhint _ _:vdefs) = do
     t <- case mhint of
         Nothing -> fmap (Qual []) (freshType KType)
-        Just hint -> return hint -- do
-            -- let qs = Set.toList $ Set.difference (freetyvars hint) (freetyvars env)
-            -- s <- getInstantiationSubst qs
-            -- return $ substApply s hint
+        Just hint -> return hint
     lift $ lift $ putStrLn $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
     env' <- return $ tyBindAdd c env l (TyScheme [] t)
     quantifiedValDefEnv env' vdefs

@@ -117,6 +117,9 @@ monomorphizeInner _ (ExprPut v pses) = do
     v' <- monomorphize v
     pses' <- mapM (\(p, e) -> do {p' <- monomorphizePat p; e' <- monomorphize e; return (p', e')}) pses
     return (ExprPut v' pses')
+monomorphizeInner t (ExprHint _ e) = do
+    e' <- monomorphize e
+    return (ExprHint t e')
 
 monomorphize :: HLExpr -> MonoState HLExpr
 monomorphize e@(c, t, _) = do

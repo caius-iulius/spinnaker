@@ -23,6 +23,7 @@ data HLExprData
     | ExprCombinator String [HLExpr] -- Riferimento al combinatore e argomenti
     | ExprLambda HLPattern HLExpr --Argomento(anche "smontato") e valore interno
     | ExprPut HLExpr [(HLPattern, HLExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
+    | ExprHint DataType HLExpr --type hint di un'espressione
     deriving Show
 type HLExpr = (StdCoord, DataType, HLExprData)
 

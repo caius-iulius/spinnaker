@@ -33,6 +33,7 @@ exprSize (_, _, ExprConstructor _ es) = 1 + sum (map exprSize es)
 exprSize (_, _, ExprCombinator _ es) = 1 + sum (map exprSize es)
 exprSize (_, _, ExprLambda p e) = 1 + exprSize e --TODO patSize p?
 exprSize (_, _, ExprPut v pses) = length pses + exprSize v + sum (map (exprSize . snd) pses) --TODO patsize pses?
+exprSize (_, _, ExprHint _ e) = exprSize e
 
 programSize :: Program -> Int
 programSize (ep, defs) = exprSize ep + sum (map (exprSize . snd) defs)
@@ -146,6 +147,7 @@ optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput
         _ -> (c, t, ExprPut val' pses'')
         --error $ "OPTIMIZED val " ++ show val' ++ "\npses " ++ show pses ++ "\npses'" ++ show pses'
 optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
+optimizeExpr (_, _, ExprHint _ e) = optimizeExpr e
 
 optimizeProgram :: Program -> Program
 optimizeProgram p =

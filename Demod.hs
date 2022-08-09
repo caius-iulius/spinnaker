@@ -37,7 +37,7 @@ buildBIDemodMap = Map.fromList . map buildBIDemod
 initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars) Map.empty
 
 entryPointBlock env = do
-    hle <- demodExpr env syne
+    hle <- demodExpr env Map.empty syne
     let entryPointVDef = ValDef c "entryPoint#BI" (Just (Qual [] realworldT)) [] hle
     return $ BlockProgram [] [] [] [[entryPointVDef]] []
     where c = Coord "entryPoint" 0 0
@@ -122,43 +122,43 @@ patValsInEnv (DemodEnv ms vs ts cs rs) (c, Just l, inner)
         return (env', (c, Just $ l++suffix, inner'))
 
 --espressioni
-demodExpr _ (c, SynExprLiteral l) = return (c, DataNOTHING, ExprLiteral l)
-demodExpr env (c, SynExprApp f a) = do
-    f' <- demodExpr env f
-    a' <- demodExpr env a
+demodExpr _ _ (c, SynExprLiteral l) = return (c, DataNOTHING, ExprLiteral l)
+demodExpr env qmap (c, SynExprApp f a) = do
+    f' <- demodExpr env qmap f
+    a' <- demodExpr env qmap a
     return (c, DataNOTHING, ExprApp f' a')
-demodExpr env (c, SynExprLabel pathlabl@(Path path labl)) = do
+demodExpr env _ (c, SynExprLabel pathlabl@(Path path labl)) = do
     (DemodEnv _ vs _ _ _) <- getPathEnv c env path
     case Map.lookup labl vs of
         Nothing -> fail $ show c ++ " Unbound value: " ++ show pathlabl
         Just (_, nlabl) -> return (c, DataNOTHING, ExprLabel nlabl)
-demodExpr env (c, SynExprConstructor pathlabl@(Path path labl)) = do
+demodExpr env _ (c, SynExprConstructor pathlabl@(Path path labl)) = do
     (DemodEnv _ _ _ cs _) <- getPathEnv c env path
     case Map.lookup labl cs of
         Nothing -> fail $ show c ++ " Unbound constructor: " ++ show pathlabl
         Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
-demodExpr env (c, SynExprTuple es) = do
-        es' <- mapM (demodExpr env) es
+demodExpr env qmap (c, SynExprTuple es) = do
+        es' <- mapM (demodExpr env qmap) es
         return (c, DataNOTHING, ExprConstructor (makeTupLabl $ length es') es')
-demodExpr env (c, SynExprLambda pat expr) = do
+demodExpr env qmap (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
-    expr' <- demodExpr env' expr
+    expr' <- demodExpr env' qmap expr
     return (c, DataNOTHING, ExprLambda pat' expr')
-demodExpr env (c, SynExprSndSection op expr) = do
-    op' <- demodExpr env (c, SynExprLabel op)
-    expr' <- demodExpr env expr
+demodExpr env qmap (c, SynExprSndSection op expr) = do
+    op' <- demodExpr env qmap (c, SynExprLabel op)
+    expr' <- demodExpr env qmap expr
     suffix <- newUniqueSuffix
     let label = "_v" ++ suffix
     return (c, DataNOTHING, ExprLambda (c, Just label, PatWildcard) (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp op' (c, DataNOTHING, ExprLabel label)) expr'))
-demodExpr env (c, SynExprPut val pses) = do
-    val' <- demodExpr env val
+demodExpr env qmap (c, SynExprPut val pses) = do
+    val' <- demodExpr env qmap val
     pses' <- mapM (\(pat, e)->do
         (env', pat') <- patValsInEnv env pat
-        e' <- demodExpr env' e
+        e' <- demodExpr env' qmap e
         return (pat', e')
         ) pses
     return (c, DataNOTHING, ExprPut val' pses')
-demodExpr env (c, SynExprString s) = do
+demodExpr env _ (c, SynExprString s) = do
     (DemodEnv _ vs _ cs _) <- getPathEnv c env ["Core"]
     case Map.lookup "Cons" cs of
         Nothing -> fail $ show c ++ " The Core module does not provide a definition for Cons"
@@ -166,38 +166,42 @@ demodExpr env (c, SynExprString s) = do
             Nothing -> fail $ show c ++ " The Core module does not provide a definition for strNil"
             Just (_, nillabl) -> return $
                 foldr (\chr rest -> (c, DataNOTHING, ExprConstructor conslabl [(c, DataNOTHING, ExprLiteral (LitCharacter chr)), rest])) (c, DataNOTHING, ExprLabel nillabl) s
-demodExpr env (c, SynExprListNil) = do --TODO: Forse questo si può ridurre a un demodExpr di un SynExprConstructor
+demodExpr env _ (c, SynExprListNil) = do --TODO: Forse questo si può ridurre a un demodExpr di un SynExprConstructor
     (DemodEnv _ _ _ cs _) <- getPathEnv c env ["Core"]
     case Map.lookup "Nil" cs of
         Nothing -> fail $ show c ++ " The Core module does not provide a definition for Nil"
         Just (_, nlabl) -> return (c, DataNOTHING, ExprConstructor nlabl [])
-demodExpr env (c, SynExprListConss es final) = do
+demodExpr env qmap (c, SynExprListConss es final) = do
     (DemodEnv _ _ _ cs _) <- getPathEnv c env ["Core"]
     case Map.lookup "Cons" cs of
         Nothing -> fail $ show c ++ " The Core module does not provide a definition for Cons"
         Just (_, nlabl) -> do
-            demodes <- mapM (demodExpr env) es
-            demodfinal <- demodExpr env final
+            demodes <- mapM (demodExpr env qmap) es
+            demodfinal <- demodExpr env qmap final
             return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [head, tail])) demodfinal demodes
-demodExpr env (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env (c, --TODO: Forse questo va "specializzato" come le implementazioni di synexprlistnil etc...
+demodExpr env qmap (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env qmap (c, --TODO: Forse questo va "specializzato" come le implementazioni di synexprlistnil etc...
     SynExprPut cond [
         ((c, Nothing, SynPatVariant (Path ["Core"] "True") []), iftrue),
         ((c, Nothing, SynPatVariant (Path ["Core"] "False") []), iffalse)
     ])
-demodExpr env (c, SynExprInlineUse (Path path labl) e) = do
+demodExpr env qmap (c, SynExprInlineUse (Path path labl) e) = do
     env' <- getPathEnv c env (path ++ [labl])
-    demodExpr (envsUnionLeft env' env) e
-demodExpr env (c, SynExprBind pat me fe) = do
+    demodExpr (envsUnionLeft env' env) qmap e
+demodExpr env qmap (c, SynExprBind pat me fe) = do
     (DemodEnv _ vs _ _ _) <- getPathEnv c env ["Core"]
     case Map.lookup "bind" vs of
         Nothing -> fail $ show c ++ " The Core module does not provide a definition for bind"
         Just (_, nlabl) -> do
-            me' <- demodExpr env me
-            lam <- demodExpr env (c, SynExprLambda pat fe)
+            me' <- demodExpr env qmap me
+            lam <- demodExpr env qmap (c, SynExprLambda pat fe)
             return (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprLabel nlabl) me') lam)
+demodExpr env qmap (c, SynExprHint hint e) = do
+    demodhint <- demodTypeExpr env qmap hint
+    demode <- demodExpr env qmap e
+    return (c, DataNOTHING, ExprHint demodhint demode)
 
 -- definizioni dei valori globali
-demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState (Qual DataType)
+demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState (Map.Map String TyQuant, Qual DataType)
 demodTySchemeExpr env qmap (c, qls, ps, te) = do
     (qmap', _) <- buildQmapQlist c qls
     if (length $ Map.intersection qmap qmap') /= 0
@@ -205,15 +209,15 @@ demodTySchemeExpr env qmap (c, qls, ps, te) = do
         else do
             ps' <- mapM (demodPred env (Map.union qmap' qmap)) ps
             te' <- demodTypeExpr env (Map.union qmap' qmap) te
-            return $ Qual ps' te'
+            return (qmap', Qual ps' te')
 
 demodValDef env (SynValDef c _ l t e) = do
-    t' <- case t of
-        Nothing -> return $ Nothing
+    (qmap, t') <- case t of
+        Nothing -> return (Map.empty, Nothing)
         Just te -> do
-            te' <- demodTySchemeExpr env Map.empty te
-            return $ Just te'
-    e' <- demodExpr env e
+            (qmap, te') <- demodTySchemeExpr env Map.empty te
+            return (qmap, Just te')
+    e' <- demodExpr env qmap e
     return (ValDef c l t' [] e')
 
 valDefGroupEnv :: DemodEnv -> [SyntaxValDef] -> TyperState (DemodEnv, [SyntaxValDef])
@@ -291,7 +295,7 @@ demodRelDecl env@(DemodEnv ms vs ts cs rs) qmap visib (c, l, tyscheme)
     | Map.member l vs = fail $ show c ++ " Value: " ++ show l ++ " already declared"
     | otherwise = do
         suffix <- newUniqueSuffix
-        dt <- demodTySchemeExpr env qmap tyscheme
+        (_, dt) <- demodTySchemeExpr env qmap tyscheme
         return (DemodEnv ms (Map.insert l (visib, l++suffix) vs) ts cs rs, Map.singleton l (l++suffix), (c, l++suffix, dt))
 demodRelDecls env qmap visib [] = return (env, Map.empty, [])
 demodRelDecls env qmap visib (decl:decls) = do
@@ -308,7 +312,7 @@ demodPredLoc env qmap (c, pathlabl@(Path path labl), steas) = do
             return $ (any id (isLocal v : islocs), Pred nlabl teas)
 demodPred env qmap p = fmap snd $ demodPredLoc env qmap p
 
-demodInstDefs rc rpath env relenv defs = loop [] relenv defs
+demodInstDefs rc env qmap relenv rpath defs = loop [] relenv defs
     where loop final mrelenv []
             | length mrelenv == 0 = return $ reverse final
             | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ (show $ map fst $ Map.toList mrelenv)
@@ -319,7 +323,7 @@ demodInstDefs rc rpath env relenv defs = loop [] relenv defs
                     then " has already been defined"
                     else " isn't declared and shouldn't be defined"
                 Just newlabl -> do
-                    e' <- demodExpr env e
+                    e' <- demodExpr env qmap e
                     loop ((c, newlabl, e'):final) (Map.delete l mrelenv) mdefs
 -- moduli
 type FilesEnv = Map.Map String DemodEnv
@@ -367,7 +371,7 @@ demodModDef core env fs (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _)
     (DemodEnv _ _ _ _ rs) <- getPathEnv c env rpath
     let relenv = case Map.lookup rlabl rs of
             Just (_, (_, relenv)) -> relenv
-    defs' <- demodInstDefs c rpl env relenv defs
+    defs' <- demodInstDefs c env qmap relenv rpl defs
     return (env, fs, BlockProgram [] [] [] [] [InstDef c (Qual preds' pred') defs'])
 demodModDef core env _ (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
 demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)

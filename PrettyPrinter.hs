@@ -13,6 +13,7 @@ toTreeHLExpr (c, dt, ExprConstructor l es) = Node (show c ++ " DT:" ++ show dt +
 toTreeHLExpr (c, dt, ExprCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeHLExpr es)
 toTreeHLExpr (c, dt, ExprLambda p expr) = Node (show c ++ " DT:" ++ show dt ++ " Lambda") [Node "arg" [toTreeHLPattern p], Node "expr" [toTreeHLExpr expr]]
 toTreeHLExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "val" [toTreeHLExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHLPattern p], Node "expr" [toTreeHLExpr e]]) branches)]
+toTreeHLExpr (c, dt, ExprHint hint e) = Node (show c ++ " DT:" ++ show dt ++ " Hinting with type: " ++ show hint) [toTreeHLExpr e]
 
 toTreeHLValDef (ValDef c s t ps e) = Node (show c ++ " Defining val: " ++ show s ++ " typehint: " ++ show t ++ " qualifiers: " ++ show ps) [toTreeHLExpr e]
 
@@ -51,6 +52,7 @@ toTreeSynExpr (c, SynExprListConss es final) = Node (show c ++ " List") (map toT
 toTreeSynExpr (c, SynExprIfThenElse cond iftrue iffalse) = Node (show c ++ " IfThenElse") [Node "Condition" [toTreeSynExpr cond], Node "If True" [toTreeSynExpr iftrue], Node "If False" [toTreeSynExpr iffalse]]
 toTreeSynExpr (c, SynExprInlineUse path e) = Node (show c ++ "Inline use: " ++ show path) [toTreeSynExpr e]
 toTreeSynExpr (c, SynExprBind pat me fe) = Node (show c ++ "Monadic bind to pattern: " ++ show pat) [toTreeSynExpr me, toTreeSynExpr fe]
+toTreeSynExpr (c, SynExprHint hint e) = Node (show c ++ "Hinting with type") [toTreeSynTypeExpr hint, toTreeSynExpr e]
 
 toTreeSynValDef (SynValDef c v s te e) = Node (show c ++ " Defining " ++ show v ++ " val: " ++ show s ++ " typehint: " ++ show te) [toTreeSynExpr e]
 

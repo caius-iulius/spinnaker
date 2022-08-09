@@ -198,10 +198,45 @@ addRelDecls env@(TypingEnv ts ks vs cs rs) =
         general_decls_map = Map.fromList general_decl_pairs
         in TypingEnv (Map.union ts general_decls_map) ks vs cs rs
 
+typeExprHints :: KindSubst -> TypingEnv -> HLExpr -> TyperState HLExpr
+typeExprHints s _ (c, t, ExprLiteral l) = return (c, t, ExprLiteral l)
+typeExprHints s env (c, t, ExprApp f a) = do
+    f' <- typeExprHints s env f
+    a' <- typeExprHints s env a
+    return (c, t, ExprApp f' a')
+typeExprHints s _ (c, t, ExprLabel l) = return (c, t, ExprLabel l)
+typeExprHints s env (c, t, ExprConstructor l es) = do
+    es' <- mapM (typeExprHints s env) es
+    return (c, t, ExprConstructor l es')
+typeExprHints s env (c, t, ExprCombinator l es) = do
+    es' <- mapM (typeExprHints s env) es
+    return (c, t, ExprCombinator l es')
+typeExprHints s env (c, t, ExprLambda p e) = do
+    e' <- typeExprHints s env e
+    return (c, t, ExprLambda p e')
+typeExprHints s env (c, t, ExprPut v pses) = do
+    v' <- typeExprHints s env v
+    pses' <- mapM (\(p, e) -> do {e' <- typeExprHints s env e; return (p, e')}) pses
+    return (c, t, ExprPut v' pses')
+typeExprHints s env (c, t, ExprHint hint e) = do
+    (ks, k, hint') <- typeTyExpr c env (kSubstApply s hint)
+    if length (freeKindQuants hint') == 0 then return ()
+    else error "KWHAT"
+    case k of
+        KType -> return ()
+        _ -> fail $ show c ++ " Kind of type hint should be T, instead found: " ++ show k
+    e' <- typeExprHints s env e
+    return (c, t, ExprHint hint' e')
+
 typeKInstDef :: TypingEnv -> HLInstDef -> TyperState (KindSubst, TypingEnv, HLInstDef)
 typeKInstDef env (InstDef c qualhead defs) = do
     (s, qualhead') <- typeQualPred c env qualhead
-    return (s, addInst qualhead' env, InstDef c qualhead' defs)
+    --TODO: monomorfizzazione del qualhead
+    defs' <- mapM (\(c,l,e)->do
+        e' <- typeExprHints s env e
+        return (c, l, e')
+        ) defs
+    return (s, addInst qualhead' env, InstDef c qualhead' defs')
     --TODO: controlli vari su defs (e.g. condizioni Paterson), applica la sostituzione su defs se aggiungo i cast nelle espressioni
 
 typeKInstDefs :: TypingEnv -> [HLInstDef] -> TyperState (KindSubst, TypingEnv, [HLInstDef])
@@ -213,13 +248,17 @@ typeKInstDefs env (instdef:instdefs) = do
 
 -- Typing degli hint
 typeValDefHint :: TypingEnv -> HLValDef -> TyperState HLValDef
-typeValDefHint env vdef@(ValDef _ _ Nothing _ _) = return vdef
+typeValDefHint env vdef@(ValDef c l Nothing ps e) = do
+    e' <- typeExprHints Map.empty env e
+    return $ ValDef c l Nothing ps e'
 typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
     (_, _, dt) <- typeQualType c env tyscheme
     s <- kindmgu c (kind dt) KType
     let s' = kindMonomorphize (kSubstApply s dt)
+        s'' = composeKSubst s' s
+    e' <- typeExprHints s'' env e
     lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s dt) ++ show (freeKindQuants dt)
-    return $ ValDef c l (Just (kSubstApply (composeKSubst s' s) dt)) ps e
+    return $ ValDef c l (Just (kSubstApply s'' dt)) ps e'
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

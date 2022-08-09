@@ -29,6 +29,9 @@ completeVariant env (c, t, ExprPut v pses) = do
     v' <- completeVariant env v
     pses' <- mapM (\(p, e)-> completeVariant env e >>= \e' -> return (p, e')) pses
     return (c, t, ExprPut v' pses')
+completeVariant env (c, t, ExprHint hint e) = do
+    e' <- completeVariant env e
+    return (c, t, ExprHint hint e')
 
 completeVariantValDefGroups :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 completeVariantValDefGroups env = mapM (mapM (\(ValDef c l t ps e)-> completeVariant env e >>= (return . ValDef c l t ps)))

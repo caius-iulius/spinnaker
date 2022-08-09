@@ -14,7 +14,7 @@ tailDigit = thisChar '_' <|| digit
 
 opChar = anyChar ":;!$%&*+/-<=>?@\\^|~."
 
-validSymbols = ["=", "->", "|", "\\", ".", "=>", ";", "<-"]
+validSymbols = [":", "=", "->", "|", "\\", ".", "=>", ";", "<-"]
 
 keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "ext", "typesyn", "rel", "inst", "use", "mod"]
 
@@ -263,6 +263,11 @@ getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| d
     (opc, op) <- getOperator;
     meta <- require getMeta;
     return (opc, SynExprApp (opc, SynExprApp (opc, SynExprLabel $ Path [] op) expr) meta)
+} <|| do {
+    expr <- getExpr;
+    (c,_) <- thisSyntaxElem ":";
+    tyexpr <- require $ getTypeExpr;
+    return (c, SynExprHint tyexpr expr)
 } <|| getExpr
 
 getBindSyn = do {
