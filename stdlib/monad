@@ -1,8 +1,7 @@
 use Core
 
-mod List "stdlib/list"
 def mapMAux = \procd, f, l -> put l
-    | [] -> return (List.reverse procd)
+    | [] -> return (reverse procd)
     | [x | xs] ->
         a <- f x;
         mapMAux (a :: procd) f xs

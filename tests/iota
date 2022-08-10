@@ -22,7 +22,7 @@ def jot_revcomp = \s -> put s
     | ['0'|s'] -> "((" ++ jot_revcomp s' ++ "S)K)"
     | ['1'|s'] -> "(S(K" ++ jot_revcomp s' ++ "))"
 
-def jot_comp = List.reverse |> jot_revcomp
+def jot_comp = reverse |> jot_revcomp
 
 def main =
     _ <- putStrLn $ "Parsed Iota: " ++ show $ map (iota_parse |> fst) ["0011011", "0101011"];

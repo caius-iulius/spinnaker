@@ -166,10 +166,18 @@ mod ListCore {
     def pub (::) : forall a. a -> List a -> List a
         = Cons
 
+    def reverseAux = \acc, l ->
+        put l
+        | Nil -> acc
+        | Cons x xs -> reverseAux (x :: acc) xs
+    def pub reverse : forall a. List a -> List a
+    = reverseAux Nil
+
+    def mapAux = \procd, f, l -> put l
+        | Nil -> reverse procd
+        | Cons x xs -> mapAux (f x :: procd) f xs
     def pub map : forall a b. (a -> b) -> List a -> List b
-        = \f, l -> put l
-        | Nil -> Nil
-        | Cons x xs -> f x :: map f xs
+        = mapAux Nil
 
     inst Functor List {def fmap = map}
 

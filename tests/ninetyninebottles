@@ -1,5 +1,4 @@
 use Std
-use List
 
 def bottles = \n ->
     put n

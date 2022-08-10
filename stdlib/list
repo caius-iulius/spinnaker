@@ -13,13 +13,6 @@ def pub init : forall a. List a -> List a
     | [x] -> []
     | [x | xs] -> x :: (init xs)
 
-def reverseAux = \acc, l ->
-    put l
-    | [] -> acc
-    | [x | xs] -> reverseAux (x :: acc) xs
-def pub reverse : forall a. List a -> List a
-    = reverseAux []
-
 def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
     = \f, s, l -> put l
     | [] -> s
