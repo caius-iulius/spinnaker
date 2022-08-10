@@ -1,9 +1,14 @@
 use Core
 
-def pub sequence : forall m a. {Monad m} => List (m a) -> m (List a)
-    = \lm -> put lm
-    | Nil -> return Nil
-    | Cons m ms -> m >>= \a -> sequence ms >>= \as -> return (a :: as)
+mod List "stdlib/list"
+def mapMAux = \procd, f, l -> put l
+    | [] -> return (List.reverse procd)
+    | [x | xs] ->
+        a <- f x;
+        mapMAux (a :: procd) f xs
+def pub mapM : forall m a b. {Monad m} => (a -> m b) -> List a -> m (List b)
+    = mapMAux []
+
 
 rel pub {Monad m} => MonadPlus m =
     # LAWS
