@@ -35,15 +35,15 @@ type VMState = (VMCode, VMStack, VMEnv)
 type VMMonad = ReaderT [(Name, VMCode)] IO
 
 execComb :: Name -> VMStack -> VMEnv -> VMMonad VMVal
-execComb "_addInt" (VClos c e:s) (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
+execComb "_addInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VConst (LitInteger (i0+i1))
-    in execVM (c, v:s, e)
-execComb "_subInt" (VClos c e:s) (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
+    in execVM ([IRet], v:s, [])
+execComb "_subInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VConst (LitInteger (i0-i1))
-    in execVM (c, v:s, e)
-execComb "_putChr" (VClos c e:s) (rw:VConst(LitCharacter ch):[]) = do
+    in execVM ([IRet], v:s, [])
+execComb "_putChr" s (rw:VConst(LitCharacter ch):[]) = do
     lift $ putChar ch
-    execVM (c, rw:s, e)
+    execVM ([IRet], rw:s, [])
 execComb n s e = do
     g <- ask
     let Just c = lookup n g
@@ -72,14 +72,21 @@ execVM (IRet:c, v:[], e) = return v
 execVM (IConst k:c, s, e) = execVM (c, VConst k:s, e)
 execVM (IAccess i:c, s, e) = execVM (c, (e!!i):s, e)
 execVM (IClos c':c, s, e) = execVM (c, VClos c' e:s, e)
+execVM (IApp:IRet:_, a:VClos c' e':s, e) = execVM (c', s, a:e') --TCO clos
 execVM (IApp:c, a:VClos c' e':s, e) = execVM (c', VClos c e:s, a:e')
 execVM (IRet:c, r:VClos c' e':s, e) = execVM (c', r:s, e')
 execVM (IVariant n i:c, s, e) =
     let (as,s') = splitAt i s
     in execVM (c, VVariant n (reverse as):s', e)
+execVM (ICombApp n i:IRet:_, s, e) = --TCO comb
+    let (as,s') = splitAt i s
+    in execComb n s' as
 execVM (ICombApp n i:c, s, e) = 
     let (as,s') = splitAt i s
-    in execComb n (VClos c e:s') as--execVM g (c, s, e)
+    in execComb n (VClos c e:s') as
+execVM (ICase pscs:IRet:_, v:s, e) = --TCO case
+    let (bs, c') = choosePattern v pscs
+    in execVM (c', s, reverse bs ++ e)
 execVM (ICase pscs:c, v:s, e) =
     let (bs, c') = choosePattern v pscs
     in execVM (c', VClos c e:s, reverse bs ++ e)
@@ -124,18 +131,23 @@ testcode = [
     ] -}
 
 globs = [("ack",
-      [ IAccess 0,
-        ICase [ ((False, PVariant "(,)" [(False, PConst(LitInteger 0)), (True, PWildcard)]),
+      [ IAccess 1,
+        ICase [ ((False, PConst(LitInteger 0)),
                     [IAccess 0, IConst(LitInteger 1), ICombApp "_addInt" 2, IRet]),
-                ((False, PVariant "(,)" [(True, PWildcard), (False, PConst(LitInteger 0))]),
-                    [IAccess 0, IConst(LitInteger 1), ICombApp "_subInt" 2, IConst(LitInteger 1), IVariant "(,)" 2, ICombApp "ack" 1, IRet]),
-                ((False, PVariant "(,)" [(True, PWildcard), (True, PWildcard)]),
-                    [IAccess 1, IConst(LitInteger 1), ICombApp "_subInt" 2, IAccess 1, IAccess 0, IConst(LitInteger 1), ICombApp "_subInt" 2, IVariant "(,)" 2, ICombApp "ack" 1, IVariant "(,)" 2, ICombApp "ack" 1, IRet])
-            ],
+                ((False, PWildcard), [
+                        IAccess 0,
+                        ICase [
+                                ((False, PConst(LitInteger 0)),
+                                    [IAccess 1, IConst(LitInteger 1), ICombApp "_subInt" 2, IConst(LitInteger 1), ICombApp "ack" 2, IRet]),
+                                ((False, PWildcard),
+                                    [IAccess 1, IConst(LitInteger 1), ICombApp "_subInt" 2, IAccess 1, IAccess 0, IConst(LitInteger 1), ICombApp "_subInt" 2, ICombApp "ack" 2, ICombApp "ack" 2, IRet])
+                            ],
+                        IRet
+                    ])],
         IRet
-      ]
-    )]
+      ])
+    ]
 
-testcode = [IConst(LitInteger 3), IConst(LitInteger 9), IVariant "(,)" 2, ICombApp "ack" 1, IRet]
+testcode = [IConst(LitInteger 3), IConst(LitInteger 9), ICombApp "ack" 2, IRet]
 
 main = runReaderT (execVM (testcode, [], [])) globs >>= print
