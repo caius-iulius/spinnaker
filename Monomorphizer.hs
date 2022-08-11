@@ -17,6 +17,9 @@ type Definitions = [(String, HLExpr)]
 type MonoEnv = (Int, Definitions, Map.Map String (Instances, Generators))
 type MonoState t = StateT MonoEnv IO t
 
+monoLog :: String -> MonoState ()
+monoLog = lift . compLog
+
 addDef :: String -> HLExpr -> MonoState ()
 addDef l e = do
     (u, defs, env) <- get
@@ -77,14 +80,14 @@ generateInstance l t = do
 
 findInstance :: String -> DataType -> MonoState String
 findInstance l t =  if length (freetyvars t) /= 0 then error $ "WHAT: there are free type variables in instance search" else do
-    lift $ putStrLn $ "Looking for instance of: " ++ show l ++ " with type: " ++ show t
+    monoLog $ "Looking for instance of: " ++ show l ++ " with type: " ++ show t
     is <- getInsts l
     case find ((==) t . fst) is of
         Just (_, l') -> do
-            lift $ putStrLn $ "Instance found: " ++ show l'
+            monoLog $ "Instance found: " ++ show l'
             return l'
         Nothing -> do
-            lift $ putStrLn $ "Instance not found, generating..."
+            monoLog $ "Instance not found, generating..."
             generateInstance l t
 
 monomorphizePat :: HLPattern -> MonoState HLPattern

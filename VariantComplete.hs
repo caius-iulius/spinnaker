@@ -12,7 +12,7 @@ completeVariant env (c, t, ExprApp e0 e1) = do
 completeVariant _ e@(_, _, ExprLabel _) = return e
 completeVariant env (c, t, ExprConstructor l es) = do
     es' <- mapM (completeVariant env) es
-    VariantData _ vqs vts vt <- getVariantData c env l
+    VariantData _ vqs vts vt <- getVariantData env l
     let zerotoadde = [0..length vts - length es -1]
     addesuffixes <- mapM (\_->newUniqueSuffix) zerotoadde
     return $ let

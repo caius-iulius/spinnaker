@@ -8,8 +8,7 @@ elseif exists("b:current_syntax")
 endif
 
 syn keyword mylangTopDef mod data def and ext rel inst
-syn keyword mylangTopKeyword use
-syn keyword mylangTopAccess pub
+syn keyword mylangModKeyword use pub
 syn keyword mylangKeyword let put forall
 syn keyword mylangConditional if then else
 syn match mylangOperator "\v[:!$%&\*\+/\-<=>\?@\\^|~.]+"
@@ -30,8 +29,7 @@ syn match mylangSeparator  "[,;]"
 highlight def link mylangIdentifier Normal
 highlight def link mylangType Type
 highlight def link mylangTopDef Define
-highlight def link mylangTopKeyword Keyword
-highlight def link mylangTopAccess Keyword
+highlight def link mylangModKeyword Include
 highlight def link mylangKeyword Keyword
 highlight def link mylangConditional Conditional
 highlight def link mylangNumber Number

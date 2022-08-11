@@ -124,6 +124,13 @@ type TyperStateData = (Int, KindQuant, TyQuantId)
 
 type TyperState t = ResultT (StateT TyperStateData IO) t
 
+compLog :: String -> IO ()
+compLog = putStrLn
+--compLog = const (return ())
+
+typerLog :: String -> TyperState ()
+typerLog = lift . lift . compLog
+
 newUniqueSuffix :: TyperState String
 newUniqueSuffix = do
     (u, k, t) <- get

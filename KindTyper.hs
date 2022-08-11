@@ -1,6 +1,7 @@
 module KindTyper where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Maybe(isJust)
 import Control.Monad.Trans
 import MPCL(StdCoord)
 import HLDefs
@@ -230,7 +231,13 @@ typeExprHints s env (c, t, ExprHint hint e) = do
 
 typeKInstDef :: TypingEnv -> HLInstDef -> TyperState (KindSubst, TypingEnv, HLInstDef)
 typeKInstDef env (InstDef c qualhead defs) = do
-    (s, qualhead') <- typeQualPred c env qualhead
+    (s, qualhead'@(Qual _ h@(Pred l _))) <- typeQualPred c env qualhead
+    let currInsts = map (\(Qual _ mp)->mp) $ insts env l
+    mapM (\i->
+        if isJust (matchPred h i) && isJust (matchPred i h)
+            then fail $ show c ++ " L'istanza " ++ show qualhead' ++ " è identica a un'altra già definita: " ++ show i
+            else return ()
+        ) currInsts
     --TODO: monomorfizzazione del qualhead
     defs' <- mapM (\(c,l,e)->do
         e' <- typeExprHints s env e
@@ -257,7 +264,7 @@ typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
     let s' = kindMonomorphize (kSubstApply s dt)
         s'' = composeKSubst s' s
     e' <- typeExprHints s'' env e
-    lift $ lift $ putStrLn $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s dt) ++ show (freeKindQuants dt)
+    typerLog $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s dt) ++ show (freeKindQuants dt)
     return $ ValDef c l (Just (kSubstApply s'' dt)) ps e'
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]

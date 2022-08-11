@@ -401,7 +401,7 @@ demodFile :: String -> DemodEnv -> FilesEnv -> TyperState (DemodEnv, FilesEnv, B
 demodFile fname core files = do
     handle <- lift $ lift $ openFile fname ReadMode
     contents <- lift $ lift $ hGetContents handle
-    lift $ lift $ putStrLn $ "File " ++ show fname ++ ": " ++ contents
+    typerLog $ "File " ++ show fname ++ ": " ++ contents
     case Map.lookup contents files of
         Just modenv -> return (modenv, files, BlockProgram [] [] [] [] [])
         Nothing -> case parse getProgram (Coord fname 1 1, contents) of
@@ -425,9 +425,9 @@ demodProgram :: String -> String -> String -> TyperState (DemodEnv, HLExpr, Bloc
 demodProgram corefname stdfname progfname = do
     (stdEnv, stdfiles, stdBlock) <- demodStdlib corefname stdfname
     (progEnv, progfiles, progBlock) <- demodFile progfname stdEnv stdfiles
-    --lift $ lift $ putStrLn $ "Final demodEnv: " ++ show modEnv
-    --lift $ lift $ putStrLn $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
-    --lift $ lift $ putStrLn $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
-    --lift $ lift $ putStrLn $ "progEnv: " ++ show progEnv
+    --typerLog $ "Final demodEnv: " ++ show modEnv
+    --typerLog $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)
+    --typerLog $ "Demodded: " ++ (drawTree $ toTreeBlockProgram modBlock)
+    --typerLog $ "progEnv: " ++ show progEnv
     entryBlock <- entryPointBlock progEnv
     return (envsUnionLeft stdEnv progEnv, (Coord "entryPoint" 0 0, realworldT, ExprLabel "entryPoint#BI"), concatBlockPrograms stdBlock (concatBlockPrograms progBlock entryBlock))

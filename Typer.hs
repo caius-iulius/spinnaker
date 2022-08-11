@@ -36,10 +36,10 @@ typeBlockProgram (BlockProgram ddefgroups reldefs extdefs vdefgroups instdefs) =
     vdefgroups'' <- typeValDefHints e'' vdefgroups'
     (ts, e'''', vdefgroups''') <- typeValDefGroups e''' vdefgroups''
     instdefs''' <- typeInstDefs e'''' instdefs''
-    lift $ lift $ putStrLn $ "Final kind substitution (datas): " ++ show ks
-    lift $ lift $ putStrLn $ "Final kind substitution (rels): " ++ show ks'
-    lift $ lift $ putStrLn $ "Final kind substitution (insts): " ++ show ks''
-    lift $ lift $ putStrLn $ "Final type substitution: " ++ show ts
-    lift $ lift $ putStrLn $ "Final env: " ++ show e''''
-    lift $ lift $ putStrLn $ "Final env freetyvars: " ++ show (freetyvars e'''')
+    typerLog $ "Final kind substitution (datas): " ++ show ks
+    typerLog $ "Final kind substitution (rels): " ++ show ks'
+    typerLog $ "Final kind substitution (insts): " ++ show ks''
+    typerLog $ "Final type substitution: " ++ show ts
+    typerLog $ "Final env: " ++ show e''''
+    typerLog $ "Final env freetyvars: " ++ show (freetyvars e'''')
     return (e'''', BlockProgram ddefgroups' reldefs' extdefs' vdefgroups''' instdefs''')

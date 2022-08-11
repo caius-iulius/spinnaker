@@ -3,22 +3,19 @@ import System.IO
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Maybe(isJust)
 import MPCL (StdCoord)
 import TypingDefs
 import MGUs
 import HLDefs
 
-getVariantData :: StdCoord -> TypingEnv -> String -> TyperState VariantData
-getVariantData c (TypingEnv _ _ vs _ _) l
+getVariantData :: TypingEnv -> String -> TyperState VariantData
+getVariantData (TypingEnv _ _ vs _ _) l
     | fst $ isTupLabl l = let len = snd $ isTupLabl l in do
             qs <- mapM (\_->newTyQuant KType) [1..len]
             let ts = map DataQuant qs in return $ VariantData l qs ts (buildTupType ts)
     | otherwise = case Map.lookup l vs of
         --Nothing -> fail $ show c ++ " Unbound constructor: " ++ l
-        Just vdata -> do
-            lift $ lift $ putStrLn $ "VDATA " ++ show l ++ show vdata
-            return vdata
+        Just vdata -> return vdata
 
 -- Funzioni di typing
 typeLit :: Literal -> DataType
@@ -31,13 +28,13 @@ typePat :: TypingEnv -> HLPattern -> TyperState DataType
 typePat _ (_, _, PatWildcard) = freshType KType
 typePat _ (_, _, PatLiteral lit) = return $ typeLit lit
 typePat env (c, _, PatVariant v ps) = do
-    (VariantData _ qs vts dt) <- getVariantData c env v
+    (VariantData _ qs vts dt) <- getVariantData env v
     if length ps /= length vts then fail $ show c ++ " Constructor is applied to wrong number of arguments"
     else do
         s <- getInstantiationSubst qs
         pts <- mapM (typePat env) ps
         s' <- liftUnionList mgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
-        lift $ lift $ putStrLn $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
+        typerLog $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
         return $ substApply s' $ substApply s dt
 
 --TODO Da testare
@@ -46,7 +43,7 @@ patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf 
 innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
 innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
-    (VariantData _ qs vts vdt) <- getVariantData c env v
+    (VariantData _ qs vts vdt) <- getVariantData env v
     s <- mgu c vdt dt --TODO: Forse serve un algoritmo di unificazione "one-way"
     patListPatVarsInEnv gf env ps (map (substApply s) vts)
 
@@ -78,11 +75,11 @@ typeExprInternal (TypingEnv env _ _ _ _) (c, _, ExprLabel labl) =
     case Map.lookup labl env of
         --Nothing -> fail $ show c ++ " Unbound variable: " ++ labl
         Just scheme -> do
-                          lift $ lift $ putStrLn $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
+                          typerLog $ show c ++ " LABEL:" ++ labl ++ " of scheme:" ++ show scheme
                           Qual ps t <- instantiate scheme
                           return (nullSubst, ps, t, (c, t, ExprLabel labl))
 typeExprInternal env (c, _, ExprConstructor l es) = do
-    (VariantData _ qs argts dt) <- getVariantData c env l
+    (VariantData _ qs argts dt) <- getVariantData env l
     is <- getInstantiationSubst qs
     let argts' = map (substApply is) argts
         dt' = substApply is dt
@@ -100,7 +97,7 @@ typeExprInternal env (c, _, ExprApp f a) = do
     (s1, ps1, t1, f') <- typeExpr env f
     (s2, ps2, t2, a') <- typeExpr (substApply s1 env) a
     s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
-    -- lift $ lift $ putStrLn $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
+    -- typerLog $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
     let finals = composeSubst s3 (composeSubst s2 s1)
         finalt = substApply finals q
         finalps = map (substApply finals) (ps1++ps2)
@@ -117,7 +114,7 @@ typeExprInternal env (c, _, ExprPut val pses) = do
     (s', tval') <- unifyPats (substApply s env) tval pses
     tempt <- freshType KType--TODO GIUSTO IL FRESH?
     (s'', ps'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) (Qual ps tval') tempt pses
-    lift $ lift $ putStrLn $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tval' ++ " texpr:"++show texpr
+    typerLog $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tval' ++ " texpr:"++show texpr
     let finals = composeSubst s'' (composeSubst s' s)
         finalps = map (substApply finals) (ps++ps'')
         finalt = substApply finals texpr
@@ -147,14 +144,14 @@ unifyPats env t ((pat, (c, _, _)):branches) = do
 typePutBranches :: TypingEnv -> Qual DataType -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, [Pred], DataType, [(HLPattern, HLExpr)])
 typePutBranches _ _ texpr [] = return (nullSubst, [], texpr, [])
 typePutBranches env qtpat@(Qual pspat tpat) texpr ((pat, expr@(c, _, _)):branches) = do
-    lift $ lift $ putStrLn $ " PUTBRANCH_SRT tpat:" ++ show tpat ++ " texpr:" ++ show texpr
+    typerLog $ " PUTBRANCH_SRT tpat:" ++ show tpat ++ " texpr:" ++ show texpr
     env' <- patVarsInEnv (TyScheme [] . Qual pspat) env pat tpat
     (s, psexpr, texpr', expr') <- typeExpr env' expr
-    lift $ lift $ putStrLn $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
+    typerLog $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
     s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?
     mys <- return $ composeSubst s' s
     (s'', psbranches, tfinal, others) <- typePutBranches (substApply mys env) (substApply mys qtpat) (substApply s' texpr) branches
-    lift $ lift $ putStrLn $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
+    typerLog $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     let finals = composeSubst s'' mys
         finalps = map (substApply finals) (psexpr++psbranches)
         in return (finals, finalps, tfinal, (pat, expr'):others)
@@ -175,7 +172,7 @@ substApplyValDef s (ValDef c l t ps e) = ValDef c l t (map (substApply s) ps) (s
 --Funzioni per le definizioni globali
 typeValDef env (ValDef c l t _ e) = do --TODO: Qui dimentico i predicati già presenti, dovrebbero essere spazzatura dalle tipizzazioni precedenti
     (s, ps, dt, e') <- typeExpr env e
-    lift $ lift $ putStrLn $ "typed valdef: " ++ l ++ " with type: " ++ show (Qual ps dt) ++ " and subst: " ++ show s
+    typerLog $ "typed valdef: " ++ l ++ " with type: " ++ show (Qual ps dt) ++ " and subst: " ++ show s
     return (s, ValDef c l t ps e')
 
 quantifiedValDefEnv init_env [] = return init_env
@@ -183,7 +180,7 @@ quantifiedValDefEnv env (ValDef c l mhint _ _:vdefs) = do
     t <- case mhint of
         Nothing -> fmap (Qual []) (freshType KType)
         Just hint -> return hint
-    lift $ lift $ putStrLn $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
+    typerLog $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
     env' <- return $ tyBindAdd c env l (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
@@ -202,7 +199,7 @@ unionValDefEnv (TypingEnv ts _ _ _ _) (ValDef c l _ ps (_, t, _)) = do
     Qual ps' tFromEnv <- case Map.lookup l ts of --TODO: Sto dimenticando i predicati, è giusto?
         Just scheme -> instantiate scheme
     s <- mgu c t tFromEnv
-    lift $ lift $ putStrLn $ "union of env and vdef "++ l ++": " ++ show s
+    typerLog $ "union of env and vdef "++ l ++": " ++ show s
     return s
 
 checkHintType :: StdCoord -> TypingEnv -> DataType -> DataType -> TyperState Subst
@@ -239,7 +236,7 @@ typeValDefGroup env vdefs = do
         vdefs'' = map (substApplyValDef sfinal) vdefs'
         ps = concat $ map (\(ValDef _ _ _ ps _) -> ps) vdefs''
         vdefs''' = map (\(ValDef c l h _ e)->ValDef c l h ps e) vdefs''
-            --lift $ lift $ putStrLn $ "Final ValDef Subst: " ++ show sfinal
+            --typerLog $ "Final ValDef Subst: " ++ show sfinal
     mapM (\(ValDef c _ _ ps' (_, t, _))->checkAmbiguousQual c env (Qual ps' t)) vdefs'''
     vdefs'''' <- checkValDefsHintPreds env vdefs'''
     let env' = addValDefsEnv (substApply sfinal env) vdefs''''
@@ -255,16 +252,10 @@ typeValDefGroups env (vdefs:vdefss) = do
 typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
     case Map.lookup l rs of
         Just (RelData qs preds decls _) -> do --TODO: controlla validità dei preds
-            -- TODO: questo controllo va fatto prima di aggiungere l'istanza al contesto
-            -- let currInsts = map (\(Qual _ mp)->mp) $ insts env l
-            -- mapM (\i->
-            --     if isJust (matchPred h i) && isJust (matchPred i h)
-            --         then fail $ show c ++ " L'istanza " ++ show qh ++ " è identica a un'altra già definita: " ++ show i
-            --         else return ()
-            --     ) currInsts
             let instSubst = Map.fromList $ zip qs ts
                 substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
             defs' <- typeInstMembers (Map.fromList substdecls) [] defs
+            -- TODO: Forse questo controllo va spostato da qualche altra parte (check superrel)
             mapM (\p ->
                 if entail env ps p
                     then return ()

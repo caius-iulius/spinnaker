@@ -17,9 +17,9 @@ import Monomorphizer
 frontendCompile :: String -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
 frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
     (denv, entry, block) <- demodProgram "stdlib/core" "stdlib/std" fname
-    lift $ lift $ putStrLn $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
+    typerLog $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
     (env, tyblock) <- typeBlockProgram block
-    lift $ lift $ putStrLn $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
+    typerLog $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
     return (env, entry, tyblock)
 
 main = do {
@@ -31,8 +31,8 @@ main = do {
     ;
     prog <- monomorphizeProgram (ep, b);
     (ep', mono) <- return $ optimizeProgram prog;
-    putStrLn $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
-    putStrLn $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
+    compLog $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
+    compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
     hFlush stdout;
     evalProgram (ep', mono)
 }

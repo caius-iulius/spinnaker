@@ -116,7 +116,7 @@ tyBindAdd c (TypingEnv ts ks vs cs rs) labl scheme =
     case Map.lookup labl ts of
         --Just _ -> fail $ show c ++ " Variable already bound: " ++ labl
         Nothing -> --do
-            --lift $ lift $ putStrLn $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
+            --typerLog $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
             --return $
             TypingEnv (Map.insert labl scheme ts) ks vs cs rs
 
@@ -132,7 +132,7 @@ getInstantiationSubst qs = do
 instantiate :: TyScheme -> TyperState (Qual DataType)
 instantiate scm@(TyScheme qs t) = do
     subst <- getInstantiationSubst qs
-    lift $ lift $ putStrLn $ "Instantiating: " ++ show scm ++ " with subst: " ++ show subst
+    typerLog $ "Instantiating: " ++ show scm ++ " with subst: " ++ show subst
     return $ substApply subst t
 
 --Algoritmo MGU
