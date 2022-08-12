@@ -8,11 +8,12 @@ import Parser
 import PrettyPrinter
 import Demod
 import Typer
-import Interpreter
 import HLDefs
 import TypingDefs
 import OptimizeHL
 import Monomorphizer
+import HLtoVM
+import qualified VM as VM
 
 frontendCompile :: String -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
 frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
@@ -32,7 +33,9 @@ main = do {
     prog <- monomorphizeProgram (ep, b);
     (ep', mono) <- return $ optimizeProgram prog;
     compLog $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
-    compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
     hFlush stdout;
-    evalProgram (ep', mono)
+    vmprog <- return $ progToVm (ep', mono);
+    compLog $ "VM Bytecode: " ++ show vmprog;
+    compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
+    VM.evalProg vmprog
 }
