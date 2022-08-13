@@ -222,7 +222,7 @@ typeExprHints s env (c, t, ExprPut v pses) = do
 typeExprHints s env (c, t, ExprHint hint e) = do
     (ks, k, hint') <- typeTyExpr c env (kSubstApply s hint)
     if length (freeKindQuants hint') == 0 then return ()
-    else error "KWHAT"
+    else error $ show c ++ " KWHAT" ++ show hint' ++ show s
     case k of
         KType -> return ()
         _ -> fail $ show c ++ " Kind of type hint should be T, instead found: " ++ show k
@@ -259,13 +259,13 @@ typeValDefHint env vdef@(ValDef c l Nothing ps e) = do
     e' <- typeExprHints Map.empty env e
     return $ ValDef c l Nothing ps e'
 typeValDefHint env (ValDef c l (Just tyscheme) ps e) = do
-    (_, _, dt) <- typeQualType c env tyscheme
-    s <- kindmgu c (kind dt) KType
-    let s' = kindMonomorphize (kSubstApply s dt)
-        s'' = composeKSubst s' s
-    e' <- typeExprHints s'' env e
-    typerLog $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s dt) ++ show (freeKindQuants dt)
-    return $ ValDef c l (Just (kSubstApply s'' dt)) ps e'
+    (s, _, dt) <- typeQualType c env tyscheme
+    s' <- kindmgu c (kind dt) KType
+    let s'' = kindMonomorphize (kSubstApply s' dt)
+        s''' = composeKSubst s'' (composeKSubst s' s)
+    typerLog $ show c ++" ValDef " ++ show l ++ " has type hint: " ++ show (kSubstApply s''' dt)
+    e' <- typeExprHints s''' env e
+    return $ ValDef c l (Just (kSubstApply s''' dt)) ps e'
 
 typeValDefHints :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
 typeValDefHints env vdefss = mapM (mapM $ typeValDefHint env) vdefss

@@ -1,10 +1,9 @@
 import System.IO
 import System.Environment
+import System.CPUTime
 import Data.Tree
 import Control.Monad.State
 
-import MPCL
-import Parser
 import PrettyPrinter
 import Demod
 import Typer
@@ -14,6 +13,14 @@ import OptimizeHL
 import Monomorphizer
 import HLtoVM
 import qualified VM as VM
+
+time :: IO t -> IO (t, Double)
+time a = do
+    start <- getCPUTime
+    v <- a
+    end <- getCPUTime
+    let diff = (fromIntegral (end - start)) / (10^9)
+    return (v, diff)
 
 frontendCompile :: String -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
 frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
@@ -25,17 +32,19 @@ frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
 
 main = do {
     args <- getArgs;
-    either <- frontendCompile (head args);
+    (either,t_frontend) <- time $ frontendCompile (head args);
     let (ep, b) = case either of
             Left e -> error $ "Frontend compilation error: " ++ e
             Right (env, ep, block) -> (ep, block)
     ;
-    prog <- monomorphizeProgram (ep, b);
-    (ep', mono) <- return $ optimizeProgram prog;
+    (prog, t_mono) <- time $ monomorphizeProgram (ep, b);
+    ((ep', mono), t_opti) <- time $ return $ optimizeProgram prog;
     compLog $ "Mono EP: " ++ (drawTree $ toTreeHLExpr ep') ++ "\nDefs: " ++(drawTree $ toTreeMonoDefs mono);
-    hFlush stdout;
-    vmprog <- return $ progToVm (ep', mono);
+    (vmprog, t_tovm) <- time $ return $ progToVm (ep', mono);
     compLog $ "VM Bytecode: " ++ show vmprog;
     compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
-    VM.evalProg vmprog
+    compLog $ "Timings: frontend:" ++ show t_frontend ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms tovm:" ++ show t_tovm ++ "ms";
+    hFlush stdout;
+    (_, t_eval) <- time $ VM.evalProg vmprog;
+    compLog $ "Program eval time:" ++ show t_eval ++ "ms"
 }

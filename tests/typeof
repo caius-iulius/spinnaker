@@ -1,0 +1,36 @@
+use Std
+
+mod Typeof {
+    mod pub Defs {
+        data pub TOTok a = TOTok
+        rel pub Typeof a = typeofT : TOTok a -> List Chr
+    } use Defs
+
+    def pub typeof : forall a. {Typeof a} => a -> List Chr
+        = const (typeofT (TOTok : TOTok a))
+
+    inst Typeof Int { def typeofT = const "Int" }
+    inst Typeof Flt { def typeofT = const "Flt" }
+    inst Typeof () { def typeofT = const "()" }
+    inst Typeof Bool { def typeofT = const "Bool" }
+    inst Typeof Chr { def typeofT = const "Chr" }
+    inst forall a b. {Typeof a, Typeof b} => Typeof (a, b) {
+        def typeofT = const $ "(" ++ typeofT (TOTok:TOTok a)  ++ ", " ++ typeofT (TOTok:TOTok b) ++ ")"
+    }
+    inst forall a. {Typeof a} => Typeof (List a) {
+        def typeofT = const $ "List " ++ typeofT (TOTok:TOTok a)
+    }
+    inst Typeof (List Chr) { def typeofT = const "String" }
+
+}
+
+def main
+    =  putStrLn (Typeof.typeof 1)
+    >> putStrLn (Typeof.typeof 1.1)
+    >> putStrLn (Typeof.typeof ())
+    >> putStrLn (Typeof.typeof True)
+    >> putStrLn (Typeof.typeof 'a')
+    >> putStrLn (Typeof.typeof (1, 1.1))
+    >> putStrLn (Typeof.typeof [0])
+    >> putStrLn (Typeof.typeof "ciao")
+    >> putStrLn (Typeof.typeof $ List.tail [(1,())])

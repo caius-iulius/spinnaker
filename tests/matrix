@@ -17,9 +17,7 @@ def derive_mx : List (Int, Int) -> List (List Int)
         map (\x -> map (\y -> if elem (x, y) edges then 1 else 0) (0..mxlen)) (0..mxlen)
 
 def reach : Int -> List (List Int) -> List (List Int)
-    = \n, mx -> put n
-    | 1 -> mx
-    | _ -> mxadd mx $ mxmul mx $ reach (n - 1) mx
+    = \n, mx -> foldl (\s,_ -> mxadd mx $ mxmul mx s) mx (1..n)
 
 def cycles : List (List Int) -> List Int = \mx ->
         let reaches = reach (length mx) mx ->

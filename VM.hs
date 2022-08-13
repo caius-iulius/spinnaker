@@ -17,7 +17,16 @@ data VMInstr
     | IVariant Name Int
     | ICombApp Name Int
     | ICase [(VMPat, VMCode)]
-    deriving Show
+
+instance Show VMInstr where
+    show (IConst lit) = show lit
+    show (IAccess i) = '$':show i
+    show (IClos c) = '\\':show c
+    show IApp = "APP"
+    show IRet = "RET"
+    show (IVariant n i) = "VAR"++show n++ '(':show i++")"
+    show (ICombApp n i) = "COMB"++show n++ '(':show i++")"
+    show (ICase pscs) = "CASE"++show pscs
 
 data VMPatData
     = PConst Literal

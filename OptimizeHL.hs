@@ -1,6 +1,7 @@
 module OptimizeHL where
 import HLDefs
 import Data.Char (ord, chr)
+import Data.List (sortBy)
 
 type Definitions = [(String, HLExpr)]
 type Program = (HLExpr, Definitions)
@@ -59,18 +60,34 @@ inline l ie (c, t, ExprPut v pses) = (c, t, ExprPut (inline l ie v)
     (map (\(p, e)->if appearsPat l p then (p, e) else (p, inline l ie e)) pses))
 
 -- TODO: Inline più furbo, per esempio dai la precedenza alle definizioni che appaiono di meno
+sortInlines :: Program -> Program
+sortInlines (ep, defs) =
+    (ep, sortBy (\(l,e) (l',e')->
+        compare (appears l ep + appearsDefs l defs) (appears l' ep + appearsDefs l' defs)
+    ) defs)
+
 inlineProgram :: Program -> Program
-inlineProgram (ep, defs) = loop ep [] defs
+inlineProgram prog = loop [] (sortInlines prog)
     where
-        loop myep procd [] = (myep, procd)
-        loop myep procd ((l, e):defs')
-            | (appears l myep + appearsDefs l (procd ++ defs')) == 0
-                = loop myep procd defs'
-            | appears l e /= 0 || not (inlineHeuristic e (appears l myep + appearsDefs l procd + appearsDefs l defs'))
-                = loop myep ((l, e):procd) defs'
-            | otherwise = loop (inline l e myep) (inlineDefs l e procd) (inlineDefs l e defs')
+        loop procd (ep, []) = (ep, procd)
+        loop procd (ep, (l, e):defs)
+            | (appears l ep + appearsDefs l (procd ++ defs)) == 0
+                = loop procd (ep, defs)
+            | appears l e /= 0 || not (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
+                = loop ((l,e):procd) (ep, defs)
+            | otherwise = loop (inlineDefs l e procd) (inline l e ep, inlineDefs l e defs)
         inlineDefs l ie [] = []
         inlineDefs l ie ((ld, e):defs') = (ld, inline l ie e):inlineDefs l ie defs'
+--     where
+--         loop myep procd [] = (myep, procd)
+--         loop myep procd ((l, e):defs')
+--             | (appears l myep + appearsDefs l (procd ++ defs')) == 0
+--                 = loop myep procd defs'
+--             | appears l e /= 0 || not (inlineHeuristic e (appears l myep + appearsDefs l procd + appearsDefs l defs'))
+--                 = loop myep ((l, e):procd) defs'
+--             | otherwise = loop (inline l e myep) (inlineDefs l e procd) (inlineDefs l e defs')
+--         inlineDefs l ie [] = []
+--         inlineDefs l ie ((ld, e):defs') = (ld, inline l ie e):inlineDefs l ie defs'
 
 data SieveRes
     = Always [(String, HLExpr)]
@@ -133,16 +150,19 @@ optimizeExpr (c, t, ExprApp f a) =
         _ -> (c, t, ExprApp f' a')
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
-optimizeExpr (c, t, ExprCombinator l es) = optimizeBI c t l (map optimizeExpr es)--(c, t, ExprCombinator l (map optimizeExpr es)) --TODO optimizeBI qui
+optimizeExpr (c, t, ExprCombinator l es) = optimizeBI c t l (map optimizeExpr es)
 optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput
     let val' = optimizeExpr val
         pses' = sievePatterns val' pses
         pses'' = map (\(p,e)->(p,optimizeExpr e)) pses'
     in case pses'' of
         (p, e):[] -> case sievePattern p val' of
-            Always bs -> optimizeExpr $
-                --TODO: questo effettua inline con qualsiasi espressione che appare un qualsiasi numero di volte, fa esplodere la dimensione
-                foldl (\me (l,e')->inline l e' me) e bs
+            Always bs -> 
+                if all (\(ml,me)->inlineHeuristic me (appears ml e)) bs
+                then optimizeExpr $
+                    --TODO: questo effettua un inline forse troppo permissivo
+                    foldl (\me (l,e')->inline l e' me) e bs
+                else (c, t, ExprPut val' pses'')
             _ -> (c, t, ExprPut val' pses'')
         _ -> (c, t, ExprPut val' pses'')
         --error $ "OPTIMIZED val " ++ show val' ++ "\npses " ++ show pses ++ "\npses'" ++ show pses'
