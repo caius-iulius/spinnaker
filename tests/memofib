@@ -1,0 +1,50 @@
+use Std
+use Maybe
+
+def mlookup = \k, kv -> put kv
+    | [] -> None
+    | [(mk,mv)|kv'] ->
+        if k == mk then Some mv
+        else mlookup k kv'
+
+data State s a = State(s -> (a, s))
+
+inst forall s. Monad (State s) {
+    def return = \a -> State (\s -> (a, s))
+    def bind = \State tf, mf -> State $
+        \s -> let (a, s') = tf s ->
+            let State tf' = mf a ->
+                tf' s'
+}
+def sget = State(\s -> (s, s))
+def sput = \s -> State(\_ -> ((), s))
+def runState = \State tf, s -> tf s
+
+def memofix = \f, x ->
+    m <- sget;
+    put mlookup x m
+    | Some r -> return r
+    | None ->
+        r <- f (memofix f) x;
+        _ <- sput ((x, r) :: m);
+        return r
+
+def runMemo = \f, x -> fst $ runState (f x) []
+
+def memofib = memofix $ \f, n -> put n
+    | 0 -> return 0
+    | 1 -> return 1
+    | _ ->
+        a <- f (n - 1);
+        b <- f (n - 2);
+        return (a + b)
+
+def fib = \n -> put n
+    | 0 -> 0
+    | 1 -> 1
+    | _ ->
+        let a = fib (n - 1) ->
+        let b = fib (n - 2) ->
+            a + b
+
+def main = runMemo memofib 33

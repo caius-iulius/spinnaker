@@ -3,7 +3,7 @@
 for i in "$@"    # same as your "for i"
 do
     echo "########### Running test: $i"
-    ./run $i | awk '/Unoptimized program size:/,0'
+    ./run $i -v | awk '/Unoptimized program size:/,0'
     echo "###########"
     echo ""
 done

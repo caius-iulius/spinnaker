@@ -1,5 +1,6 @@
 module TypingDefs where
 import Control.Monad.State
+import System.Environment
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import ResultT
@@ -125,8 +126,11 @@ type TyperStateData = (Int, KindQuant, TyQuantId)
 type TyperState t = ResultT (StateT TyperStateData IO) t
 
 compLog :: String -> IO ()
-compLog = putStrLn
---compLog = const (return ())
+compLog l = do
+    args <- getArgs
+    if elem "-v" args
+    then putStrLn l
+    else return ()
 
 typerLog :: String -> TyperState ()
 typerLog = lift . lift . compLog
