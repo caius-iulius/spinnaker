@@ -13,6 +13,14 @@ def pub init : forall a. List a -> List a
     | [x] -> []
     | [x | xs] -> x :: (init xs)
 
+# TODO: uncons, null, intersperse, intercalate, transpose, subsequences, permutations
+
+def lengthAux = \n, l -> put l
+    | [] -> n
+    | [_ | xs] -> lengthAux (n + 1) xs
+def pub length : forall a. List a -> Int
+    = lengthAux 0
+
 def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
     = \f, s, l -> put l
     | [] -> s
@@ -23,11 +31,9 @@ def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
     | [] -> s
     | [x | xs] -> f x (foldr f s xs)
 
-def lengthAux = \n, l -> put l
-    | [] -> n
-    | [_ | xs] -> lengthAux (n + 1) xs
-def pub length : forall a. List a -> Int
-    = lengthAux 0
+# TODO: foldl1, foldr1, scanl, scanr, scanl1, scanr1
+
+# TODO: unfoldr
 
 def pub zip : forall a b. List a -> List b -> List (a, b)
     = \l, l' -> put (l, l')
@@ -55,6 +61,8 @@ def pub all : forall a. (a -> Bool) -> List a -> Bool
         | False -> False
         | _ -> all bf xs
 
+# TODO: and, or, sum, product, maximum, minimum
+
 def pub elem : forall a. {Eq a} => a -> List a -> Bool
     = \x -> any (x ==)
 
@@ -62,3 +70,9 @@ def pub nth : forall a. Int -> List a -> a
     = \n, l -> put n
     | 0 -> head l
     | _ -> nth (n - 1) (tail l)
+
+# TODO: lookup, find, filter, partition, elemIndex, elemIndices, findIndex, findIndices
+# TODO: take, drop, splitAt, takeWhile, dropWhile, span
+# TODO?: inits, tails
+
+# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn

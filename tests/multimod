@@ -1,0 +1,16 @@
+use Std
+
+mod M {
+    mod A {
+        def pub a = 10
+        def pub b = 1
+    }
+    mod B {
+        def pub a = 11
+        def pub c = 2
+    }
+    use pub A
+    use B
+}
+
+def main = M.a
