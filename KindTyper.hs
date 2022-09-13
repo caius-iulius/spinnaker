@@ -215,10 +215,10 @@ typeExprHints s env (c, t, ExprCombinator l es) = do
 typeExprHints s env (c, t, ExprLambda p e) = do
     e' <- typeExprHints s env e
     return (c, t, ExprLambda p e')
-typeExprHints s env (c, t, ExprPut v pses) = do
-    v' <- typeExprHints s env v
+typeExprHints s env (c, t, ExprPut vs pses) = do
+    vs' <- mapM (typeExprHints s env) vs
     pses' <- mapM (\(p, e) -> do {e' <- typeExprHints s env e; return (p, e')}) pses
-    return (c, t, ExprPut v' pses')
+    return (c, t, ExprPut vs' pses')
 typeExprHints s env (c, t, ExprHint hint e) = do
     (ks, k, hint') <- typeTyExpr c env (kSubstApply s hint)
     if length (freeKindQuants hint') == 0 then return ()

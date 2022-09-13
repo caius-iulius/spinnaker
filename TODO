@@ -1,10 +1,11 @@
-implementa le putexpr con più espressioni e pattern:
-put v0, v1, v2
-| p00, p01, p02 -> e0
-| p10, p11, p12 -> e1
-...
+dato che i put possono fare matching su più espressioni, potrebbe convenire implementare i let con più assegnazioni:
+let v0, v1, v2 = e0, e1, e2 -> e
+ |
+ v
+put e0, e1, e2
+| v0, v1, v2 -> e
 
-dopodiché converti le lambda con pattern in lambda con label e match multipli dopo (in Demod):
+converti le lambda con pattern in lambda con label e match multipli dopo (in Demod):
 \p0, p1, p2 -> e
  |
  v

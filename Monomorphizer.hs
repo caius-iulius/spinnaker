@@ -116,10 +116,10 @@ monomorphizeInner _ (ExprLambda pat e) = do
     pat' <- monomorphizePat pat
     e' <- monomorphize e
     return (ExprLambda pat' e')
-monomorphizeInner _ (ExprPut v pses) = do
-    v' <- monomorphize v
-    pses' <- mapM (\(p, e) -> do {p' <- monomorphizePat p; e' <- monomorphize e; return (p', e')}) pses
-    return (ExprPut v' pses')
+monomorphizeInner _ (ExprPut vs pses) = do
+    vs' <- mapM monomorphize vs
+    pses' <- mapM (\(ps, e) -> do {ps' <- mapM monomorphizePat ps; e' <- monomorphize e; return (ps', e')}) pses
+    return (ExprPut vs' pses')
 monomorphizeInner t (ExprHint _ e) = do
     e' <- monomorphize e
     return (ExprHint t e')

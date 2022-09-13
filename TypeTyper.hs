@@ -32,10 +32,12 @@ typePat env (c, _, PatVariant v ps) = do
     if length ps /= length vts then fail $ show c ++ " Constructor is applied to wrong number of arguments"
     else do
         s <- getInstantiationSubst qs
-        pts <- mapM (typePat env) ps
+        pts <- typePats env ps
         s' <- liftUnionList mgu c $ zip (map (substApply s) vts) pts --TODO questo in teoria controlla la validità degli argomenti, va rifatto, forse serve un algoritmo di unificazione "one-way"
         typerLog $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
         return $ substApply s' $ substApply s dt
+typePats :: TypingEnv -> [HLPattern] -> TyperState [DataType]
+typePats env ps = mapM (typePat env) ps
 
 --TODO Da testare
 patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf e p t}) (return env) (zip ps ts)
@@ -109,16 +111,16 @@ typeExprInternal env (c, _, ExprLambda pat expr) = do
     (s, ps, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
         in return (s, ps, finaldt, (c, finaldt, ExprLambda pat e))
-typeExprInternal env (c, _, ExprPut val pses) = do
-    (s, ps, tval, val') <- typeExpr env val
-    (s', tval') <- unifyPats (substApply s env) tval pses
+typeExprInternal env (c, _, ExprPut vals pses) = do
+    (s, ps, tvals, vals') <- typeExprs env vals
+    (s', tvals') <- unifyPats (substApply s env) tvals pses
     tempt <- freshType KType--TODO GIUSTO IL FRESH?
-    (s'', ps'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) (Qual ps tval') tempt pses
-    typerLog $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tval' ++ " texpr:"++show texpr
+    (s'', ps'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) ps tvals' tempt pses
+    typerLog $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tvals' ++ " texpr:"++show texpr
     let finals = composeSubst s'' (composeSubst s' s)
         finalps = map (substApply finals) (ps++ps'')
         finalt = substApply finals texpr
-        in return (finals, finalps, finalt, (c, finalt, ExprPut val' pses'))
+        in return (finals, finalps, finalt, (c, finalt, ExprPut vals' pses'))
 typeExprInternal env (c, _, ExprHint hint e) = do
     (s, ps, t, e') <- typeExpr env e
     s' <- match c t hint
@@ -133,28 +135,30 @@ typeExpr env expr@(c, _, _) = do
     return (s, ps', t, expr')
 
 --Funzioni helper per putexpr
-unifyPats :: TypingEnv -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, DataType)
-unifyPats _ t [] = return (nullSubst, t)
-unifyPats env t ((pat, (c, _, _)):branches) = do
-    tpat <- typePat env pat
-    s <- mgu c t tpat
-    (s', t') <- unifyPats (substApply s env) (substApply s t) branches
-    return (composeSubst s' s, t')
+unifyPats :: TypingEnv -> [DataType] -> [([HLPattern], HLExpr)] -> TyperState (Subst, [DataType])
+unifyPats _ ts [] = return (nullSubst, ts)
+unifyPats env ts ((pats, (c, _, _)):branches)
+    | length pats /= length ts = fail $ show c ++ " Match has " ++ show (length pats) ++ " patterns, but matches on " ++ show (length ts) ++ " expressions"
+    | otherwise = do
+        tpats <- typePats env pats
+        s <- liftUnionList mgu c (zip ts tpats)
+        (s', ts') <- unifyPats (substApply s env) (map (substApply s) ts) branches
+        return (composeSubst s' s, ts')
 
-typePutBranches :: TypingEnv -> Qual DataType -> DataType -> [(HLPattern, HLExpr)] -> TyperState (Subst, [Pred], DataType, [(HLPattern, HLExpr)])
-typePutBranches _ _ texpr [] = return (nullSubst, [], texpr, [])
-typePutBranches env qtpat@(Qual pspat tpat) texpr ((pat, expr@(c, _, _)):branches) = do
-    typerLog $ " PUTBRANCH_SRT tpat:" ++ show tpat ++ " texpr:" ++ show texpr
-    env' <- patVarsInEnv (TyScheme [] . Qual pspat) env pat tpat
+typePutBranches :: TypingEnv -> [Pred] -> [DataType] -> DataType -> [([HLPattern], HLExpr)] -> TyperState (Subst, [Pred], DataType, [([HLPattern], HLExpr)])
+typePutBranches _ _ _ texpr [] = return (nullSubst, [], texpr, [])
+typePutBranches env pspat tpats texpr ((pats, expr@(c, _, _)):branches) = do
+    typerLog $ " PUTBRANCH_SRT tpat:" ++ show tpats ++ " texpr:" ++ show texpr
+    env' <- patListPatVarsInEnv (TyScheme [] . Qual pspat) env pats tpats
     (s, psexpr, texpr', expr') <- typeExpr env' expr
     typerLog $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
     s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?
     mys <- return $ composeSubst s' s
-    (s'', psbranches, tfinal, others) <- typePutBranches (substApply mys env) (substApply mys qtpat) (substApply s' texpr) branches
+    (s'', psbranches, tfinal, others) <- typePutBranches (substApply mys env) (map (substApply mys) pspat) (map (substApply mys) tpats) (substApply s' texpr) branches
     typerLog $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     let finals = composeSubst s'' mys
         finalps = map (substApply finals) (psexpr++psbranches)
-        in return (finals, finalps, tfinal, (pat, expr'):others)
+        in return (finals, finalps, tfinal, (pats, expr'):others)
 
 --Sostituzioni su espressioni e definizioni, eseguite solo nel toplevel (riduci ancora il numero di applicazioni)
 substApplyExpr :: Subst -> HLExpr -> HLExpr
@@ -164,7 +168,7 @@ substApplyExpr s (c, dt, ExprLabel l) = (c, substApply s dt, ExprLabel l)
 substApplyExpr s (c, dt, ExprConstructor l es) = (c, substApply s dt, ExprConstructor l (map (substApplyExpr s) es))
 substApplyExpr s (c, dt, ExprCombinator l es) = (c, substApply s dt, ExprCombinator l (map (substApplyExpr s) es))
 substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (substApplyExpr s e))
-substApplyExpr s (c, dt, ExprPut v psandes) = (c, substApply s dt, ExprPut (substApplyExpr s v) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
+substApplyExpr s (c, dt, ExprPut vs psandes) = (c, substApply s dt, ExprPut (map (substApplyExpr s) vs) (map (\(p, e) -> (p, substApplyExpr s e)) psandes))
 substApplyExpr s (c, dt, ExprHint hint e) = (c, substApply s dt, ExprHint hint (substApplyExpr s e))
 
 substApplyValDef s (ValDef c l t ps e) = ValDef c l t (map (substApply s) ps) (substApplyExpr s e)

@@ -12,7 +12,7 @@ toTreeHLExpr (c, dt, ExprLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label
 toTreeHLExpr (c, dt, ExprConstructor l es) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) (map toTreeHLExpr es)
 toTreeHLExpr (c, dt, ExprCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeHLExpr es)
 toTreeHLExpr (c, dt, ExprLambda p expr) = Node (show c ++ " DT:" ++ show dt ++ " Lambda") [Node "arg" [toTreeHLPattern p], Node "expr" [toTreeHLExpr expr]]
-toTreeHLExpr (c, dt, ExprPut val branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "val" [toTreeHLExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHLPattern p], Node "expr" [toTreeHLExpr e]]) branches)]
+toTreeHLExpr (c, dt, ExprPut vals branches) = Node (show c ++ " DT:" ++ show dt ++ " Put") [Node "vals" (map toTreeHLExpr vals), Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeHLPattern p], Node "expr" [toTreeHLExpr e]]) branches)]
 toTreeHLExpr (c, dt, ExprHint hint e) = Node (show c ++ " DT:" ++ show dt ++ " Hinting with type: " ++ show hint) [toTreeHLExpr e]
 
 toTreeHLValDef (ValDef c s t ps e) = Node (show c ++ " Defining val: " ++ show s ++ " typehint: " ++ show t ++ " qualifiers: " ++ show ps) [toTreeHLExpr e]
@@ -45,7 +45,7 @@ toTreeSynExpr (c, SynExprConstructor l) = Node (show c ++ " Constructor: " ++ sh
 toTreeSynExpr (c, SynExprTuple es) = Node (show c ++ " Tuple") (map toTreeSynExpr es)
 toTreeSynExpr (c, SynExprLambda p expr) = Node (show c ++ " Lambda") [Node "arg" [toTreeSynPattern p], Node "expr" [toTreeSynExpr expr]]
 toTreeSynExpr (c, SynExprSndSection op expr) = Node (show c ++ " Second section of operator: " ++ show op) [toTreeSynExpr expr]
-toTreeSynExpr (c, SynExprPut val branches) = Node (show c ++ " Put") [Node "val" [toTreeSynExpr val], Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeSynPattern p], Node "expr" [toTreeSynExpr e]]) branches)]
+toTreeSynExpr (c, SynExprPut vals branches) = Node (show c ++ " Put") [Node "vals" (map toTreeSynExpr vals), Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeSynPattern p], Node "expr" [toTreeSynExpr e]]) branches)]
 toTreeSynExpr (c, SynExprString s) = Node (show c ++ "String literal: " ++ show s) []
 toTreeSynExpr (c, SynExprListNil) = Node (show c ++ " Empty List") []
 toTreeSynExpr (c, SynExprListConss es final) = Node (show c ++ " List") (map toTreeSynExpr es ++ [Node "With final elems" [toTreeSynExpr final]])

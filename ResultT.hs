@@ -12,7 +12,6 @@ instance Applicative m => Applicative (ResultT m) where
     pure a = ResultT (pure (Right a))
     (<*>) (ResultT mf) (ResultT ma) = ResultT (fmap (<*>) mf <*> ma)
 instance Monad m => Monad (ResultT m) where
-    return a = ResultT (return (Right a))
     (>>=) (ResultT m) mf = ResultT (
         do  either <- m
             case either of

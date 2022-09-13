@@ -16,7 +16,7 @@ data VMInstr
     | IRet
     | IVariant Name Int
     | ICombApp Name Int
-    | ICase [(VMPat, VMCode)]
+    | ICase Int [([VMPat], VMCode)]
 
 instance Show VMInstr where
     show (IConst lit) = show lit
@@ -26,7 +26,7 @@ instance Show VMInstr where
     show IRet = "RET"
     show (IVariant n i) = "VAR"++show n++ '(':show i++")"
     show (ICombApp n i) = "COMB"++show n++ '(':show i++")"
-    show (ICase pscs) = "CASE"++show pscs
+    show (ICase i pscs) = "CASE("++show i++")"++show pscs
 
 data VMPatData
     = PConst Literal
@@ -94,17 +94,17 @@ sievePatternInner (VConst vlit) (PConst plit)
     | vlit == plit = return []
     | otherwise = Nothing
 sievePatternInner (VVariant vn vas) (PVariant pn pas)
-    | vn == pn =
-        fmap concat $ zipWithM sievePattern vas pas
+    | vn == pn = sievePatterns vas pas
     | otherwise = Nothing
 sievePatternInner v p = error $ show v ++ show p
-sievePattern :: VMVal -> VMPat -> Maybe [VMVal]
 sievePattern v (True, p) = fmap (v :) (sievePatternInner v p)
 sievePattern v (False, p) = sievePatternInner v p
+sievePatterns :: [VMVal] -> [VMPat] -> Maybe [VMVal]
+sievePatterns vs ps = fmap concat $ zipWithM sievePattern vs ps
 
-choosePattern v ((p,c):pscs) =
-    case sievePattern v p of
-        Nothing -> choosePattern v pscs
+chooseBranch vs ((ps,c):pscs) =
+    case sievePatterns vs ps of
+        Nothing -> chooseBranch vs pscs
         Just bs -> (bs, c)
 
 execVM :: VMState -> VMMonad VMVal
@@ -124,12 +124,14 @@ execVM (ICombApp n i:IRet:_, s, e) = --TCO comb
 execVM (ICombApp n i:c, s, e) = 
     let (as,s') = splitAt i s
     in execComb n (VClos c e:s') as
-execVM (ICase pscs:IRet:_, v:s, e) = --TCO case
-    let (bs, c') = choosePattern v pscs
-    in execVM (c', s, reverse bs ++ e)
-execVM (ICase pscs:c, v:s, e) =
-    let (bs, c') = choosePattern v pscs
-    in execVM (c', VClos c e:s, reverse bs ++ e)
+execVM (ICase i pscs:IRet:_, s, e) = --TCO case
+    let (vs,s') = splitAt i s
+        (bs, c') = chooseBranch (reverse vs) pscs
+    in execVM (c', s', reverse bs ++ e)
+execVM (ICase i pscs:c, s, e) =
+    let (vs,s') = splitAt i s
+        (bs, c') = chooseBranch (reverse vs) pscs
+    in execVM (c', VClos c e:s', reverse bs ++ e)
 execVM (c, s, e) = error $ show c ++ show s ++ show e
 
 evalProg :: (VMCode, [(String, VMCode)]) -> IO ()

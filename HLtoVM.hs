@@ -7,8 +7,8 @@ import VM
 patToVmInner PatWildcard = (PWildcard, [])
 patToVmInner (PatLiteral lit) = (PConst lit, [])
 patToVmInner (PatVariant v ps) =
-    let (ps', ls) = unzip $ map patToVm ps
-        in (PVariant v ps', concat ls)
+    let (ps', ls) = patsToVm ps
+        in (PVariant v ps', ls)
 
 patToVm :: HLPattern -> (VMPat, [String])
 patToVm (_, Nothing, ip) =
@@ -17,6 +17,10 @@ patToVm (_, Nothing, ip) =
 patToVm (_, Just l, ip) =
     let (ip', ls) = patToVmInner ip
         in ((True, ip'), l:ls)
+patsToVm :: [HLPattern] -> ([VMPat], [String])
+patsToVm ps =
+    let (ps', ls) = unzip $ map patToVm ps
+        in (ps', concat ls)
 
 exprToVm :: [String] -> HLExpr -> VMCode
 exprToVm _ (_, _, ExprLiteral lit) = [IConst lit]
@@ -36,15 +40,15 @@ exprToVm vs (_, _, ExprLambda (_, ml, PatWildcard) e) =
 exprToVm vs (_, _, ExprLambda p e) =
     let (p', ls) = patToVm p
         e' = exprToVm (reverse ls ++ ["#"] ++ vs) e ++ [IRet]
-    in [IClos [IAccess 0, ICase [(p',e')], IRet]]
+    in [IClos [IAccess 0, ICase 1 [([p'],e')], IRet]]
 exprToVm vs (_, _, ExprPut v pses) =
-    let v' = exprToVm vs v
+    let v' = v >>= exprToVm vs
         pscs = map (\(p, e) ->
-            let (p', ls) = patToVm p
+            let (p', ls) = patsToVm p
                 e' = exprToVm (reverse ls ++ vs) e ++ [IRet]
                 in (p', e')
             ) pses
-    in v' ++ [ICase pscs]
+    in v' ++ [ICase (length v) pscs]
 
 progToVm :: (HLExpr, [(String, HLExpr)]) -> (VMCode, [(Name, VMCode)])
 progToVm (ep, defs) =

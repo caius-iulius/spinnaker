@@ -1,0 +1,9 @@
+use Core
+
+def main = putStrLn $
+    put 213, True
+    | 213, False -> "a"
+    | 2, True -> "b"
+    | _, False -> "c"
+    | 3, _ -> "d"
+    | a, b -> show (a, b)

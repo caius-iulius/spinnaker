@@ -98,12 +98,6 @@ getPathEnv c (DemodEnv envs _ _ _ _) (entry:path) = do
     getPathEnv c env path
 
 -- Roba per i pattern
-patsValsInEnv env [] = return (env, [])
-patsValsInEnv env (p:ps) = do
-    (env', p') <- patValsInEnv env p
-    (env'', ps') <- patsValsInEnv env' ps
-    return (env'', p':ps')
-
 patValsInEnvInner _ env SynPatWildcard = return (env, PatWildcard)
 patValsInEnvInner _ env (SynPatLiteral l) = return (env, PatLiteral l)
 patValsInEnvInner _ env (SynPatTuple ps) = do
@@ -124,8 +118,6 @@ patValsInEnvInner c env (SynPatListConss ps final) = do
     (env', ps') <- patsValsInEnv env ps
     (env'', final') <- patValsInEnv env' final
     return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [head, tail])) final' ps'
-
-patValsInEnv :: DemodEnv -> SyntaxPattern -> TyperState (DemodEnv, HLPattern)
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
     return (env', (c, Nothing, inner'))
@@ -135,6 +127,13 @@ patValsInEnv (DemodEnv ms vs ts cs rs) (c, Just l, inner)
         suffix <- newUniqueSuffix
         (env', inner') <- patValsInEnvInner c (DemodEnv ms (envmapInsert l (visibtoenv Private, l++suffix) vs) ts cs rs) inner
         return (env', (c, Just $ l++suffix, inner'))
+
+patsValsInEnv :: DemodEnv -> [SyntaxPattern] -> TyperState (DemodEnv, [HLPattern])
+patsValsInEnv env [] = return (env, [])
+patsValsInEnv env (p:ps) = do
+    (env', p') <- patValsInEnv env p
+    (env'', ps') <- patsValsInEnv env' ps
+    return (env'', p':ps')
 
 --espressioni
 demodExpr _ _ (c, SynExprLiteral l) = return (c, DataNOTHING, ExprLiteral l)
@@ -163,14 +162,14 @@ demodExpr env qmap (c, SynExprSndSection op expr) = do
     suffix <- newUniqueSuffix
     let label = "_v" ++ suffix
     return (c, DataNOTHING, ExprLambda (c, Just label, PatWildcard) (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp op' (c, DataNOTHING, ExprLabel label)) expr'))
-demodExpr env qmap (c, SynExprPut val pses) = do
-    val' <- demodExpr env qmap val
-    pses' <- mapM (\(pat, e)->do
-        (env', pat') <- patValsInEnv env pat
+demodExpr env qmap (c, SynExprPut vals pses) = do
+    vals' <- mapM (demodExpr env qmap) vals
+    pses' <- mapM (\(pats, e)->do
+        (env', pats') <- patsValsInEnv env pats
         e' <- demodExpr env' qmap e
-        return (pat', e')
+        return (pats', e')
         ) pses
-    return (c, DataNOTHING, ExprPut val' pses')
+    return (c, DataNOTHING, ExprPut vals' pses')
 demodExpr env _ (c, SynExprString s) = do
     (DemodEnv _ vs _ cs _) <- getPathEnv c env ["Core"]
     (_, conslabl) <- envmapLookup (show c ++ " The Core module does not provide a definition for Cons") "Cons" cs
@@ -187,9 +186,9 @@ demodExpr env qmap (c, SynExprListConss es final) = do
     demodfinal <- demodExpr env qmap final
     return $ foldr (\head tail -> (c, DataNOTHING, ExprConstructor nlabl [head, tail])) demodfinal demodes
 demodExpr env qmap (c, SynExprIfThenElse cond iftrue iffalse) = demodExpr env qmap (c, --TODO: Forse questo va "specializzato" come le implementazioni di synexprlistnil etc...
-    SynExprPut cond [
-        ((c, Nothing, SynPatVariant (Path ["Core"] "True") []), iftrue),
-        ((c, Nothing, SynPatVariant (Path ["Core"] "False") []), iffalse)
+    SynExprPut [cond] [
+        ([(c, Nothing, SynPatVariant (Path ["Core"] "True") [])], iftrue),
+        ([(c, Nothing, SynPatVariant (Path ["Core"] "False") [])], iffalse)
     ])
 demodExpr env qmap (c, SynExprInlineUse (Path path labl) e) = do
     env' <- getPathEnv c env (path ++ [labl])

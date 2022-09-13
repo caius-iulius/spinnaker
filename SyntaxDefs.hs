@@ -24,7 +24,7 @@ data SyntaxExprData
     | SynExprSndSection Path SyntaxExpr -- Sezioni di tipo (OP META)
     | SynExprTuple [SyntaxExpr] --Elementi della n-tupla
     | SynExprLambda SyntaxPattern SyntaxExpr --Argomento(anche "smontato") e valore interno
-    | SynExprPut SyntaxExpr [(SyntaxPattern, SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
+    | SynExprPut [SyntaxExpr] [([SyntaxPattern], SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
     | SynExprString String -- Costante stringa
     | SynExprListNil -- lista vuota
     | SynExprListConss [SyntaxExpr] SyntaxExpr -- primi elementi della lista, continuazione

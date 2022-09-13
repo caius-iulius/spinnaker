@@ -20,8 +20,8 @@ appears l (_, _, ExprLabel l') = if l == l' then 1 else 0
 appears l (_, _, ExprConstructor c es) = sum (map (appears l) es)
 appears l (_, _, ExprCombinator c es) = sum (map (appears l) es)
 appears l (_, _, ExprLambda p e) = if appearsPat l p then 0 else appears l e
-appears l (_, _, ExprPut v pses) = appears l v +
-    sum (map (\(p, e)->if appearsPat l p then 0 else appears l e) pses)
+appears l (_, _, ExprPut vs pses) = sum (map (appears l) vs) +
+    sum (map (\(ps, e)->if any (appearsPat l) ps then 0 else appears l e) pses)
 
 appearsDefs :: String -> Definitions -> Int
 appearsDefs l defs = sum $ map (appears l . snd) defs
@@ -33,7 +33,7 @@ exprSize (_, _, ExprLabel _) = 1
 exprSize (_, _, ExprConstructor _ es) = 1 + sum (map exprSize es)
 exprSize (_, _, ExprCombinator _ es) = 1 + sum (map exprSize es)
 exprSize (_, _, ExprLambda p e) = 1 + exprSize e --TODO patSize p?
-exprSize (_, _, ExprPut v pses) = length pses + exprSize v + sum (map (exprSize . snd) pses) --TODO patsize pses?
+exprSize (_, _, ExprPut vs pses) = length pses + sum (map exprSize vs) + sum (map (exprSize . snd) pses) --TODO patsize pses?
 exprSize (_, _, ExprHint _ e) = exprSize e
 
 programSize :: Program -> Int
@@ -56,8 +56,8 @@ inline l ie (c, t, ExprCombinator cn es) = (c, t, ExprCombinator cn (map (inline
 inline l ie e@(c, t, ExprLambda p le)
     | appearsPat l p = e
     | otherwise = (c, t, ExprLambda p (inline l ie le))
-inline l ie (c, t, ExprPut v pses) = (c, t, ExprPut (inline l ie v)
-    (map (\(p, e)->if appearsPat l p then (p, e) else (p, inline l ie e)) pses))
+inline l ie (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline l ie) vs)
+    (map (\(p, e)->if any (appearsPat l) p then (p, e) else (p, inline l ie e)) pses))
 
 -- TODO: Inline più furbo, per esempio dai la precedenza alle definizioni che appaiono di meno
 sortInlines :: Program -> Program
@@ -107,9 +107,8 @@ sievePatternInner PatWildcard _ = Always []
 sievePatternInner (PatLiteral plit) (_, _, ExprLiteral elit) =
     if plit == elit then Always [] else Never
 sievePatternInner (PatVariant pvar ps) (_, _, ExprConstructor evar es) =
-    if pvar == evar then
-        let maps = zipWith sievePattern ps es
-            in concatRess maps
+    if pvar == evar
+    then sievePatternList ps es
     else Never
 sievePatternInner p e = Maybe
 
@@ -119,11 +118,14 @@ sievePattern (_, Just l, patdata) e =
     let inner = sievePatternInner patdata e
         in concatRess [Always[(l, e)],inner]
 
-sievePatterns :: HLExpr -> [(HLPattern, HLExpr)] -> [(HLPattern, HLExpr)]
+sievePatternList :: [HLPattern] -> [HLExpr] -> SieveRes
+sievePatternList ps es = concatRess (zipWith sievePattern ps es)
+
+sievePatterns :: [HLExpr] -> [([HLPattern], HLExpr)] -> [([HLPattern], HLExpr)]
 sievePatterns v = reverse . loop []
     where loop pses' [] = pses'
           loop pses' ((p, e):pses) =
-            case sievePattern p v of
+            case sievePatternList p v of
                 Always _ -> (p, e):pses'
                 Maybe -> loop ((p, e):pses') pses
                 Never -> loop pses' pses
@@ -146,25 +148,25 @@ optimizeExpr (c, t, ExprApp f a) =
     let f' = optimizeExpr f
         a' = optimizeExpr a
     in case f' of
-        (_, _, ExprLambda pat inner) -> optimizeExpr (c, t, ExprPut a' [(pat, inner)])
+        (_, _, ExprLambda pat inner) -> optimizeExpr (c, t, ExprPut [a'] [([pat], inner)])
         _ -> (c, t, ExprApp f' a')
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
 optimizeExpr (c, t, ExprCombinator l es) = optimizeBI c t l (map optimizeExpr es)
-optimizeExpr (c, t, ExprPut val pses) = --TODO: putofput
-    let val' = optimizeExpr val
-        pses' = sievePatterns val' pses
+optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
+    let vals' = map optimizeExpr vals
+        pses' = sievePatterns vals' pses
         pses'' = map (\(p,e)->(p,optimizeExpr e)) pses'
     in case pses'' of
-        (p, e):[] -> case sievePattern p val' of
+        (p, e):[] -> case sievePatternList p vals' of
             Always bs -> 
                 if all (\(ml,me)->inlineHeuristic me (appears ml e)) bs
                 then optimizeExpr $
                     --TODO: questo effettua un inline forse troppo permissivo
                     foldl (\me (l,e')->inline l e' me) e bs
-                else (c, t, ExprPut val' pses'')
-            _ -> (c, t, ExprPut val' pses'')
-        _ -> (c, t, ExprPut val' pses'')
+                else (c, t, ExprPut vals' pses'')
+            _ -> (c, t, ExprPut vals' pses'')
+        _ -> (c, t, ExprPut vals' pses'')
         --error $ "OPTIMIZED val " ++ show val' ++ "\npses " ++ show pses ++ "\npses'" ++ show pses'
 optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
 optimizeExpr (_, _, ExprHint _ e) = optimizeExpr e

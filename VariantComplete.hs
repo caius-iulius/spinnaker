@@ -25,10 +25,10 @@ completeVariant env (c, t, ExprCombinator l es) = do
 completeVariant env (c, t, ExprLambda p e) = do
     e' <- completeVariant env e
     return (c, t, ExprLambda p e')
-completeVariant env (c, t, ExprPut v pses) = do
-    v' <- completeVariant env v
+completeVariant env (c, t, ExprPut vs pses) = do
+    vs' <- mapM (completeVariant env) vs
     pses' <- mapM (\(p, e)-> completeVariant env e >>= \e' -> return (p, e')) pses
-    return (c, t, ExprPut v' pses')
+    return (c, t, ExprPut vs' pses')
 completeVariant env (c, t, ExprHint hint e) = do
     e' <- completeVariant env e
     return (c, t, ExprHint hint e')

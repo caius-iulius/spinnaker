@@ -284,29 +284,29 @@ getBindSyn = do {
 getLet = do
     (c, _) <- thisSyntaxElem "let"
     require $ do {
-        p <- require getPatternExpr;
+        p <- require getPatternExpr; --TODO: forse il require non serve
         thisSyntaxElem "=";
         val <- getMeta;
         thisSyntaxElem "->";
         expr <- getMeta;
-        return (c, SynExprPut val [(p, expr)])
+        return (c, SynExprPut [val] [([p], expr)])
     }
 
 getBranch = do
     thisSyntaxElem "|";
     require $ do {
-        p <- require getPatternExpr;
+        ps <- sepBy1 (require getPatternExpr) (thisUsefulChar ','); --TODO: forse il require non serve
         thisSyntaxElem "->";
         expr <- getMeta;
-        return (p, expr)
+        return (ps, expr)
     }
 
 getPut = do
     (c, _) <- thisSyntaxElem "put"
     require $ do {
-        val <- getMeta;
+        vals <- sepBy1 getMeta (thisUsefulChar ',');
         branches <- munch1 getBranch;
-        return (c, SynExprPut val branches)
+        return (c, SynExprPut vals branches)
     }
 
 getLambda = do {
