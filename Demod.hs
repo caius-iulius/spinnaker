@@ -155,13 +155,15 @@ demodExpr env qmap (c, SynExprTuple es) = do
 demodExpr env qmap (c, SynExprLambda pat expr) = do
     (env', pat') <- patValsInEnv env pat
     expr' <- demodExpr env' qmap expr
-    return (c, DataNOTHING, ExprLambda pat' expr')
+    suffix <- newUniqueSuffix
+    let label = "_v" ++ suffix
+    return (c, DataNOTHING, ExprLambda label (c, DataNOTHING, ExprPut [(c, DataNOTHING, ExprLabel label)] [([pat'], expr')]))
 demodExpr env qmap (c, SynExprSndSection op expr) = do
     op' <- demodExpr env qmap (c, SynExprLabel op)
     expr' <- demodExpr env qmap expr
     suffix <- newUniqueSuffix
     let label = "_v" ++ suffix
-    return (c, DataNOTHING, ExprLambda (c, Just label, PatWildcard) (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp op' (c, DataNOTHING, ExprLabel label)) expr'))
+    return (c, DataNOTHING, ExprLambda label (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp op' (c, DataNOTHING, ExprLabel label)) expr'))
 demodExpr env qmap (c, SynExprPut vals pses) = do
     vals' <- mapM (demodExpr env qmap) vals
     pses' <- mapM (\(pats, e)->do
@@ -383,7 +385,7 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModExt c visib l tas tr) --TO
         suffixes <- mapM (\_->newUniqueSuffix) [0..length tas-1]
         let vnames = map ("_v"++) suffixes
             ves = map (\myl->(c,DataNOTHING,ExprLabel myl)) vnames
-            finale = foldr (\myl e->(c,DataNOTHING, ExprLambda (c, Just myl, PatWildcard) e)) (c, DataNOTHING, ExprCombinator l ves) vnames
+            finale = foldr (\myl e->(c,DataNOTHING, ExprLambda myl e)) (c, DataNOTHING, ExprCombinator l ves) vnames
         return (DemodEnv ms (envmapInsert l (visibtoenv visib, l++defsuffix) vs) ts cs rs, fs, BlockProgram [] [] [ExtDef c l tas' tr'] [[ValDef c (l++defsuffix) Nothing [] finale]] [])
 
 concatBlockPrograms (BlockProgram datagroups reldefs extdefs valgroups instdefs) (BlockProgram datagroups' reldefs' extdefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (extdefs++extdefs') (valgroups++valgroups') (instdefs++instdefs')

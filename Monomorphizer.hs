@@ -112,10 +112,9 @@ monomorphizeInner _ (ExprConstructor c es) = do
 monomorphizeInner _ (ExprCombinator l es) = do
     es' <- mapM monomorphize es
     return (ExprCombinator l es')
-monomorphizeInner _ (ExprLambda pat e) = do
-    pat' <- monomorphizePat pat
+monomorphizeInner _ (ExprLambda l e) = do
     e' <- monomorphize e
-    return (ExprLambda pat' e')
+    return (ExprLambda l e')
 monomorphizeInner _ (ExprPut vs pses) = do
     vs' <- mapM monomorphize vs
     pses' <- mapM (\(ps, e) -> do {ps' <- mapM monomorphizePat ps; e' <- monomorphize e; return (ps', e')}) pses

@@ -105,12 +105,12 @@ typeExprInternal env (c, _, ExprApp f a) = do
         finalps = map (substApply finals) (ps1++ps2)
     return (finals, finalps, finalt, (c, finalt, ExprApp f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
-typeExprInternal env (c, _, ExprLambda pat expr) = do
-    argt <- typePat env pat
-    env' <- patVarsInEnv (TyScheme [] . Qual []) env pat argt
+typeExprInternal env (c, _, ExprLambda labl expr) = do
+    argt <- freshType KType
+    let env' = tyBindAdd c env labl (TyScheme [] $ Qual [] argt)
     (s, ps, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
-        in return (s, ps, finaldt, (c, finaldt, ExprLambda pat e))
+        in return (s, ps, finaldt, (c, finaldt, ExprLambda labl e))
 typeExprInternal env (c, _, ExprPut vals pses) = do
     (s, ps, tvals, vals') <- typeExprs env vals
     (s', tvals') <- unifyPats (substApply s env) tvals pses

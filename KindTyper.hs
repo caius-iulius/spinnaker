@@ -212,9 +212,9 @@ typeExprHints s env (c, t, ExprConstructor l es) = do
 typeExprHints s env (c, t, ExprCombinator l es) = do
     es' <- mapM (typeExprHints s env) es
     return (c, t, ExprCombinator l es')
-typeExprHints s env (c, t, ExprLambda p e) = do
+typeExprHints s env (c, t, ExprLambda l e) = do
     e' <- typeExprHints s env e
-    return (c, t, ExprLambda p e')
+    return (c, t, ExprLambda l e')
 typeExprHints s env (c, t, ExprPut vs pses) = do
     vs' <- mapM (typeExprHints s env) vs
     pses' <- mapM (\(p, e) -> do {e' <- typeExprHints s env e; return (p, e')}) pses

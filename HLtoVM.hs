@@ -33,14 +33,9 @@ exprToVm vs (_, _, ExprConstructor v es) =
     (es >>= exprToVm vs) ++ [IVariant v (length es)]
 exprToVm vs (_, _, ExprCombinator l es) =
     (es >>= exprToVm vs) ++ [ICombApp l (length es)]
-exprToVm vs (_, _, ExprLambda (_, ml, PatWildcard) e) =
-    let vs' = fromMaybe "#" ml : vs
-        e' = exprToVm vs' e
+exprToVm vs (_, _, ExprLambda l e) =
+    let e' = exprToVm (l : vs) e
     in [IClos (e' ++ [IRet])]
-exprToVm vs (_, _, ExprLambda p e) =
-    let (p', ls) = patToVm p
-        e' = exprToVm (reverse ls ++ ["#"] ++ vs) e ++ [IRet]
-    in [IClos [IAccess 0, ICase 1 [([p'],e')], IRet]]
 exprToVm vs (_, _, ExprPut v pses) =
     let v' = v >>= exprToVm vs
         pscs = map (\(p, e) ->

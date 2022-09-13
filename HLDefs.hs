@@ -21,7 +21,7 @@ data HLExprData
     | ExprLabel String --Riferimento a label
     | ExprConstructor String [HLExpr] -- Riferimento a una variante e argomenti "applicati"
     | ExprCombinator String [HLExpr] -- Riferimento al combinatore e argomenti
-    | ExprLambda HLPattern HLExpr --Argomento(anche "smontato") e valore interno
+    | ExprLambda String HLExpr --Argomento e valore interno
     | ExprPut [HLExpr] [([HLPattern], HLExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
     | ExprHint DataType HLExpr --type hint di un'espressione
     deriving Show

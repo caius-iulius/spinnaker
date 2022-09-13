@@ -19,7 +19,7 @@ appears l (_, _, ExprApp f a) = appears l f + appears l a
 appears l (_, _, ExprLabel l') = if l == l' then 1 else 0
 appears l (_, _, ExprConstructor c es) = sum (map (appears l) es)
 appears l (_, _, ExprCombinator c es) = sum (map (appears l) es)
-appears l (_, _, ExprLambda p e) = if appearsPat l p then 0 else appears l e
+appears l (_, _, ExprLambda l' e) = if l == l' then 0 else appears l e
 appears l (_, _, ExprPut vs pses) = sum (map (appears l) vs) +
     sum (map (\(ps, e)->if any (appearsPat l) ps then 0 else appears l e) pses)
 
@@ -53,9 +53,9 @@ inline l ie e@(_, _, ExprLabel l')
 inline l ie (c, t, ExprApp f a) = (c, t, ExprApp (inline l ie f) (inline l ie a))
 inline l ie (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inline l ie) es))
 inline l ie (c, t, ExprCombinator cn es) = (c, t, ExprCombinator cn (map (inline l ie) es))
-inline l ie e@(c, t, ExprLambda p le)
-    | appearsPat l p = e
-    | otherwise = (c, t, ExprLambda p (inline l ie le))
+inline l ie e@(c, t, ExprLambda l' le)
+    | l == l' = e
+    | otherwise = (c, t, ExprLambda l' (inline l ie le))
 inline l ie (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline l ie) vs)
     (map (\(p, e)->if any (appearsPat l) p then (p, e) else (p, inline l ie e)) pses))
 
@@ -148,7 +148,7 @@ optimizeExpr (c, t, ExprApp f a) =
     let f' = optimizeExpr f
         a' = optimizeExpr a
     in case f' of
-        (_, _, ExprLambda pat inner) -> optimizeExpr (c, t, ExprPut [a'] [([pat], inner)])
+        (_, _, ExprLambda l inner) -> optimizeExpr (c, t, ExprPut [a'] [([(c, Just l, PatWildcard)], inner)])
         _ -> (c, t, ExprApp f' a')
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
