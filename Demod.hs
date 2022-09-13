@@ -152,12 +152,13 @@ demodExpr env _ (c, SynExprConstructor pathlabl@(Path path labl)) = do
 demodExpr env qmap (c, SynExprTuple es) = do
     es' <- mapM (demodExpr env qmap) es
     return (c, DataNOTHING, ExprConstructor (makeTupLabl $ length es') es')
-demodExpr env qmap (c, SynExprLambda pat expr) = do
-    (env', pat') <- patValsInEnv env pat
+demodExpr env qmap (c, SynExprLambda pats expr) = do
+    (env', pats') <- patsValsInEnv env pats
     expr' <- demodExpr env' qmap expr
-    suffix <- newUniqueSuffix
-    let label = "_v" ++ suffix
-    return (c, DataNOTHING, ExprLambda label (c, DataNOTHING, ExprPut [(c, DataNOTHING, ExprLabel label)] [([pat'], expr')]))
+    suffixes <- mapM (const newUniqueSuffix) [1..length pats]
+    let labels = map ("_v" ++) suffixes
+    return $ foldr (\l e -> (c, DataNOTHING, ExprLambda l e)) (c, DataNOTHING, ExprPut (map (\l->(c,DataNOTHING, ExprLabel l)) labels) [(pats', expr')]) labels
+    -- return (c, DataNOTHING, ExprLambda label (c, DataNOTHING, ExprPut [(c, DataNOTHING, ExprLabel label)] [([pat'], expr')]))
 demodExpr env qmap (c, SynExprSndSection op expr) = do
     op' <- demodExpr env qmap (c, SynExprLabel op)
     expr' <- demodExpr env qmap expr
@@ -199,7 +200,7 @@ demodExpr env qmap (c, SynExprBind pat me fe) = do
     (DemodEnv _ vs _ _ _) <- getPathEnv c env ["Core"]
     (_, nlabl) <- envmapLookup (show c ++ " The Core module does not provide a definition for bind") "bind" vs
     me' <- demodExpr env qmap me
-    lam <- demodExpr env qmap (c, SynExprLambda pat fe)
+    lam <- demodExpr env qmap (c, SynExprLambda [pat] fe)
     return (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprApp (c, DataNOTHING, ExprLabel nlabl) me') lam)
 demodExpr env qmap (c, SynExprHint hint e) = do
     demodhint <- demodTypeExpr env qmap hint

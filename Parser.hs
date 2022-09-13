@@ -315,7 +315,8 @@ getLambda = do {
         curriedargs <- sepBy1 getPatternExpr (thisUsefulChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
         thisSyntaxElem "->";
         internal <- getMeta; --Expr
-        return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
+        return (c, SynExprLambda curriedargs internal)
+        -- return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
     }
 }
 
