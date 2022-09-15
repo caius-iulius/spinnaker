@@ -63,7 +63,7 @@ i file sono implementati in modo inefficiente e fragile
 6. defunzionalizzazione e semplificazione a un branch per putexpr
 7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors")
     - [TEST] inlining globale
-    - inlining locale
+    - [TEST] inlining locale
     - putofput
-    - application
+    - [TEST] application
 8. compilazione a C

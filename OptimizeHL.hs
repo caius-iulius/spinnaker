@@ -42,8 +42,8 @@ programSize (ep, defs) = exprSize ep + sum (map (exprSize . snd) defs)
 inlineHeuristic :: HLExpr -> Int -> Bool
 inlineHeuristic e appears =
     let size = exprSize e
-        addedSize = size*(appears - 1) - 1
-    in size < 8 || addedSize <= (2*size)
+        addedSize = size*(appears - 1)
+    in size < 8 || addedSize < size
 
 inline :: String -> HLExpr -> HLExpr -> HLExpr
 inline l ie e@(_, _, ExprLiteral _) = e

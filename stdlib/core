@@ -69,8 +69,7 @@ mod NumCore {
         (*) : a -> a -> a,
         (/) : a -> a -> a,
         fromInt : Int -> a
-
-    rel pub Eq a =
+rel pub Eq a =
         (==) : a -> a -> Bool,
         (!=) : a -> a -> Bool
 
@@ -91,6 +90,12 @@ mod NumCore {
         toEnum : Int -> a
 
     use Builtins
+
+    #TODO: forse incorpora in Num
+    def pub abs : forall a. {Num a, Ord a} => a -> a
+        = \a -> put a < fromInt 0
+        | True -> fromInt 0 - a
+        | False -> a
 
     inst Enum Int {
         def toEnum = id

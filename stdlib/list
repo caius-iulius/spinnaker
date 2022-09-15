@@ -13,12 +13,12 @@ def pub init : forall a. List a -> List a
     | [x] -> []
     | [x | xs] -> x :: (init xs)
 
-# TODO: uncons, null, intersperse, intercalate, transpose, subsequences, permutations
+# TODO: uncons, null
 
 def lengthAux = \n, l -> put l
     | [] -> n
     | [_ | xs] -> lengthAux (n + 1) xs
-def pub length : forall a. List a -> Int
+and pub length : forall a. List a -> Int
     = lengthAux 0
 
 def pub foldl : forall a s. (s -> a -> s) -> s -> List a -> s
@@ -71,8 +71,21 @@ def pub nth : forall a. Int -> List a -> a
     | 0 -> head l
     | _ -> nth (n - 1) (tail l)
 
-# TODO: lookup, find, filter, partition, elemIndex, elemIndices, findIndex, findIndices
+def filterAux
+    = \c, f, l -> put l
+    | [] -> reverse c
+    | [x | xs] ->
+        let newc = if f x then x :: c else c ->
+        filterAux newc f xs
+and pub filter: forall a. (a -> Bool) -> List a -> List a
+    = filterAux []
+
+
+# TODO: lookup, find, partition, elemIndex, elemIndices, findIndex, findIndices
 # TODO: take, drop, splitAt, takeWhile, dropWhile, span
 # TODO?: inits, tails
 
-# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy, (\\ ?)
+def pub (\\) = \l, m -> filter (\x -> all (x !=) m) l
+# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
+# TODO: intersperse, intercalate, transpose, subsequences, permutations
+
