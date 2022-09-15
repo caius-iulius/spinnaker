@@ -22,20 +22,27 @@ time a = do
     let diff = (fromIntegral (end - start)) / (10^9)
     return (v, diff)
 
-frontendCompile :: String -> IO (Either String (TypingEnv, HLExpr, BlockProgram))
-frontendCompile fname = (>>= return . fst) $ runTyperState (0,0,0) $ do
-    (denv, entry, block) <- demodProgram "stdlib/core" "stdlib/std" fname
+timeTyper :: TyperState t -> TyperState (t, Double)
+timeTyper a = do
+    start <- lift $ lift $ getCPUTime
+    v <- a
+    end <- lift $ lift $ getCPUTime
+    let diff = (fromIntegral (end - start)) / (10^9)
+    return (v, diff)
+
+frontendCompile fname = fmap fst $ runTyperState (0,0,0) $ do
+    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram "stdlib/core" "stdlib/std" fname
     typerLog $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
-    (env, tyblock) <- typeBlockProgram block
+    ((env, tyblock), t_typer) <- timeTyper $ typeBlockProgram block
     typerLog $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
-    return (env, entry, tyblock)
+    return (env, entry, tyblock, (t_demod, t_typer))
 
 main = do {
     args <- getArgs;
     (either,t_frontend) <- time $ frontendCompile (head args);
-    let (ep, b) = case either of
+    let (ep, b, ts) = case either of
             Left e -> error $ "Frontend compilation error: " ++ e
-            Right (env, ep, block) -> (ep, block)
+            Right (env, ep, block, ts) -> (ep, block, ts)
     ;
     (prog, t_mono) <- time $ monomorphizeProgram (ep, b);
     ((ep', mono), t_opti) <- time $ return $ optimizeProgram prog;
@@ -43,7 +50,7 @@ main = do {
     (vmprog, t_tovm) <- time $ return $ progToVm (ep', mono);
     compLog $ "VM Bytecode: " ++ show vmprog;
     compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize (ep', mono));
-    compLog $ "Timings: frontend:" ++ show t_frontend ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms tovm:" ++ show t_tovm ++ "ms";
+    compLog $ "Timings: frontend:" ++ show t_frontend ++ (show ts) ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms tovm:" ++ show t_tovm ++ "ms";
     hFlush stdout;
     (_, t_eval) <- time $ VM.evalProg vmprog;
     compLog $ "Program eval time:" ++ show t_eval ++ "ms"

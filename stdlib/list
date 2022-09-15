@@ -36,16 +36,16 @@ def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
 # TODO: unfoldr
 
 def pub zip : forall a b. List a -> List b -> List (a, b)
-    = \l, l' -> put (l, l')
-    | ([], _) -> []
-    | (_, []) -> []
-    | (Cons x xs, Cons x' xs') -> (x, x') :: zip xs xs'
+    = \l, l' -> put l, l'
+    | [], _ -> []
+    | _, [] -> []
+    | Cons x xs, Cons x' xs' -> (x, x') :: zip xs xs'
 
 def pub zipWith : forall a b c. (a -> b -> c) -> List a -> List b -> List c
-    = \f, l, l' -> put (l, l')
-    | ([], _) -> []
-    | (_, []) -> []
-    | ([x | xs], [x' | xs']) -> f x x' :: zipWith f xs xs'
+    = \f, l, l' -> put l, l'
+    | [], _ -> []
+    | _, [] -> []
+    | [x | xs], [x' | xs'] -> f x x' :: zipWith f xs xs'
 
 def pub any : forall a. (a -> Bool) -> List a -> Bool
     = \bf, l -> put l
@@ -75,4 +75,4 @@ def pub nth : forall a. Int -> List a -> a
 # TODO: take, drop, splitAt, takeWhile, dropWhile, span
 # TODO?: inits, tails
 
-# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn
+# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy, (\\ ?)
