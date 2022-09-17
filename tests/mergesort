@@ -2,19 +2,6 @@ use Std
 use List
 
 mod pub Sort {
-    # def split_internal : forall a . (List a, List a) -> List a -> (List a, List a) 
-    # = \(curra, currb), lst ->
-    #     put lst
-    #     | [x, xp | xs] -> split_internal (x :: curra, xp :: currb) xs
-    #     | [x] -> (x::curra, currb)
-    #     | [] -> (curra, currb)
-
-    # def split : forall a . List a -> (List a, List a)
-    # = \lst -> split_internal ([], []) (reverse lst)
-    def splitAt = \n, lst -> put (n, lst)
-        | (0, _) -> ([], lst)
-        | (_, [x | xs]) ->
-            let (f, s) = splitAt (n - 1) xs ->  (x::f, s)
     def split = \l -> splitAt (length l / 2) l
 
     def merge = \cmp, lists ->
