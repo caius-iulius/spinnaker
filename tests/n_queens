@@ -1,0 +1,30 @@
+use Std
+use List use Monad
+
+# def is_safe = \ps, n ->
+#     let safe_f = \(i, p) -> (p != n) && (abs (n - p) != (i + 1))
+#     -> all safe_f (enumerate ps)
+
+def is_safe_aux = \i, ps, n -> put ps
+    | [] -> True
+    | [p | ps'] ->
+        if (p != n) && (abs (n - p) != i)
+        then is_safe_aux (i + 1) ps' n
+        else False
+and is_safe = is_safe_aux 1
+
+def partial = \n, i -> put i
+    | 0 -> [[]]
+    | _ ->
+        q <- partial n (i - 1);
+        p <- 0..n;
+        _ <- guard (is_safe q p);
+        return (p :: q)
+
+def n_queens = \n -> partial n n
+
+def print_sol =
+    let print_row = \n, p -> putStrLn $ (>>= id) $ map (\x -> if x == p then "Q " else ". ") (0..n) ->
+    \s -> fmap (const ()) $ mapM (print_row (length s)) s
+
+def main = fmap (const ()) $ mapM (print_sol |> (>> putChr '\n')) $ n_queens 6

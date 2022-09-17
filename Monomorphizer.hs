@@ -74,7 +74,7 @@ generateInstance l t = do
     let Just e = findGenerator l t gs
     s <- newMonoSuffix
     addInst l t (l++s)
-    e' <- monomorphize e
+    e' <- monomorphize s e
     addDef (l++s) e'
     return (l++s)
 
@@ -90,44 +90,54 @@ findInstance l t =  if length (freetyvars t) /= 0 then error $ "WHAT: there are 
             monoLog $ "Instance not found, generating..."
             generateInstance l t
 
-monomorphizePat :: HLPattern -> MonoState HLPattern
-monomorphizePat = return --TODO: In futuro trova i data giusti
+monomorphizePatInner :: String -> HLPatternData -> MonoState HLPatternData
+monomorphizePatInner _ PatWildcard = return PatWildcard
+monomorphizePatInner _ p@(PatLiteral _) = return p
+monomorphizePatInner s (PatVariant c ps) = do
+    ps' <- mapM (monomorphizePat s) ps
+    return (PatVariant c ps')
+    --TODO: In futuro trova i data giusti
 
-monomorphizeInner :: DataType -> HLExprData -> MonoState HLExprData
-monomorphizeInner _ e@(ExprLiteral _) = return e
-monomorphizeInner _ (ExprApp f a) = do
-    f' <- monomorphize f
-    a' <- monomorphize a
+monomorphizePat :: String -> HLPattern -> MonoState HLPattern
+monomorphizePat s (c, ml, i) = do
+    i' <- monomorphizePatInner s i
+    return (c, fmap (++s) ml, i')
+
+monomorphizeInner :: DataType -> String -> HLExprData -> MonoState HLExprData
+monomorphizeInner _ _ e@(ExprLiteral _) = return e
+monomorphizeInner _ s (ExprApp f a) = do
+    f' <- monomorphize s f
+    a' <- monomorphize s a
     return (ExprApp f' a')
-monomorphizeInner t (ExprLabel l) = do
+monomorphizeInner t s (ExprLabel l) = do
     isglob <- isGlobal l
     case isglob of
-        False -> return (ExprLabel l)
+        False -> return (ExprLabel (l++s))
         True -> do
             l' <- findInstance l t
             return (ExprLabel l')
-monomorphizeInner _ (ExprConstructor c es) = do
-    es' <- mapM monomorphize es
+monomorphizeInner _ s (ExprConstructor c es) = do
+    es' <- mapM (monomorphize s) es
     return (ExprConstructor c es')
-monomorphizeInner _ (ExprCombinator l es) = do
-    es' <- mapM monomorphize es
+monomorphizeInner _ s (ExprCombinator l es) = do
+    es' <- mapM (monomorphize s) es
     return (ExprCombinator l es')
-monomorphizeInner _ (ExprLambda l e) = do
-    e' <- monomorphize e
-    return (ExprLambda l e')
-monomorphizeInner _ (ExprPut vs pses) = do
-    vs' <- mapM monomorphize vs
-    pses' <- mapM (\(ps, e) -> do {ps' <- mapM monomorphizePat ps; e' <- monomorphize e; return (ps', e')}) pses
+monomorphizeInner _ s (ExprLambda l e) = do
+    e' <- monomorphize s e
+    return (ExprLambda (l++s) e')
+monomorphizeInner _ s (ExprPut vs pses) = do
+    vs' <- mapM (monomorphize s) vs
+    pses' <- mapM (\(ps, e) -> do {ps' <- mapM (monomorphizePat s) ps; e' <- monomorphize s e; return (ps', e')}) pses
     return (ExprPut vs' pses')
-monomorphizeInner t (ExprHint _ e) = do
-    e' <- monomorphize e
+monomorphizeInner t s (ExprHint _ e) = do
+    e' <- monomorphize s e
     return (ExprHint t e')
 
-monomorphize :: HLExpr -> MonoState HLExpr
-monomorphize e@(c, t, _) = do
+monomorphize :: String -> HLExpr -> MonoState HLExpr
+monomorphize s e@(c, t, _) = do
     let monoSubst = Map.fromList $ map (\q -> (q, buildTupType [])) $ Set.toList (freetyvars t)
         (_, t', ed) = substApplyExpr monoSubst e
-    ed' <- monomorphizeInner t' ed
+    ed' <- monomorphizeInner t' s ed
     return (c, t', ed')
 
 myListMerge :: Eq k => [(k,v)]->[(k,[v])]
@@ -148,6 +158,6 @@ monomorphizeProgram (entryPoint, BlockProgram datagroups extdefs reldefs valgrou
 
         env = Map.fromList $ map (\(l, tses) -> (l, ([], tses))) (valVtables ++ instsVtables)
     in do
-        (entryPoint', (_, defs, _)) <- runStateT (monomorphize entryPoint) (0, [], env)
+        (entryPoint', (_, defs, _)) <- runStateT (monomorphize "" entryPoint) (0, [], env)
         return (entryPoint', defs)
     --TODO: così main può avere soltanto il tipo: (), il che non viene controllato nel typer

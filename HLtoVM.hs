@@ -44,6 +44,7 @@ exprToVm vs (_, _, ExprPut v pses) =
                 in (p', e')
             ) pses
     in v' ++ [ICase (length v) pscs]
+exprToVm vs (_, _, ExprHint _ e) = exprToVm vs e
 
 progToVm :: (HLExpr, [(String, HLExpr)]) -> (VMCode, [(Name, VMCode)])
 progToVm (ep, defs) =

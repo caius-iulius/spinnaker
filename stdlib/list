@@ -1,5 +1,7 @@
 use Core
 
+mod Maybe "stdlib/maybe"
+
 def pub head : forall a. List a -> a
     = \Cons x xs -> x
 def pub tail : forall a. List a -> List a
@@ -33,7 +35,11 @@ def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
 
 # TODO: foldl1, foldr1, scanl, scanr, scanl1, scanr1
 
-# TODO: unfoldr
+# TODO: versione tail-call?
+def pub unfoldr : forall a b. (a -> Maybe.Maybe (b, a)) -> a -> List b
+    = \f, a -> put f a
+    | Maybe.None -> []
+    | Maybe.Some (b, a') -> b :: unfoldr f a'
 
 def pub zip : forall a b. List a -> List b -> List (a, b)
     = \l, l' -> put l, l'
@@ -82,10 +88,25 @@ and pub filter: forall a. (a -> Bool) -> List a -> List a
 
 
 # TODO: lookup, find, partition, elemIndex, elemIndices, findIndex, findIndices
-# TODO: take, drop, splitAt, takeWhile, dropWhile, span
-# TODO?: inits, tails
 
-def pub (\\) = \l, m -> filter (\x -> all (x !=) m) l
+# TODO: forse conviene utilizzare una funzione passata come argomento come trasformazione di c e l, oppure reimplementare take e drop autonomamente
+def splitAtAux = \c, i, l -> put i, l
+    | 0, _ -> (reverse c, l)
+    | _, [x | xs] -> splitAtAux (x::c) (i - 1) xs
+and pub splitAt : forall a. Int -> List a -> (List a, List a)
+    = splitAtAux []
+
+def pub take : forall a. Int -> List a -> List a
+    = \i, l -> fst (splitAtAux [] i l)
+def pub drop : forall a. Int -> List a -> List a
+    = \i, l -> snd (splitAtAux [] i l)
+
+# TODO: takeWhile, dropWhile, span
+
+def pub (\\) : forall a. {Eq a} => List a -> List a -> List a
+    = \l, m -> filter (\x -> all (x !=) m) l
+
+# TODO?: inits, tails
 # TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
-# TODO: intersperse, intercalate, transpose, subsequences, permutations
+# TODO: intersperse, intercalate, transpose, subsequences, permutations, enumerate
 

@@ -96,7 +96,7 @@ sievePatternInner (VConst vlit) (PConst plit)
 sievePatternInner (VVariant vn vas) (PVariant pn pas)
     | vn == pn = sievePatterns vas pas
     | otherwise = Nothing
-sievePatternInner v p = error $ show v ++ show p
+sievePatternInner v p = error $ "UNMATCHED PAT:" ++ show v ++ show p
 sievePattern v (True, p) = fmap (v :) (sievePatternInner v p)
 sievePattern v (False, p) = sievePatternInner v p
 sievePatterns :: [VMVal] -> [VMPat] -> Maybe [VMVal]
@@ -132,7 +132,7 @@ execVM (ICase i pscs:c, s, e) =
     let (vs,s') = splitAt i s
         (bs, c') = chooseBranch (reverse vs) pscs
     in execVM (c', VClos c e:s', reverse bs ++ e)
-execVM (c, s, e) = error $ show c ++ show s ++ show e
+execVM (c, s, e) = error $ "INVALID STATE:" ++ show c ++ show s ++ show e
 
 evalProg :: (VMCode, [(String, VMCode)]) -> IO ()
 evalProg (ep, defs) = fmap (const ()) $ runReaderT (execVM (ep, [], [])) defs
