@@ -31,7 +31,10 @@ def pub foldr : forall s a. (a -> s -> s) -> s -> List a -> s
     | [] -> s
     | [x | xs] -> f x (foldr f s xs)
 
-# TODO: foldl1, foldr1, scanl, scanr, scanl1, scanr1
+def pub foldl1 : forall a. (a -> a -> a) -> List a -> a
+    = \f, [x | xs] -> foldl f x xs
+
+# TODO: foldr1, scanl, scanr, scanl1, scanr1
 
 # TODO: versione tail-call?
 def pub unfoldr : forall a b. (a -> Maybe.Maybe (b, a)) -> a -> List b
@@ -39,16 +42,17 @@ def pub unfoldr : forall a b. (a -> Maybe.Maybe (b, a)) -> a -> List b
     | Maybe.None -> []
     | Maybe.Some (b, a') -> b :: unfoldr f a'
 
+def pub map2 : forall a b c. (a -> b -> c) -> List a -> List b -> List c
+    = \f, l, l' -> put l, l'
+    | [], _ -> []
+    | _, [] -> []
+    | [x | xs], [x' | xs'] -> f x x' :: map2 f xs xs'
+
+# zip = map2 (\a, b -> (a, b))
 def pub zip : forall a b. List a -> List b -> List (a, b) =
     \ [], _ -> []
     | _, [] -> []
     | Cons x xs, Cons x' xs' -> (x, x') :: zip xs xs'
-
-def pub zipWith : forall a b c. (a -> b -> c) -> List a -> List b -> List c
-    = \f, l, l' -> put l, l'
-    | [], _ -> []
-    | _, [] -> []
-    | [x | xs], [x' | xs'] -> f x x' :: zipWith f xs xs'
 
 def pub any : forall a. (a -> Bool) -> List a -> Bool
     = \bf, l -> put l
@@ -106,11 +110,24 @@ def pub (\\) : forall a. {Eq a} => List a -> List a -> List a
 # TODO?: inits, tails
 # TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
 
+def pub concat : forall a. List (List a) -> List a
+    = (>>= id)
+
 def transposeAux =
     \ [l] -> map (::[]) l
-    | [l | ls] -> zipWith (::) l (transposeAux ls)
+    | [l | ls] -> map2 (::) l (transposeAux ls)
 and pub transpose : forall a. List (List a) -> List (List a) =
     \ [] -> []
     | ls -> transposeAux ls
 
-# TODO: intersperse, intercalate, subsequences, permutations, enumerate
+mod pub Text {
+    def pub unwords : List (List Chr) -> List Chr =
+        \ [] -> []
+        | ws -> foldl1 (\t, w -> t ++ ' ':: w) ws
+
+    def pub unlines : List (List Chr) -> List Chr =
+        \ [] -> []
+        | [l | ls] -> l ++ '\n'::unlines ls
+}
+
+# TODO: intercalate, subsequences, permutations, enumerate

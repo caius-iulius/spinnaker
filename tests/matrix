@@ -2,9 +2,9 @@ use Std
 use List
 
 def mxmul = \ma, mb -> let tmb = transpose mb ->
-    map (\rowa -> map (foldl (+) (fromInt 0) <| zipWith (*) rowa) tmb) ma
+    map (\rowa -> map (foldl (+) (fromInt 0) <| map2 (*) rowa) tmb) ma
 
-def mxadd = \ma, mb -> zipWith (zipWith (+)) ma mb
+def mxadd = \ma, mb -> map2 (map2 (+)) ma mb
 
 
 def derive_mx : List (Int, Int) -> List (List Int)
