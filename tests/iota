@@ -5,22 +5,22 @@ data Iota
     | INode Iota Iota
 
 inst Show Iota {
-    def show = \i -> put i
-        | ILeaf -> "ι"
+    def show =
+        \ ILeaf -> "ι"
         | INode i0 i1 -> "(" ++ show i0 ++ show i1 ++ ")"
 }
 
-def iota_parse = \s -> put s
-    | ['1'|s'] -> (ILeaf, s')
-    | ['0'|s'] ->
-        let (i0, s'') = iota_parse s' ->
-        let (i1, s''') = iota_parse s'' ->
-        (INode i0 i1, s''')
+def iota_parse =
+    \ ['1'|s] -> (ILeaf, s)
+    | ['0'|s] ->
+        let (i0, s') = iota_parse s ->
+        let (i1, s'') = iota_parse s' ->
+        (INode i0 i1, s'')
 
-def jot_revcomp = \s -> put s
-    | [] -> "I"
-    | ['0'|s'] -> "((" ++ jot_revcomp s' ++ "S)K)"
-    | ['1'|s'] -> "(S(K" ++ jot_revcomp s' ++ "))"
+def jot_revcomp =
+    \ [] -> "I"
+    | ['0'|s] -> "((" ++ jot_revcomp s ++ "S)K)"
+    | ['1'|s] -> "(S(K" ++ jot_revcomp s ++ "))"
 
 def jot_comp = reverse |> jot_revcomp
 

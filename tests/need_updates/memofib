@@ -39,10 +39,10 @@ def memofib = memofix $ \f, n -> put n
         b <- f (n - 2);
         return (a + b)
 
-def fib = \n -> put n
-    | 0 -> 0
+def fib =
+    \ 0 -> 0
     | 1 -> 1
-    | _ ->
+    | n ->
         let a = fib (n - 1) ->
         let b = fib (n - 2) ->
             a + b

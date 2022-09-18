@@ -6,13 +6,11 @@ def pub head : forall a. List a -> a
     = \Cons x xs -> x
 def pub tail : forall a. List a -> List a
     = \Cons x xs -> xs
-def pub last : forall a. List a -> a
-    = \l -> put l
-    | [x] -> x
+def pub last : forall a. List a -> a =
+    \ [x] -> x
     | [x | xs] -> last xs
-def pub init : forall a. List a -> List a
-    = \l -> put l
-    | [x] -> []
+def pub init : forall a. List a -> List a =
+    \ [x] -> []
     | [x | xs] -> x :: (init xs)
 
 # TODO: uncons, null
@@ -41,9 +39,8 @@ def pub unfoldr : forall a b. (a -> Maybe.Maybe (b, a)) -> a -> List b
     | Maybe.None -> []
     | Maybe.Some (b, a') -> b :: unfoldr f a'
 
-def pub zip : forall a b. List a -> List b -> List (a, b)
-    = \l, l' -> put l, l'
-    | [], _ -> []
+def pub zip : forall a b. List a -> List b -> List (a, b) =
+    \ [], _ -> []
     | _, [] -> []
     | Cons x xs, Cons x' xs' -> (x, x') :: zip xs xs'
 
@@ -108,5 +105,12 @@ def pub (\\) : forall a. {Eq a} => List a -> List a -> List a
 
 # TODO?: inits, tails
 # TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
-# TODO: intersperse, intercalate, transpose, subsequences, permutations, enumerate
 
+def transposeAux =
+    \ [l] -> map (::[]) l
+    | [l | ls] -> zipWith (::) l (transposeAux ls)
+and pub transpose : forall a. List (List a) -> List (List a) =
+    \ [] -> []
+    | ls -> transposeAux ls
+
+# TODO: intersperse, intercalate, subsequences, permutations, enumerate

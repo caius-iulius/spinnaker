@@ -1,10 +1,9 @@
 use Std
 
-def bottles = \n ->
-    put n
-    | 0 -> "no more bottles"
+def bottles =
+    \ 0 -> "no more bottles"
     | 1 -> "1 bottle"
-    | _ -> show n ++ " bottles"
+    | n -> show n ++ " bottles"
 
 def verse = \n ->
     if n == 0

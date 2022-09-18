@@ -20,9 +20,8 @@ rel pub {Monad m} => MonadPlus m =
     mzero : forall a. m a,
     mplus : forall a. m a -> m a -> m a
 
-def pub guard : forall m. {MonadPlus m} => Bool -> m ()
-    = \b -> put b
-    | True -> return ()
+def pub guard : forall m. {MonadPlus m} => Bool -> m () =
+    \ True -> return ()
     | False -> mzero
 
 inst MonadPlus List {

@@ -1,10 +1,9 @@
 use Std
 use Maybe use List
 
-def sieve = \n -> let sieve_iter
-        = \l -> put l
-        | [] -> None
-        | [x | xs] -> Some (x, xs \\ map (x*) $ take (1+ length xs / x) l)
+def sieve = \n -> let sieve_iter =
+        \ [] -> None
+        | [x | xs] -> Some (x, xs \\ map (x*) $ x :: take (length xs / x) xs)
     -> unfoldr sieve_iter (2..=n)
 
 def main = sieve 100

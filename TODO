@@ -5,12 +5,7 @@ let v0, v1, v2 = e0, e1, e2 -> e
 put e0, e1, e2
 | v0, v1, v2 -> e
 
-a questo punto le lambda possono incorporare direttamente un pattern matching:
-\p00, p01, p02 -> e0
-|p10, p11, p12 -> e1
-...
-
-NOTA: la sintassi del pattern matching è un po' ambigua al momento, questo potrebbe soltanto esacerbare il problema
+NOTA: la sintassi del pattern matching è un po' ambigua al momento, le lambda con più match e i put multipat potrebbero soltanto esacerbare il problema
 
 ---
 implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo

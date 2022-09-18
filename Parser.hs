@@ -292,32 +292,28 @@ getLet = do
         return (c, SynExprPut [val] [([p], expr)])
     }
 
-getBranch = do
-    thisSyntaxElem "|";
-    require $ do {
+getBranches = sepBy1
+    (do {
         ps <- sepBy1 (require getPatternExpr) (thisUsefulChar ','); --TODO: forse il require non serve
         thisSyntaxElem "->";
         expr <- getMeta;
         return (ps, expr)
-    }
+    })
+    (thisSyntaxElem "|")
 
 getPut = do
     (c, _) <- thisSyntaxElem "put"
     require $ do {
         vals <- sepBy1 getMeta (thisUsefulChar ',');
-        branches <- munch1 getBranch;
+        thisSyntaxElem "|";
+        branches <- getBranches;
         return (c, SynExprPut vals branches)
     }
 
 getLambda = do {
     (c, _) <- thisSyntaxElem "\\";
-    require $ do{
-        curriedargs <- sepBy1 getPatternExpr (thisUsefulChar ','); --[Pattern] --TODO: o patternexpr divisi da virgole o sequenza di patternterm
-        thisSyntaxElem "->";
-        internal <- getMeta; --Expr
-        return (c, SynExprLambda curriedargs internal)
-        -- return $ foldr (\p e-> ((\(c',_,_)->c') p, SynExprLambda p e)) internal curriedargs
-    }
+    branches <- require $ getBranches;
+    return (c, SynExprLambda branches)
 }
 
 getIfThenElse = do {

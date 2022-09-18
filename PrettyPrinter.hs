@@ -38,14 +38,16 @@ toTreeMonoDefs defs = Node "MonoDefs" (map toTreeMonoDef defs)
 --Roba per Syn
 toTreeSynPattern p = Node (show p) []
 
+toTreeSynBranch (pats, e) = Node "branch" [Node "pats" (map toTreeSynPattern pats), Node "expr" [toTreeSynExpr e]]
+
 toTreeSynExpr (c, SynExprLiteral l) = Node (show c ++ " Literal: " ++ show l) []
 toTreeSynExpr (c, SynExprApp f a) = Node (show c ++ " Function call") [toTreeSynExpr f, toTreeSynExpr a]
 toTreeSynExpr (c, SynExprLabel l) = Node (show c ++ " Label: " ++ show l) []
 toTreeSynExpr (c, SynExprConstructor l) = Node (show c ++ " Constructor: " ++ show l) []
 toTreeSynExpr (c, SynExprTuple es) = Node (show c ++ " Tuple") (map toTreeSynExpr es)
-toTreeSynExpr (c, SynExprLambda p expr) = Node (show c ++ " Lambda") [Node "arg" [toTreeSynPattern p], Node "expr" [toTreeSynExpr expr]]
+toTreeSynExpr (c, SynExprLambda branches) = Node (show c ++ " Lambda") [Node "branches" (map toTreeSynBranch branches)]
 toTreeSynExpr (c, SynExprSndSection op expr) = Node (show c ++ " Second section of operator: " ++ show op) [toTreeSynExpr expr]
-toTreeSynExpr (c, SynExprPut vals branches) = Node (show c ++ " Put") [Node "vals" (map toTreeSynExpr vals), Node "branches" (map (\(p, e) -> Node "branch" [Node "pat" [toTreeSynPattern p], Node "expr" [toTreeSynExpr e]]) branches)]
+toTreeSynExpr (c, SynExprPut vals branches) = Node (show c ++ " Put") [Node "vals" (map toTreeSynExpr vals), Node "branches" (map toTreeSynBranch branches)]
 toTreeSynExpr (c, SynExprString s) = Node (show c ++ "String literal: " ++ show s) []
 toTreeSynExpr (c, SynExprListNil) = Node (show c ++ " Empty List") []
 toTreeSynExpr (c, SynExprListConss es final) = Node (show c ++ " List") (map toTreeSynExpr es ++ [Node "With final elems" [toTreeSynExpr final]])

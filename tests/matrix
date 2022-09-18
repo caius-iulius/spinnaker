@@ -1,11 +1,6 @@
 use Std
 use List
 
-def transpose = \ls -> put ls
-    | [] -> []
-    | [[] | _] -> []
-    | [l | ls'] -> (head l :: map head ls') :: transpose (tail l :: map tail ls')
-
 def mxmul = \ma, mb -> let tmb = transpose mb ->
     map (\rowa -> map (foldl (+) (fromInt 0) <| zipWith (*) rowa) tmb) ma
 

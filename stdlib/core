@@ -44,19 +44,16 @@ def pub snd : forall a b. (a, b) -> b
     = \(_,b)->b
 
 mod BoolCore {
-    def pub (&&) : Bool -> Bool -> Bool
-        = \a, b -> put (a, b)
-        | (True, True) -> True
-        | _ -> False
+    def pub (&&) : Bool -> Bool -> Bool =
+        \ True, True -> True
+        | _, _ -> False
 
-    def pub (||) : Bool -> Bool -> Bool
-        = \a, b -> put (a, b)
-        | (False, False) -> False
-        | _ -> True
+    def pub (||) : Bool -> Bool -> Bool =
+        \ False, False -> False
+        | _, _ -> True
 
-    def pub not : Bool -> Bool
-        = \a -> put a
-        | True -> False
+    def pub not : Bool -> Bool =
+        \ True -> False
         | False -> True
 } use pub BoolCore
 
@@ -211,8 +208,8 @@ mod ShowCore {
     }
 
     inst Show Bool {
-        def show = \b -> put b
-            | True -> 'T'::'r'::'u'::'e'::Nil
+        def show =
+            \ True -> 'T'::'r'::'u'::'e'::Nil
             | False -> 'F'::'a'::'l'::'s'::'e'::Nil
     }
 
@@ -233,12 +230,12 @@ mod ShowCore {
 
     inst Show Int { def show = showInt }
 
-    def escapeChr = \c -> put c
-        | '\n' -> '\\'::'n'::Nil
+    def escapeChr =
+        \ '\n' -> '\\'::'n'::Nil
         | '\\' -> '\\'::'\\'::Nil
         | '\'' -> '\\'::'\''::Nil
         | '"' -> '\\'::'"'::Nil
-        | _ -> c::Nil #Solo se 32 <= fromEnum c <= 126
+        | c -> c::Nil #Solo se 32 <= fromEnum c <= 126
 
     inst Show Chr {
         def show = \c -> Cons '\'' (escapeChr c) ++ ('\''::Nil)
@@ -248,9 +245,8 @@ mod ShowCore {
         def show = \l -> Cons '"' (l >>= escapeChr) ++ ('"'::Nil)
     }
 
-    def showListAux = \l ->
-        put l
-        | Nil -> ']' :: Nil
+    def showListAux =
+        \ Nil -> ']' :: Nil
         | Cons x Nil -> show x ++ (']' :: Nil)
         | Cons x xs -> show x ++ Cons ',' (Cons ' ' Nil) ++ showListAux xs
 
@@ -261,7 +257,7 @@ mod ShowCore {
     }
 
     inst forall a b. {Show a, Show b} => Show (a, b) {
-        def show = \(a, b) -> '(' :: show a ++ (','::Nil) ++ show b ++ (')'::Nil)
+        def show = \(a, b) -> '(' :: show a ++ (','::' '::Nil) ++ show b ++ (')'::Nil)
     }
 } use pub ShowCore
 

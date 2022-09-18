@@ -23,8 +23,8 @@ data SyntaxExprData
     | SynExprConstructor Path -- Riferimento a una variante
     | SynExprSndSection Path SyntaxExpr -- Sezioni di tipo (OP META)
     | SynExprTuple [SyntaxExpr] --Elementi della n-tupla
-    | SynExprLambda [SyntaxPattern] SyntaxExpr --Argomento(anche "smontato") e valore interno
-    | SynExprPut [SyntaxExpr] [([SyntaxPattern], SyntaxExpr)] --Valore da controllare, lista di pattern e i branch corrispondenti
+    | SynExprLambda [SyntaxBranch] --Argomenti(anche "smontati" e con match) e valore interno
+    | SynExprPut [SyntaxExpr] [SyntaxBranch] --Valore da controllare, lista di pattern e i branch corrispondenti
     | SynExprString String -- Costante stringa
     | SynExprListNil -- lista vuota
     | SynExprListConss [SyntaxExpr] SyntaxExpr -- primi elementi della lista, continuazione
@@ -34,6 +34,8 @@ data SyntaxExprData
     | SynExprHint SyntaxTypeExpr SyntaxExpr --type hint di un'espressione
     deriving Show
 type SyntaxExpr = (StdCoord, SyntaxExprData)
+
+type SyntaxBranch = ([SyntaxPattern], SyntaxExpr)
 
 data SyntaxTypeExprData
     = SynTypeExprQuantifier String -- Nome del quantifier, forse va incorporato con SynTypeExprName?

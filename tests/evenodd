@@ -1,13 +1,10 @@
 use Std
 
-def even = \n ->
-    put n
-    | 0 -> True
-    | _ -> odd (n - 1)
-
-and odd = \n ->
-    put n
-    | 0 -> False
-    | _ -> even (n - 1)
+def even =
+    \ 0 -> True
+    | n -> odd (n - 1)
+and odd =
+    \ 0 -> False
+    | n -> even (n - 1)
 
 def main = (0..9) |-> map $ \n->(even n, odd n)

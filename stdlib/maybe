@@ -4,14 +4,12 @@ mod Monad "stdlib/monad"
 
 data pub Maybe a = None | Some a
 
-def pub isSome : forall a. Maybe a -> Bool
-    = \m -> put m
-    | None -> False
+def pub isSome : forall a. Maybe a -> Bool =
+    \ None -> False
     | Some _ -> True
 
-def pub isNone : forall a. Maybe a -> Bool
-    = \m -> put m
-    | None -> True
+def pub isNone : forall a. Maybe a -> Bool =
+    \ None -> True
     | Some _ -> False
 
 # TODO: Da inserire quando si riscrive la libreria da zero
@@ -22,8 +20,8 @@ def pub isNone : forall a. Maybe a -> Bool
 #     | Some a -> f a
 
 inst forall a. {Show a} => Show (Maybe a) { #NOTE: temporaneo, aggiunge parentesi di troppo
-    def show = \m -> put m
-        | None -> "None"
+    def show =
+        \ None -> "None"
         | Some a -> "Some (" ++ show a ++ ")"
 }
 
