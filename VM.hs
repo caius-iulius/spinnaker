@@ -70,6 +70,36 @@ execComb "_leqInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
 execComb "_greInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VVariant (if i0 > i1 then "True#BI" else "False#BI") []
     in execVM ([IRet], v:s, [])
+
+execComb "_addFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VConst (LitFloating (f0+f1))
+    in execVM ([IRet], v:s, [])
+execComb "_subFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VConst (LitFloating (f0-f1))
+    in execVM ([IRet], v:s, [])
+execComb "_mulFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VConst (LitFloating (f0*f1))
+    in execVM ([IRet], v:s, [])
+execComb "_divFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VConst (LitFloating (f0/f1))
+    in execVM ([IRet], v:s, [])
+execComb "_equFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VVariant (if f0 == f1 then "True#BI" else "False#BI") []
+    in execVM ([IRet], v:s, [])
+execComb "_neqFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VVariant (if f0 /= f1 then "True#BI" else "False#BI") []
+    in execVM ([IRet], v:s, [])
+execComb "_leqFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VVariant (if f0 <= f1 then "True#BI" else "False#BI") []
+    in execVM ([IRet], v:s, [])
+execComb "_greFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
+    let v = VVariant (if f0 > f1 then "True#BI" else "False#BI") []
+    in execVM ([IRet], v:s, [])
+execComb "_convItoF" s (VConst(LitInteger i):[]) =
+    execVM ([IRet], (VConst(LitFloating(fromIntegral i))):s, [])
+execComb "_floorFlt" s (VConst(LitFloating f):[]) =
+    execVM ([IRet], (VConst(LitInteger(floor f))):s, [])
+
 execComb "_convItoC" s (VConst(LitInteger i):[]) =
     execVM ([IRet], (VConst(LitCharacter(chr i))):s, [])
 execComb "_convCtoI" s (VConst(LitCharacter c):[]) =

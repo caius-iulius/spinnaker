@@ -1,0 +1,9 @@
+use Std
+
+def fizzbuzz = \n -> put rem n 3, rem n 5
+    | 0, 0 -> "FizzBuzz"
+    | 0, _ -> "Fizz"
+    | _, 0 -> "Buzz"
+    | _, _ -> show n
+
+def main = putStr $ List.Text.unlines $ map fizzbuzz $ 1..=15

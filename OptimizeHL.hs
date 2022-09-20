@@ -138,6 +138,18 @@ optimizeBI c t "_equInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral
 optimizeBI c t "_neqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 /= i1 then "True#BI" else "False#BI") [])
 optimizeBI c t "_leqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 <= i1 then "True#BI" else "False#BI") [])
 optimizeBI c t "_greInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 > i1 then "True#BI" else "False#BI") [])
+
+optimizeBI c t "_addFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0+f1)))
+optimizeBI c t "_subFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0-f1)))
+optimizeBI c t "_mulFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0*f1)))
+optimizeBI c t "_divFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0/f1)))
+optimizeBI c t "_equFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 == f1 then "True#BI" else "False#BI") [])
+optimizeBI c t "_neqFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 /= f1 then "True#BI" else "False#BI") [])
+optimizeBI c t "_leqFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 <= f1 then "True#BI" else "False#BI") [])
+optimizeBI c t "_greFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 > f1 then "True#BI" else "False#BI") [])
+optimizeBI c t "_convItoF" ((_, _, ExprLiteral (LitInteger i)):[]) = (c, t, ExprLiteral (LitFloating (fromIntegral i)))
+optimizeBI c t "_floorFlt" ((_, _, ExprLiteral (LitFloating f)):[]) = (c, t, ExprLiteral (LitInteger (floor f)))
+
 optimizeBI c t "_convItoC" ((_, _, ExprLiteral (LitInteger i)):[]) = (c, t, ExprLiteral (LitCharacter (chr i)))
 optimizeBI c t "_convCtoI" ((_, _, ExprLiteral (LitCharacter ch)):[]) = (c, t, ExprLiteral (LitInteger (ord ch)))
 optimizeBI c t l es = (c, t, ExprCombinator l es)

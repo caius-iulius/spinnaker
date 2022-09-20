@@ -12,9 +12,19 @@ mod Builtins {
     ext pub _leqInt : Int, Int -> Bool
     ext pub _greInt : Int, Int -> Bool
 
+    ext pub _addFlt : Flt, Flt -> Flt
+    ext pub _subFlt : Flt, Flt -> Flt
+    ext pub _mulFlt : Flt, Flt -> Flt
+    ext pub _divFlt : Flt, Flt -> Flt
+    ext pub _equFlt : Flt, Flt -> Bool
+    ext pub _neqFlt : Flt, Flt -> Bool
+    ext pub _leqFlt : Flt, Flt -> Bool
+    ext pub _greFlt : Flt, Flt -> Bool
+    ext pub _floorFlt : Flt -> Int
+    ext pub _convItoF : Int -> Flt
+
     ext pub _convItoC : Int -> Chr
     ext pub _convCtoI : Chr -> Int
-
     ext pub _putChr : Chr, RealWorld_ -> RealWorld_
     ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
     ext pub _exit : RealWorld_ -> RealWorld_
@@ -88,7 +98,11 @@ rel pub Eq a =
 
     use Builtins
 
-    #TODO: forse incorpora in Num
+    # TODO: usa un intrinseco
+    def pub rem : Int -> Int -> Int
+        = \a, b -> a - b * a / b
+
+    # TODO: forse incorpora in Num
     def pub abs : forall a. {Num a, Ord a} => a -> a
         = \a -> put a < fromInt 0
         | True -> fromInt 0 - a
@@ -117,6 +131,20 @@ rel pub Eq a =
         def (!=) = _neqInt
     }
 
+    inst Num Flt {
+        def (+) = _addFlt
+        def (-) = _subFlt
+        def (*) = _mulFlt
+        def (/) = _divFlt
+        def fromInt = _convItoF
+    }
+    def pub floor = _floorFlt
+
+    inst Eq Flt {
+        def (==) = _equFlt
+        def (!=) = _neqFlt
+    }
+
     inst Eq Chr {
         def (==) = \a, b -> fromEnum a == fromEnum b
         def (!=) = \a, b -> fromEnum a != fromEnum b
@@ -127,6 +155,13 @@ rel pub Eq a =
         def (>) = _greInt
         def (<=)= _leqInt
         def (>=)= \a,b->_leqInt b a
+    }
+
+    inst Ord Flt {
+        def (<) = \a,b->_greFlt b a
+        def (>) = _greFlt
+        def (<=)= _leqFlt
+        def (>=)= \a,b->_leqFlt b a
     }
 } use pub NumCore
 
@@ -218,9 +253,7 @@ mod ShowCore {
     def showNonNegAux = \s, i -> put (i < 10)
         | True -> showDigit i :: s
         | _ ->
-            let div10 = i/10 ->
-            let mod10 = i - div10*10 ->
-            showNonNegAux (showDigit mod10 :: s) div10
+            showNonNegAux (showDigit (rem i 10) :: s) (i / 10)
     def showNonNeg = showNonNegAux Nil
 
     def showInt = \i ->
@@ -229,6 +262,35 @@ mod ShowCore {
         | _ -> showNonNeg i
 
     inst Show Int { def show = showInt }
+
+    def showFracAux =
+        \ curr, 0 -> curr
+        | curr, i ->
+            put rem i 10
+            | 0 -> showFracAux curr (i / 10)
+            | mod10 -> showFracAux (showDigit mod10 :: curr) (i / 10)
+    # TODO: 1000 significa 3 cifre dopo il punto, magari usane di più. Forse bisogna fare un arrotondamento invece di un floor
+    def showFrac = \f -> put floor (1000.0*f)
+        | 0 -> '0'::Nil
+        | flr -> showFracAux Nil flr
+    # def showFrac =
+    #     \ 0.0 -> '0'::Nil
+    #     | f ->
+    #         let times10 = 10.0 * f ->
+    #         let flr = floor times10 ->
+    #         let frac = times10 - fromInt flr ->
+    #         showDigit flr :: showFrac frac
+
+    def showNonNegFlt = \f ->
+        let flr = floor f ->
+        show flr ++ '.' :: showFrac (f - fromInt flr)
+
+    def showFlt = \f ->
+        put f < 0.0
+        | True -> '-' :: showNonNegFlt (0.0-f)
+        | _ -> showNonNegFlt f
+
+    inst Show Flt { def show = showFlt }
 
     def escapeChr =
         \ '\n' -> '\\'::'n'::Nil
