@@ -1,0 +1,18 @@
+use Std
+
+def other =
+    \ 0, 1 -> 2
+    | 1, 0 -> 2
+    | 0, 2 -> 1
+    | 2, 0 -> 1
+    | 1, 2 -> 0
+    | 2, 1 -> 0
+
+def hanoiAux =
+    \ _, _, 0 -> []
+    | from, to, n ->
+        let interm = other from to ->
+             hanoiAux from interm (n - 1) ++ (from, to) :: hanoiAux interm to (n - 1)
+and hanoi = hanoiAux 0 1
+
+def main = hanoi 4

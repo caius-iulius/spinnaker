@@ -205,6 +205,11 @@ unionValDefEnv (TypingEnv ts _ _ _ _) (ValDef c l _ ps (_, t, _)) = do
     s <- mgu c t tFromEnv
     typerLog $ "union of env and vdef "++ l ++": " ++ show s
     return s
+unionValDefsEnv env [] = return nullSubst
+unionValDefsEnv env (vdef:vdefs) = do
+    s <- unionValDefEnv env vdef
+    s' <- unionValDefsEnv (substApply s env) (map (substApplyValDef s) vdefs)
+    return (composeSubst s' s)
 
 checkHintType :: StdCoord -> TypingEnv -> DataType -> DataType -> TyperState Subst
 checkHintType c env typehint typet = match c typet typehint
@@ -233,10 +238,9 @@ checkValDefsHintPreds env vdefs = mapM checkValDefHintPreds vdefs
 typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
-    substs <- mapM (unionValDefEnv (substApply s vars_env)) vdefs' -- Mi sa che questa cosa funziona solo perché le sostituzioni dovrebbero essere indipendenti l'una dall'altra a questo punto (cioè le due sostituzioni non contengono frecce discordanti e.g. q1->Int e q1->Flt) ... oppure è perché le sostituzioni vengono composte nel modo giusto???
-    let s' = foldl (flip composeSubst) s substs
+    s' <- unionValDefsEnv (substApply s vars_env) vdefs'
     s'' <- checkValDefsHint (substApply s' vars_env) (map (substApplyValDef s') vdefs') --TODO: La posizione è giusta?
-    let sfinal = composeSubst s'' s'
+    let sfinal = composeSubst s'' (composeSubst s' s)
         vdefs'' = map (substApplyValDef sfinal) vdefs'
         ps = concat $ map (\(ValDef _ _ _ ps _) -> ps) vdefs''
         vdefs''' = map (\(ValDef c l h _ e)->ValDef c l h ps e) vdefs''

@@ -62,7 +62,7 @@ findGenerator l t = getMostSpecific
             let matching = catMaybes [match dummyStdCoord te t >> Just (te, e) | (te, e) <- tses]
                 specifics = reduceMostSpecifics [] matching
             in case specifics of
-                [] -> error $ "No matching generators of: " ++ show l ++ " with type: " ++ show t
+                [] -> error $ "No matching generators of: " ++ show l ++ " with type: " ++ show t ++ "\nAvailable gens: " ++ show tses
                 ((te, e):[]) -> do
                     s <- match dummyStdCoord te t
                     Just (substApplyExpr s e)
