@@ -264,22 +264,12 @@ mod ShowCore {
     inst Show Int { def show = showInt }
 
     def showFracAux =
-        \ curr, 0 -> curr
-        | curr, i ->
-            put rem i 10
-            | 0 -> showFracAux curr (i / 10)
-            | mod10 -> showFracAux (showDigit mod10 :: curr) (i / 10)
-    # TODO: 1000 significa 3 cifre dopo il punto, magari usane di più. Forse bisogna fare un arrotondamento invece di un floor
-    def showFrac = \f -> put floor (1000.0*f)
-        | 0 -> '0'::Nil
-        | flr -> showFracAux Nil flr
-    # def showFrac =
-    #     \ 0.0 -> '0'::Nil
-    #     | f ->
-    #         let times10 = 10.0 * f ->
-    #         let flr = floor times10 ->
-    #         let frac = times10 - fromInt flr ->
-    #         showDigit flr :: showFrac frac
+        \ 0, curr, i -> curr
+        | n, curr, i ->
+            showFracAux (n - 1) (showDigit (rem i 10) :: curr) (i / 10)
+    # TODO: 1000 e 3 significa 3 cifre dopo il punto, magari usane di più. Forse bisogna fare un arrotondamento invece di un floor
+    # TODO: quest'algoritmo non è flessibile, va riscritto
+    def showFrac = \f -> showFracAux 3 Nil (floor (1000.0*f))
 
     def showNonNegFlt = \f ->
         let flr = floor f ->

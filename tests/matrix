@@ -1,21 +1,127 @@
 use Std
-use List
 
-def mxmul = \ma, mb -> let tmb = transpose mb ->
-    map (\rowa -> map (foldl (+) (fromInt 0) <| map2 (*) rowa) tmb) ma
+mod TypeNat {
+    # TODO: questo deve diventare una libreria, è abbastanza utile
 
-def mxadd = \ma, mb -> map2 (map2 (+)) ma mb
+    data pub S a = S a
+    data pub Z = Z
+    # NOTE: Wrapper per i TypeNat, è un semplice holder di phanto, type
+    data pub NatWrap a = NatWrap
 
+    # Numeri natuali condificati con Peano in type-level, al momento si può controllare soltanto l'equivalenza grazie all'unificazione, ma con le dipendenze funzionali si potrebbero anche codificare delle operazioni di base
+    # Un tipo è un naturale di type-level se implementa questa relazione, cioè se si può convertire (tramite un wrapper) a un naturale value-level
+    rel pub TyNat a = tynatInt : NatWrap a -> Int
 
-def derive_mx : List (Int, Int) -> List (List Int)
-    = \edges -> let mxlen = 1+ foldl max 0 $ map (uncurry max) edges ->
-        map (\x -> map (\y -> if elem (x, y) edges then 1 else 0) (0..mxlen)) (0..mxlen)
+    # Istanze della relazione per 0 e S(n)
+    inst TyNat Z { def tynatInt = const 0 }
+    inst forall a. {TyNat a} => TyNat (S a) {
+        def tynatInt = const (1 + tynatInt (NatWrap : NatWrap a))
+    }
+}
 
-def reach : Int -> List (List Int) -> List (List Int)
-    = \n, mx -> foldl (\s,_ -> mxadd mx $ mxmul mx s) mx (1..n)
+mod Matrix {
+    use List
+    use Maybe
+    use TypeNat
 
-def cycles : List (List Int) -> List Int = \mx ->
-        let reaches = reach (length mx) mx ->
-        map (\n -> nth n (nth n reaches)) (0..length reaches)
+    # Una matrice è un wrapper di una lista di liste, con due phantom type che rappresentano il numero di righe e colonne
+    data pub Matrix r c a = Matrix (List (List a))
 
-def main = cycles $ derive_mx [(0, 1), (1, 2), (2, 0), (3, 0)]
+    # Stampa la matrice
+    inst forall r c a.{TyNat r, TyNat c, Show (List a)} => Show (Matrix r c a) {
+        def show = \Matrix l -> "Matrix " ++ show (tynatInt $ NatWrap : NatWrap r) ++ "x" ++ show (tynatInt $ NatWrap : NatWrap c) ++ ':'::show l
+    }
+
+    # Matrice identità, nota che le dimensioni della matrice vengono rilevate automaticamente
+    def pub identity : forall n a.{TyNat n, Num a} => Matrix n n a
+        =   let n = tynatInt (NatWrap : NatWrap n) ->
+            let iter = 0..n ->
+            Matrix $ map (\y -> map (\x -> if x == y then fromInt 1 else fromInt 0) iter) iter
+
+    # Matrice zero, nota che le dimensioni della matrice vengono rilevate automaticamente
+    def pub zero : forall r c a.{TyNat r, TyNat c, Num a} => Matrix r c a
+        =   let r = tynatInt (NatWrap : NatWrap r) ->
+            let c = tynatInt (NatWrap : NatWrap c) ->
+            let iterr = 0..r ->
+            let iterc = 0..c ->
+            Matrix $ map (const $ map (const $ fromInt 0) iterc) iterr
+
+    # Converti una list di liste in matrice controllandone le dimensioni, un crash è possibile solo qui
+    def pub mxfromList : forall r c a. {TyNat r, TyNat c, Num a} => List (List a) -> Matrix r c a
+        = \l ->
+            let r = tynatInt (NatWrap : NatWrap r) ->
+            let c = tynatInt (NatWrap : NatWrap c) ->
+            Matrix $ if length l != r
+                then error "List has wrong number of rows"
+                else map (\l' -> if length l' != c then error "List row has wrong number of columns" else l') l
+
+    # Trasposizione
+    def pub mxtranspose : forall r c a. Matrix r c a -> Matrix c r a
+        = \Matrix l -> Matrix (transpose l)
+
+    # Somma
+    def pub mxadd : forall r c a.{TyNat r, TyNat c, Num a} => Matrix r c a -> Matrix r c a -> Matrix r c a
+        = \Matrix l, Matrix l' -> Matrix $ map2 (map2 (+)) l l'
+
+    # Prodotto interno generalizzato
+    def pub mxinner : forall m n p a b c. (List a -> List b -> c) -> Matrix m n a -> Matrix n p b -> Matrix m p c
+        = \f, Matrix l, Matrix l' ->
+            let tl' = transpose l' ->
+            Matrix $ map (\rowa -> map (f rowa) tl') l
+
+    # Prodotto tra matrici classico
+    def pub mxmul : forall m n p a. {Num a} => Matrix m n a -> Matrix n p a -> Matrix m p a
+         = mxinner (\a, b -> foldl (+) (fromInt 0) (map2 (*) a b))
+
+    def swapFront =
+        \ _, _, [] -> None
+        | n, curr, [r | rows] ->
+            if all (fromInt 0 ==) (take n r) && fromInt 0 != nth n r
+                then Some (r, reverse curr ++ rows)
+                else swapFront n (r :: curr) rows
+
+    # Annulla l'n-esimo elemento di ogni riga grazie a una somma proporzionale a r
+    def canceln = \n, r, rows ->
+        map (\row ->
+            let ratio = nth n row / nth n r ->
+            map2 (-) row (map (ratio *) r)
+        ) rows
+
+    # Annulla gli elementi superiori arrivando a una diagonale (NOTE: l'input è invertito)
+    def cancelTop =
+        \ _, curr, [] -> curr
+        | n, curr, [r | rows] ->
+            cancelTop (n - 1) (map (/ nth n r) r :: curr) (canceln n r rows)
+
+    # Diagonalizza
+    def diagonalize =
+        \ n, curr, [] -> return $ cancelTop (n - 1) [] curr
+        | n, curr, rows ->
+            (r, rows') <- swapFront n [] rows;
+            diagonalize (n + 1) (r :: curr) (canceln n r rows')
+
+    # Trova l'inverso con l'eliminazione Gauss-Jordan
+    def pub inverseList
+        = \list ->
+            let n = length list ->
+            let ident =
+                let iter = 0..n ->
+                map (\y -> map (\x -> if x == y then fromInt 1 else fromInt 0) iter) iter ->
+            let augmented = map2 (++) list ident ->
+            fmap (map (drop n)) $ diagonalize 0 [] augmented
+
+    # Wrapper per le matrici type-safe
+    def pub mxinverse : forall m a. {Eq a, Num a} => Matrix m m a -> Maybe (Matrix m m a)
+        = \Matrix l -> fmap Matrix (inverseList l)
+} use Matrix
+
+use TypeNat
+
+# Risolve i Least Squares: (X^T X)^-1 X^T Y
+def lsq_solve = \x, y ->
+    fmap (flip mxmul (mxmul (mxtranspose x) y)) (mxinverse $ mxmul (mxtranspose x) x)
+
+def main =
+    let x = mxfromList [[0.0, 1.0], [1.0, 1.0], [2.0, 1.0], [3.0, 1.0]] : Matrix (S(S(S(S Z)))) (S(S Z)) Flt ->
+    let y = mxfromList [[1.0], [2.0], [4.0], [-1.0]] : Matrix (S(S(S(S Z)))) (S Z) Flt ->
+    lsq_solve x y

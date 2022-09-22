@@ -12,12 +12,18 @@ def pub isNone : forall a. Maybe a -> Bool =
     \ None -> True
     | Some _ -> False
 
+def pub fromSome : forall a. Maybe a -> a
+    = \Some a -> a
+
 # TODO: Da inserire quando si riscrive la libreria da zero
 
 # def pub maybe : forall a b. b -> (a -> b) -> Maybe a -> b
 #     = \b, f, m -> put m
 #     | None -> b
 #     | Some a -> f a
+#
+# def pub fromMaybe : forall a. a -> Maybe a -> a
+#   = \a -> maybe a id
 
 inst forall a. {Show a} => Show (Maybe a) { #NOTE: temporaneo, aggiunge parentesi di troppo
     def show =

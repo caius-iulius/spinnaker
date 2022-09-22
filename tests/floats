@@ -1,0 +1,13 @@
+use Std
+
+def ceiling = (0.0 -) |> floor |> (0 -)
+
+def round = (2.0 *) |> ceiling |> (/ 2)
+
+def main =
+    let l = [0.0, 1.0, 2.3, 2.4999, 2.5, 2.50001, 2.8, 3.0000001, 3.000001] ->
+    _ <- putStrLn $ "vec: " ++ show l;
+    _ <- putStrLn $ "floors:   " ++ show $ map floor l;
+    _ <- putStrLn $ "ceilings: " ++ show $ map ceiling l;
+    _ <- putStrLn $ "rounds:   " ++ show $ map round l;
+    return ()
