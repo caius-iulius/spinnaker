@@ -1,3 +1,5 @@
+aggiungi check di input nella libreria standard, tipo esponenti negativi, liste vuote con head e tail...
+
 dato che i put possono fare matching su più espressioni, potrebbe convenire implementare i let con più assegnazioni:
 let v0, v1, v2 = e0, e1, e2 -> e
  |

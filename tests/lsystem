@@ -1,0 +1,14 @@
+use Std
+use List
+use Maybe
+
+def step = \rules, state ->
+    c <- state;
+    fromMaybe [c] (lookup c rules)
+
+def stepn = \n, rules, axiom ->
+    foldl (\s, _ -> step rules s) axiom (0..n)
+
+def main =
+    putStrLn (stepn 6 [('A', "AB"), ('B', "A")] "A")
+    >> putStrLn (stepn 2 [('F', "FF"), ('X', "F+[[X]-X]-F[-FX]+X")] "X")

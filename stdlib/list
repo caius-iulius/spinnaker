@@ -87,8 +87,16 @@ def filterAux
 and pub filter: forall a. (a -> Bool) -> List a -> List a
     = filterAux []
 
+def pub find : forall a. (a -> Bool) -> List a -> Maybe.Maybe a =
+    \ f, [] -> Maybe.None
+    | f, [x | xs] -> if f x
+        then Maybe.Some x
+        else find f xs
 
-# TODO: lookup, find, partition, elemIndex, elemIndices, findIndex, findIndices
+def pub lookup : forall a b. {Eq a} => a -> List (a, b) -> Maybe.Maybe b
+    = \a -> fmap snd <| find (fst |> (a ==))
+
+# TODO: partition, elemIndex, elemIndices, findIndex, findIndices
 
 # TODO: forse conviene utilizzare una funzione passata come argomento come trasformazione di c e l, oppure reimplementare take e drop autonomamente
 def splitAtAux = \c, i, l -> put i, l

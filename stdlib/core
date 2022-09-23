@@ -108,6 +108,12 @@ rel pub Eq a =
         | True -> fromInt 0 - a
         | False -> a
 
+    def expAux =
+        \ curr, a, 0 -> curr
+        | curr, a, n -> expAux (a * curr) a (n - 1)
+    and pub (^) : forall a. {Num a} => a -> Int -> a
+        = expAux (fromInt 1)
+
     inst Enum Int {
         def toEnum = id
         def fromEnum = id
@@ -230,6 +236,17 @@ mod ListCore {
             | Nil -> Nil
             | Cons x xs -> f x ++ bind xs f
     }
+
+    inst forall a. {Eq a} => Eq (List a) {
+        def (==) =
+            \ Nil, Nil -> True
+            | Cons x xs, Cons y ys -> (put x == y
+                | True -> xs == ys
+                | _ -> False)
+            | _, _ -> False
+        def (!=) = \a, b -> not (a == b)
+    }
+
 } use pub ListCore
 
 mod ShowCore {

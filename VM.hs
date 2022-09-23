@@ -136,6 +136,7 @@ chooseBranch vs ((ps,c):pscs) =
     case sievePatterns vs ps of
         Nothing -> chooseBranch vs pscs
         Just bs -> (bs, c)
+chooseBranch vs [] = error $ "Pattern match failed on values: " ++ show vs
 
 execVM :: VMState -> VMMonad VMVal
 execVM (IRet:c, v:[], e) = return v
