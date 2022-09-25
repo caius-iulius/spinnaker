@@ -42,6 +42,13 @@ def pub unfoldr : forall a b. (a -> Maybe.Maybe (b, a)) -> a -> List b
     | Maybe.None -> []
     | Maybe.Some (b, a') -> b :: unfoldr f a'
 
+def replicateAux =
+    \ curr, 0, _ -> curr
+    | curr, n, a -> replicateAux (a :: curr) (n - 1) a
+and pub replicate : forall a. Int -> a -> List a
+    = replicateAux []
+
+
 def pub map2 : forall a b c. (a -> b -> c) -> List a -> List b -> List c
     = \f, l, l' -> put l, l'
     | [], _ -> []
@@ -77,6 +84,12 @@ def pub nth : forall a. Int -> List a -> a
     = \n, l -> put n
     | 0 -> head l
     | _ -> nth (n - 1) (tail l)
+
+# TODO: versione tail-call
+def pub updateAt : forall a. Int -> (a -> a) -> List a -> List a
+    = \n, f, l -> put n, l
+    | 0, [x | xs] -> f x :: xs
+    | _, [x | xs] -> x :: updateAt (n - 1) f xs
 
 def filterAux
     = \c, f, l -> put l

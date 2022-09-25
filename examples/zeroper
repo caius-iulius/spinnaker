@@ -1,0 +1,68 @@
+use Std
+use List
+
+def intersperse = \e, l -> put l
+    | [] -> []
+    | [ x] -> [x]
+    | [x | xs] -> [x, e | intersperse e xs]
+
+def diagonal = \l -> put l
+    | [] -> []
+    | [[x|_] | ls] -> x :: diagonal (map tail ls)
+
+data Segno = Zero | Per | Vuoto
+
+inst Show Segno {
+    def show = \c -> put c
+        | Zero -> "O"
+        | Per -> "X"
+        | Vuoto -> " "
+}
+inst Eq Segno {
+    def (==) =
+        \ Zero, Zero -> True
+        | Per, Per -> True
+        | Vuoto, Vuoto -> True
+        | _, _ -> False
+    def (!=) = \a, b -> not (a == b)
+}
+
+def vuoto = \b, x, y -> nth x (nth y b) == Vuoto
+
+def showBoard = map (map show |> intersperse "|" |> Text.unwords)
+             |> intersperse "\n---------\n" |> concat
+
+def alternate =
+    \ Zero -> Per
+    | Per -> Zero
+
+def wins = \s, brd -> any (all (s==)) $
+       diagonal brd
+    :: diagonal (reverse brd)
+    :: brd
+    ++ transpose brd
+
+def getInput : IO (Int, Int)
+    = input <- getLn;
+    put input
+    | [cx, ',', cy] ->
+        let x = fromEnum cx - 48 ->
+        let y = fromEnum cy - 48 ->
+        if all id [x >= 0, x <= 2, y >= 0, y <= 2]
+            then return (x, y)
+            else putStr "Invalid input: " >> getInput
+    | _ -> putStr "Invalid input: " >> getInput
+
+def loop : Segno -> List (List Segno) -> IO ()
+    = \p, brd -> putStrLn (showBoard brd) >>
+    putStr ("Player " ++ show p ++ " input x,y: ") >>
+    (x, y) <- getInput;
+    if vuoto brd x y then
+        let brd' = updateAt y (updateAt x (const p)) brd ->
+        if wins p brd'
+            then putStrLn ("Player " ++ show p ++ " won:") >> putStrLn (showBoard brd')
+            else loop (alternate p) brd'
+    else putStrLn "This square is already occupied" >> loop p brd
+
+
+def main = loop Zero (replicate 3 (replicate 3 Vuoto))
