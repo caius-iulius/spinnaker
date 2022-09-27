@@ -250,11 +250,12 @@ mod ListCore {
 } use pub ListCore
 
 mod ShowCore {
+    typesyn pub String = List Chr
     # Definizione di Show e delle sue istanze sui tipi builtin
 
-    rel pub Show a = show : a -> List Chr
+    rel pub Show a = show : a -> String
 
-    def pub strNil : List Chr = Nil
+    def pub strNil : String = Nil
     inst Show () {
         def show = \() -> '('::')':: Nil
     }
@@ -310,7 +311,7 @@ mod ShowCore {
         def show = \c -> Cons '\'' (escapeChr c) ++ ('\''::Nil)
     }
 
-    inst Show (List Chr) {
+    inst Show String {
         def show = \l -> Cons '"' (l >>= escapeChr) ++ ('"'::Nil)
     }
 
@@ -358,7 +359,7 @@ mod IOCore {
         def pub getChr = _getChr
         def pub exit = _exit
 
-        def pub putStr : List Chr -> RealWorld_ -> RealWorld_
+        def pub putStr : String -> RealWorld_ -> RealWorld_
             = \s, rw -> put s
             | Nil -> rw
             | Cons c cs ->
@@ -381,19 +382,19 @@ mod IOCore {
         = \c -> IO(\s->((), UnsafeIO.putChr c s))
     def pub getChr : IO Chr
         = IO UnsafeIO.getChr
-    def pub putStr : List Chr -> IO ()
+    def pub putStr : String -> IO ()
         = \l -> IO(\s->((), UnsafeIO.putStr l s))
-    def pub putStrLn : List Chr -> IO ()
+    def pub putStrLn : String -> IO ()
         = \l -> IO(\s->((), UnsafeIO.putStrLn l s))
-    def pub getLn : IO (List Chr)
+    def pub getLn : IO String
         = IO UnsafeIO.getLn
 
     def pub print : forall a. {Show a} => a -> IO ()
         = show |> putStrLn
 
-    def errorAux : forall a. List Chr -> RealWorld_ -> a
+    def errorAux : forall a. String -> RealWorld_ -> a
         = \s, rw -> errorAux s (UnsafeIO.exit (UnsafeIO.putStrLn s rw))
-    def pub error : forall a. List Chr -> a
+    def pub error : forall a. String -> a
         = \s -> errorAux ('e'::'r'::'r'::'o'::'r'::':'::' '::s) RealWorld_
 } use pub IOCore
 

@@ -3,10 +3,10 @@ use Std
 mod Typeof {
     mod pub Defs {
         data pub TOTok a = TOTok
-        rel pub Typeof a = typeofT : TOTok a -> List Chr
+        rel pub Typeof a = typeofT : TOTok a -> String
     } use Defs
 
-    def pub typeof : forall a. {Typeof a} => a -> List Chr
+    def pub typeof : forall a. {Typeof a} => a -> String
         = const (typeofT (TOTok : TOTok a))
 
     inst Typeof Int { def typeofT = const "Int" }
@@ -20,7 +20,7 @@ mod Typeof {
     inst forall a. {Typeof a} => Typeof (List a) {
         def typeofT = const $ "List " ++ typeofT (TOTok:TOTok a)
     }
-    inst Typeof (List Chr) { def typeofT = const "String" }
+    inst Typeof String { def typeofT = const "String" }
 
 }
 

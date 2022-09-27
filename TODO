@@ -1,3 +1,25 @@
+i typesyn sono implementati alla cazzo
+vengono sostituiti durante il demod, quindi senza controlli di kind, devono ricevere sempre l'esatto numero di argomenti richiesti consecutivamente e impediscono i controlli di posizione nelle rel
+
+--- Esempi:
+data A a b = A a b
+typesyn B a b = A a b
+typesyn C = A
+
+todo : (B Int Flt) # funziona
+todo : (B Int) Flt # non funziona
+todo : (B) Int Flt # non funziona
+
+todo : (C Int Flt) # non funziona
+todo : (C Int) Flt # non funziona
+todo : (C) Int Flt # funziona
+---
+
+i typesyn vanno bene come shorthand, ma bisogna studiare le type families per decidere se esprimere tutto in funzione di quelle, quindi aggiungendole al sistema
+il vantaggio di questo sistema è che dopo il demod nessun componente del compilatore deve implementare typesyn
+
+---
+
 aggiungi check di input nella libreria standard, tipo esponenti negativi, liste vuote con head e tail...
 
 dato che i put possono fare matching su più espressioni, potrebbe convenire implementare i let con più assegnazioni:
@@ -10,9 +32,8 @@ put e0, e1, e2
 NOTA: la sintassi del pattern matching è un po' ambigua al momento, le lambda con più match e i put multipat potrebbero soltanto esacerbare il problema
 
 ---
-implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
 
-phantom types per determinare se un programma è stato tipizzato? (oppure a che livello di tipizzazione è un'ipotetica rappresentazione uniforme)
+implementa il parsing dei pattern (LABEL@PATTERN), tipo haskell. La rappresentazione interna dei pattern è già stata predisposta per questo
 
 invece di usare def...and... per le definizioni di valore coricorsive, si può considerare la costruzione di un digrafo dove le frecce sono le possibili chiamate da una funzione del toplevel a un'altra, dopodiché si può usare un algoritmo (per esempio kosaraju) per trovare i cicli e tipizzarli monomorficamente
 alternativamente si può introdurre un vincolo: ogni valore utilizzato prima della sua dichiarazione deve avere un tipo specificato dall'hint. Questo però apre la strada alla ricorsione polimorfica, che andrebbe impedita da qualche altro controllo. Inoltre anche semplici programmi come il fattoriale dovrebbero essere annotati.

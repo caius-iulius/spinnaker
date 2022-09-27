@@ -31,7 +31,7 @@ inst MonadPlus List {
 
 rel pub {Monad m} => MonadFail m =
     # Se {MonadPlus m} si può considerare: mzero = fail "mzero"
-    fail : forall a. List Chr -> m a
+    fail : forall a. String -> m a
 
 inst MonadFail IO {
     def fail = error

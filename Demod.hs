@@ -9,6 +9,7 @@ import Parser
 import TypingDefs
 import HLDefs
 import SyntaxDefs
+import MGUs
 
 data EnvVisib = LocPub | LocPriv | ExtPub | ExtPriv
     deriving Show
@@ -24,7 +25,7 @@ type EnvMap a = Map.Map String [(EnvVisib, a)]
 data DemodEnv = DemodEnv
     (EnvMap DemodEnv) -- Mods
     (EnvMap String) -- Vals
-    (EnvMap String) -- Types
+    (EnvMap (Either String ([TyQuant], DataType))) -- Types o typesyn
     (EnvMap String) -- Constructors
     (EnvMap (String, Map.Map String String)) -- Rels
     deriving Show
@@ -49,10 +50,12 @@ envmapDefd l em = case Map.lookup l em of
 builtinDemodTypes = ["->", "Int", "Flt", "Bool", "Chr", "RealWorld_"]
 builtinDemodVars = ["True", "False", "RealWorld_"]
 
-buildBIDemodMap = Map.fromList . map buildBIDemod
+buildBIDemodTypeMap = Map.fromList . map buildBIDemod
+    where buildBIDemod l = (l, [(LocPub, Left $ l++"#BI")])
+buildBIDemodVarMap = Map.fromList . map buildBIDemod
     where buildBIDemod l = (l, [(LocPub, l++"#BI")])
 
-initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodMap builtinDemodTypes) (buildBIDemodMap builtinDemodVars) Map.empty
+initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodTypeMap builtinDemodTypes) (buildBIDemodVarMap builtinDemodVars) Map.empty
 
 entryPointBlock env = do
     hle <- demodExpr env Map.empty syne
@@ -248,12 +251,25 @@ demodTypeExprLoc env qmap (c, SynTypeExprTuple stes) = do
     return (any id islocs, foldl (\tef tea -> DataCOORD c (DataTypeApp tef tea)) (DataCOORD c (DataTypeName (makeTupLabl $ length tes) KindNOTHING)) tes)
 demodTypeExprLoc env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     (DemodEnv _ _ ts _ _) <- getPathEnv c env path
-    (v, nlabl) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts
-    return (isLocal v, DataCOORD c (DataTypeName nlabl KindNOTHING))
+    (v, either) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts
+    case either of
+        Left nlabl -> return (isLocal v, DataCOORD c (DataTypeName nlabl KindNOTHING))
+        Right (quants, syn) ->
+            if length quants == 0 then return (False, DataCOORD c syn)
+            else fail $ show c ++ " Type synonym is applied to 0 arguments, but needs " ++ show (length quants)
+demodTypeExprLoc env qmap (c, SynTypeExprApp (_, SynTypeExprName pathlabl@(Path path labl)) steas) = do
+    (DemodEnv _ _ ts _ _) <- getPathEnv c env path
+    (v, either) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts
+    (islocs, teas) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) steas
+    case either of
+        Left nlabl -> return (any id (isLocal v : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) (DataCOORD c (DataTypeName nlabl KindNOTHING)) teas)
+        Right (quants, syn) ->
+            if length quants == length teas then return (any id islocs, substApply (Map.fromList $ zip quants teas) syn)
+            else fail $ show c ++ " Type synonym is applied to " ++ show (length teas) ++ " arguments, but needs " ++ show (length quants)
 demodTypeExprLoc env qmap (c, SynTypeExprApp stef steas) = do
     (isloc, tef) <- demodTypeExprLoc env qmap stef
     (islocs, teas) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) steas
-    return (any id (isloc : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) tef teas) --TODO: Le applicazioni di typesyn vanno gestite diversamente
+    return (any id (isloc : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) tef teas)
 
 demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState DataType
 demodTypeExpr e q t = fmap snd $ demodTypeExprLoc e q t
@@ -295,7 +311,7 @@ dataDefGroupEnv env@(DemodEnv _ _ ts _ _) (SynDataDef c v l qs vars:ddefs)
     | otherwise = do
         suffix <- newUniqueSuffix
         (DemodEnv ms' vs' ts' cs' rs', vars') <- dataVarsEnv v env vars
-        (env'', ddefs') <- dataDefGroupEnv (DemodEnv ms' vs' (envmapInsert l (visibtoenv v, l++suffix) ts') cs' rs') ddefs
+        (env'', ddefs') <- dataDefGroupEnv (DemodEnv ms' vs' (envmapInsert l (visibtoenv v, Left $ l++suffix) ts') cs' rs') ddefs
         return (env'', SynDataDef c v (l++suffix) qs vars':ddefs')
 
 -- rel & inst
@@ -378,7 +394,12 @@ demodModDef core env fs (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _)
     (_, (_, relenv)) <- envmapLookup "" rlabl rs
     defs' <- demodInstDefs c env qmap relenv rpl defs
     return (env, fs, BlockProgram [] [] [] [] [InstDef c (Qual preds' pred') defs'])
-demodModDef core env _ (ModTypeSyn _ _ _ _ _) = error "TODO demod dei typesyn. Vanno sostituiti qui o restano nel HLDefs?"
+demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModTypeSyn c visib l qls ste)
+    | envmapDefd l ts = fail $ show c ++ " Type: " ++ show l ++ " already defined"
+    | otherwise = do
+        (qmap, qlist) <- buildQmapQlist c qls
+        te <- demodTypeExpr env qmap ste
+        return ((DemodEnv ms vs (envmapInsert l (visibtoenv visib, Right (map snd qlist, te)) ts) cs rs), fs, BlockProgram [] [] [] [] [])
 demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
     | envmapDefd l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
     | otherwise = do

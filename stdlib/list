@@ -142,11 +142,11 @@ and pub transpose : forall a. List (List a) -> List (List a) =
     | ls -> transposeAux ls
 
 mod pub Text {
-    def pub unwords : List (List Chr) -> List Chr =
+    def pub unwords : List String -> String =
         \ [] -> []
         | ws -> foldl1 (\t, w -> t ++ ' ':: w) ws
 
-    def pub unlines : List (List Chr) -> List Chr =
+    def pub unlines : List String -> String =
         \ [] -> []
         | [l | ls] -> l ++ '\n'::unlines ls
 }

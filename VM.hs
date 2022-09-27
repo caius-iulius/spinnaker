@@ -1,5 +1,6 @@
 module VM where
 import System.IO(hFlush,stdout)
+import System.Exit(exitSuccess)
 import Control.Monad.Reader
 import Data.Char(ord,chr)
 import HLDefs(Literal(..))
@@ -111,6 +112,8 @@ execComb "_getChr" s (rw:[]) = do
     lift $ hFlush stdout
     c <- lift getChar
     execVM ([IRet], (VVariant "(,)" [VConst(LitCharacter c), rw]):s, [])
+
+execComb "_exit" s (rw:[]) = lift $ exitSuccess
 
 execComb n s e = do
     g <- ask
