@@ -31,7 +31,7 @@ timeTyper a = do
     return (v, diff)
 
 frontendCompile fname = fmap fst $ runTyperState (0,0,0) $ do
-    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram "stdlib/core" "stdlib/std" fname
+    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram "stdlib/core.spk" "stdlib/std.spk" fname
     typerLog $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
     ((env, tyblock), t_typer) <- timeTyper $ typeBlockProgram block
     typerLog $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)

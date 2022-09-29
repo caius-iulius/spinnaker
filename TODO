@@ -1,3 +1,5 @@
+TODO, NOTE e FIXME non sono evidenziati per qualche motivo
+
 i typesyn sono implementati alla cazzo
 vengono sostituiti durante il demod, quindi senza controlli di kind, devono ricevere sempre l'esatto numero di argomenti richiesti consecutivamente e impediscono i controlli di posizione nelle rel
 
@@ -43,8 +45,6 @@ prendi una decisione riguardo all'ambiguità sintattica del pattern matching
 STUDIA K-NORMAL FORMS E A-NORMAL FORMS, SE NON ORA USA UNA DI QUESTE NEL PROSSIMO COMPILATORE
 
 DIMOSTRA IL TYPER, SPECIALMENTE LE REGOLE DEI PATTERN
-
-si potrebbe implementare una macchina virtuale simile a ZINC
 
 SCEGLI UNA SINTASSI MIGLIORE PER "inst" (e forse per i constraint)
 Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implementerò i row types

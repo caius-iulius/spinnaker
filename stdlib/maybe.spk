@@ -1,6 +1,6 @@
 use Core
 
-mod Monad "stdlib/monad"
+mod Monad "stdlib/monad.spk"
 
 data pub Maybe a = None | Some a
 

@@ -1,8 +1,0 @@
-use Core
-
-data Pair a = Pair a a
-# data Bool = False | True
-data Either a b = Left a | Right b
-data PairTup a = PairT (a, a)
-# data List a = Nil | Cons a (List a)
-data BoolOrInt = Bool Bool | Int Int

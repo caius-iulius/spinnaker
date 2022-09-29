@@ -5,7 +5,7 @@ mod TypeNat {
 
     data pub S a = S a
     data pub Z = Z
-    # NOTE: Wrapper per i TypeNat, è un semplice holder di phanto, type
+    # NOTE: Wrapper per i TypeNat, è un semplice holder di phantom type
     data pub NatWrap a = NatWrap
 
     # Numeri natuali condificati con Peano in type-level, al momento si può controllare soltanto l'equivalenza grazie all'unificazione, ma con le dipendenze funzionali si potrebbero anche codificare delle operazioni di base
