@@ -1,6 +1,7 @@
 module Demod (DemodEnv(..), concatBlockPrograms, demodExpr, demodProgram) where
 
 import System.IO
+import System.Environment
 
 import Control.Monad.Trans
 import qualified Data.Map as Map
@@ -350,33 +351,33 @@ demodInstDefs rc env qmap relenv rpath defs = loop [] relenv defs
 -- moduli
 type FilesEnv = Map.Map String DemodEnv
 
-demodModDef :: DemodEnv -> DemodEnv -> FilesEnv -> SyntaxModDef -> TyperState (DemodEnv, FilesEnv, BlockProgram)
-demodModDef core env@(DemodEnv ms vs ts cs rs) files (ModMod c v l m)
+demodModDef :: DemodEnv -> DemodEnv -> FilesEnv -> String -> SyntaxModDef -> TyperState (DemodEnv, FilesEnv, BlockProgram)
+demodModDef core env@(DemodEnv ms vs ts cs rs) files workdir (ModMod c v l m)
     | envmapDefd l ms = fail $ show c ++ " Module: " ++ show l ++ " already defined"
     | otherwise = do
-        (menv, files', demodded) <- demodModule core (envSetPrivate env) files m
+        (menv, files', demodded) <- demodModule core (envSetPrivate env) files workdir m
         return (DemodEnv (envmapInsert l (visibtoenv v, envGetPubs menv) ms) vs ts cs rs, files', demodded)
-demodModDef core env files (ModUse c v (Path p l)) =
+demodModDef core env files workdir (ModUse c v (Path p l)) =
     let setVisib = case v of
             Public -> id
             Private -> envSetPrivate
     in do
         useEnv <- getPathEnv c env (p++[l])
         return (envsUnion (setVisib useEnv) env, files, BlockProgram [] [] [] [] [])
-demodModDef core env@(DemodEnv ms vs ts cs rs) files (ModFromFile c v l fname)
+demodModDef core env@(DemodEnv ms vs ts cs rs) files workdir (ModFromFile c v l fname)
     | envmapDefd l ms = fail $ show c ++ " Module: " ++ show l ++ " already defined"
     | otherwise = do
-        (menv, files', block) <- demodFile fname core files
+        (menv, files', block) <- demodFile (workdir ++ fname) core files
         return (DemodEnv (envmapInsert l (visibtoenv v, envGetExts menv) ms) vs ts cs rs, files', block)
-demodModDef core env fs (ModValGroup vvdefs) = do
+demodModDef core env fs workdir (ModValGroup vvdefs) = do
     (env', vdefs) <- valDefGroupEnv env vvdefs
     vdefs' <- mapM (demodValDef env') vdefs
     return (env', fs, BlockProgram [] [] [] [vdefs'] [])
-demodModDef core env fs (ModDataGroup ddefs) = do
+demodModDef core env fs workdir (ModDataGroup ddefs) = do
     (env', ddefs') <- dataDefGroupEnv env ddefs
     ddefs'' <- mapM (demodDataDef env') ddefs'
     return (env', fs, BlockProgram [ddefs''] [] [] [] [])
-demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModRel c visib preds l qls decls)
+demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModRel c visib preds l qls decls)
     | envmapDefd l rs = fail $ show c ++ " Rel: " ++ show l ++ " already defined"
     | otherwise = do
         suffix <- newUniqueSuffix
@@ -384,7 +385,7 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModRel c visib preds l qls de
         preds' <- mapM (demodPred env qmap) preds
         (DemodEnv ms' vs' ts' cs' rs', relenv, decls') <- demodRelDecls env qmap (visibtoenv visib) decls
         return (DemodEnv ms' vs' ts' cs' (envmapInsert l (visibtoenv visib, (l++suffix, relenv)) rs'), fs, BlockProgram [] [RelDef c (l++suffix) (map snd qlist) preds' decls'] [] [] [])
-demodModDef core env fs (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
+demodModDef core env fs workdir (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _) defs) = do
     (qmap, qlist) <- buildQmapQlist c qls
     preds' <- mapM (demodPred env qmap) preds
     (isloc, pred') <- demodPredLoc env qmap head
@@ -394,13 +395,13 @@ demodModDef core env fs (ModInst c qls preds head@(_, rpl@(Path rpath rlabl), _)
     (_, (_, relenv)) <- envmapLookup "" rlabl rs
     defs' <- demodInstDefs c env qmap relenv rpl defs
     return (env, fs, BlockProgram [] [] [] [] [InstDef c (Qual preds' pred') defs'])
-demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModTypeSyn c visib l qls ste)
+demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModTypeSyn c visib l qls ste)
     | envmapDefd l ts = fail $ show c ++ " Type: " ++ show l ++ " already defined"
     | otherwise = do
         (qmap, qlist) <- buildQmapQlist c qls
         te <- demodTypeExpr env qmap ste
         return ((DemodEnv ms vs (envmapInsert l (visibtoenv visib, Right (map snd qlist, te)) ts) cs rs), fs, BlockProgram [] [] [] [] [])
-demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
+demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
     | envmapDefd l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
     | otherwise = do
         tas' <- mapM (demodTypeExpr env Map.empty) tas
@@ -414,14 +415,17 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs (ModExt c visib l tas tr) --TO
 
 concatBlockPrograms (BlockProgram datagroups reldefs extdefs valgroups instdefs) (BlockProgram datagroups' reldefs' extdefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (extdefs++extdefs') (valgroups++valgroups') (instdefs++instdefs')
 
-demodModDefs core env files [] = return (env, files, BlockProgram [] [] [] [] [])
-demodModDefs core env files (def:defs) = do
-    (env', files', block) <- demodModDef core env files def
-    (env'', files'', block') <- demodModDefs core env' files' defs
+demodModDefs core env files workdir [] = return (env, files, BlockProgram [] [] [] [] [])
+demodModDefs core env files workdir (def:defs) = do
+    (env', files', block) <- demodModDef core env files workdir def
+    (env'', files'', block') <- demodModDefs core env' files' workdir defs
     return (env'', files'', concatBlockPrograms block block')
 
-demodModule :: DemodEnv -> DemodEnv -> FilesEnv -> SyntaxModule -> TyperState (DemodEnv, FilesEnv, BlockProgram)
-demodModule core env files (Module defs) = demodModDefs core env files defs
+demodModule :: DemodEnv -> DemodEnv -> FilesEnv -> String -> SyntaxModule -> TyperState (DemodEnv, FilesEnv, BlockProgram)
+demodModule core env files workdir (Module defs) = demodModDefs core env files workdir defs
+
+getDirOf :: String -> String
+getDirOf = reverse . dropWhile ('/' /=) . reverse --TODO: ci sono tanti edge-case per cui non funziona
 
 demodFile :: String -> DemodEnv -> FilesEnv -> TyperState (DemodEnv, FilesEnv, BlockProgram)
 demodFile fname core files = do
@@ -432,7 +436,8 @@ demodFile fname core files = do
         Just modenv -> return (modenv, files, BlockProgram [] [] [] [] [])
         Nothing -> case parse getProgram (Coord fname 1 1, contents) of
             POk syntree _ -> do --TODO: non termina su moduli ciclici
-                (modenv, files', block) <- demodModule core core files syntree
+                let workdir = getDirOf fname
+                (modenv, files', block) <- demodModule core core files workdir syntree
                 return (modenv, Map.insert contents modenv files', block)
             pe -> fail $ show pe
 
@@ -447,9 +452,9 @@ demodStdlib corefname stdfname = do
     let stdEnvExport = envsUnion (DemodEnv (envmapSingleton "Std" (visibtoenv Private, envGetExts stdEnv)) Map.empty Map.empty Map.empty Map.empty) coreEnvExport
     return (stdEnvExport, stdfiles, concatBlockPrograms coreBlock stdBlock)
 
-demodProgram :: String -> String -> String -> TyperState (DemodEnv, HLExpr, BlockProgram)
-demodProgram corefname stdfname progfname = do
-    (stdEnv, stdfiles, stdBlock) <- demodStdlib corefname stdfname
+demodProgram :: String -> String -> String -> String -> TyperState (DemodEnv, HLExpr, BlockProgram)
+demodProgram rootpath corefname stdfname progfname = do
+    (stdEnv, stdfiles, stdBlock) <- demodStdlib (rootpath++corefname) (rootpath++stdfname) --TODO: le stdlib avranno un path assoluto (?)
     (progEnv, progfiles, progBlock) <- demodFile progfname stdEnv stdfiles
     --typerLog $ "Final demodEnv: " ++ show modEnv
     --typerLog $ "Demodded Core: " ++ (drawTree $ toTreeBlockProgram coreBlock)

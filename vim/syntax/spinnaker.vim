@@ -6,7 +6,7 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn keyword spinnakerTopDef mod data def and ext rel inst
+syn keyword spinnakerTopDef mod data def and ext rel inst typesyn
 syn keyword spinnakerModKeyword use pub
 syn keyword spinnakerKeyword let put forall
 syn keyword spinnakerConditional if then else

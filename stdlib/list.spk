@@ -1,6 +1,6 @@
 use Core
 
-mod Maybe "stdlib/maybe.spk"
+mod Maybe "maybe.spk"
 
 def pub head : forall a. List a -> a
     = \Cons x xs -> x

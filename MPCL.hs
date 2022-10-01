@@ -42,27 +42,27 @@ parse (PParse f) cs = f cs
 infixr 5 <||
 (PValue v) <|| _ = PValue v
 (PParse f) <|| p = PParse(\cs ->
-    let resf = f cs in case resf of
-        POk _ _ -> resf
+    case f cs of
         PFail _ _ -> parse p cs
-        PFatal _ _ -> resf
+        resf -> resf
     )
 
 --Restituisce un parser che non consuma l'input
 look p = PParse(\cs ->
-    let resp = parse p cs in case resp of
+    case parse p cs of
         POk elem _ -> POk elem cs
-        _ -> resp
+        resp -> resp
     )
 
 --Restituisce un parser che fallisce catastroficamente se non è soddisfatto
 require p = PParse(\cs ->
-    let resp = parse p cs in case resp of
+    case parse p cs of
         PFail c e -> PFatal c e
-        _ -> resp
+        resp -> resp
     )
 
-discard p = p >> return ()
+discard :: Parser c a -> Parser c ()
+discard = fmap (const ())
 {-
 --Aggiunge la stringa specificata all'inizio del messaggio di errore
 detailError s p = PParse(\cs ->
@@ -77,10 +77,9 @@ detailError s p = PParse(\cs ->
 --TODO: Forse bisogna conservare le coordinate originarie?
 --TODO: Forse sovrascrivi anche l'errore fatale
 describeError s p = PParse(\cs ->
-    let resp = parse p cs in case resp of
-        POk _ _ -> resp
-        PFatal _ _ -> resp
+    case parse p cs of
         PFail c preve -> PFail (fst cs) s
+        resp -> resp
     )
 
 --Messaggio di errore in caso di fallimento "soft"
@@ -98,7 +97,7 @@ reachedEof = PParse(\(c, s) ->
 --Elabora uno o più elementi del parser specificato
 munch1 p = do {
     e <- p;
-    es <- munch1 p <|| return [];
+    es <- munch p;
     return (e:es)
 }
 
@@ -143,7 +142,7 @@ instance Show StdCoord where
 dummyStdCoord = Coord "" 0 0
 
 stdcoord_newc (Coord file line col) char = --TODO: Come si trattano i caratteri a più celle?
-    case char of 
+    case char of
         '\n' -> Coord file (line+1) 1
         _ -> Coord file line (col+1)
 

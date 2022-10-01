@@ -1,10 +1,10 @@
 use pub Core
 
-mod pub Monad "stdlib/monad.spk"
+mod pub Monad "monad.spk"
 
-mod pub List "stdlib/list.spk"
+mod pub List "list.spk"
 
-mod pub Maybe "stdlib/maybe.spk"
+mod pub Maybe "maybe.spk"
 
 def pub max : forall a. {Ord a} => a -> a -> a
     = \a, b -> put a > b
