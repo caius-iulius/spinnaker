@@ -1,6 +1,7 @@
 module HLtoVM where
 import Data.List(elemIndex)
 import Data.Maybe(fromMaybe)
+import TypingDefs
 import HLDefs
 import VM
 
@@ -28,7 +29,6 @@ exprToVm vs (_, _, ExprApp f a) = exprToVm vs f ++ exprToVm vs a ++ [IApp]
 exprToVm vs (_, _, ExprLabel l) =
     case elemIndex l vs of
         Just i -> [IAccess i]
-        Nothing -> [ICombApp l 0]
 exprToVm vs (_, _, ExprConstructor v es) =
     (es >>= exprToVm vs) ++ [IVariant v (length es)]
 exprToVm vs (_, _, ExprCombinator l es) =
@@ -46,8 +46,11 @@ exprToVm vs (_, _, ExprPut v pses) =
     in v' ++ [ICase (length v) pscs]
 exprToVm vs (_, _, ExprHint _ e) = exprToVm vs e
 
-progToVm :: (HLExpr, [(String, HLExpr)]) -> (VMCode, [(Name, VMCode)])
+combToVm :: (String, [(String, DataType)], HLExpr) -> (Name, VMCode)
+combToVm (l, as, e) = (l, exprToVm (reverse $ map fst as) e ++ [IRet])
+
+progToVm :: (HLExpr, [(String, [(String, DataType)], HLExpr)]) -> (VMCode, [(Name, VMCode)])
 progToVm (ep, defs) =
     let cep = exprToVm [] ep ++ [IRet]
-        cdefs = map (fmap ((++ [IRet]) . exprToVm [])) defs
+        cdefs = map combToVm defs
     in (cep, cdefs)

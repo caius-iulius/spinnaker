@@ -12,7 +12,7 @@ import TypeTyper(substApplyExpr)
 
 type Instances = [(DataType, String)]
 type Generators = [(DataType, HLExpr)]
-type Definitions = [(String, HLExpr)]
+type Definitions = [(String, [(String, DataType)], HLExpr)]
 
 type MonoEnv = (Int, Definitions, Map.Map String (Instances, Generators))
 type MonoState t = StateT MonoEnv IO t
@@ -23,7 +23,7 @@ monoLog = lift . compLog
 addDef :: String -> HLExpr -> MonoState ()
 addDef l e = do
     (u, defs, env) <- get
-    put (u, (l, e) : defs, env)
+    put (u, (l, [], e) : defs, env)
 getInsts :: String -> MonoState Instances
 getInsts l = do
     (_, _, e) <- get
@@ -115,7 +115,7 @@ monomorphizeInner t s (ExprLabel l) = do
         False -> return (ExprLabel (l++s))
         True -> do
             l' <- findInstance l t
-            return (ExprLabel l')
+            return (ExprCombinator l' [])
 monomorphizeInner _ s (ExprConstructor c es) = do
     es' <- mapM (monomorphize s) es
     return (ExprConstructor c es')

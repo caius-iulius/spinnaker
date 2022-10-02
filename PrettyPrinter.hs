@@ -33,7 +33,7 @@ toTreeBlockProgram (BlockProgram datagroups reldefs extdefs valgroups instdefs) 
         Node "Insts" (map toTreeHLInstDef instdefs)
     ]
 
-toTreeMonoDef (l, e) = Node (show l) [toTreeHLExpr e]
+toTreeMonoDef (l, as, e) = Node (show l) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeHLExpr e]
 toTreeMonoDefs defs = Node "MonoDefs" (map toTreeMonoDef defs)
 --Roba per Syn
 toTreeSynPattern p = Node (show p) []

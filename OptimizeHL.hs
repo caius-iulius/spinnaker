@@ -1,9 +1,10 @@
 module OptimizeHL where
+import TypingDefs
 import HLDefs
 import Data.Char (ord, chr)
 import Data.List (sortBy)
 
-type Definitions = [(String, HLExpr)]
+type Definitions = [(String, [(String, DataType)], HLExpr)]
 type Program = (HLExpr, Definitions)
 
 appearsPatInner l PatWildcard = False
@@ -18,13 +19,13 @@ appears _ (_, _, ExprLiteral _) = 0
 appears l (_, _, ExprApp f a) = appears l f + appears l a
 appears l (_, _, ExprLabel l') = if l == l' then 1 else 0
 appears l (_, _, ExprConstructor c es) = sum (map (appears l) es)
-appears l (_, _, ExprCombinator c es) = sum (map (appears l) es)
+appears l (_, _, ExprCombinator c es) = (if c == l then 1 else 0) + sum (map (appears l) es)
 appears l (_, _, ExprLambda l' e) = if l == l' then 0 else appears l e
 appears l (_, _, ExprPut vs pses) = sum (map (appears l) vs) +
     sum (map (\(ps, e)->if any (appearsPat l) ps then 0 else appears l e) pses)
 
 appearsDefs :: String -> Definitions -> Int
-appearsDefs l defs = sum $ map (appears l . snd) defs
+appearsDefs l defs = sum $ map (\(_,as,e) -> if elem l (map fst as) then 0 else appears l e) defs
 
 exprSize :: HLExpr -> Int
 exprSize (_, _, ExprLiteral _) = 1
@@ -37,7 +38,7 @@ exprSize (_, _, ExprPut vs pses) = length pses + sum (map exprSize vs) + sum (ma
 exprSize (_, _, ExprHint _ e) = exprSize e
 
 programSize :: Program -> Int
-programSize (ep, defs) = exprSize ep + sum (map (exprSize . snd) defs)
+programSize (ep, defs) = exprSize ep + sum (map (exprSize . (\(_,_,a)->a)) defs)
 
 inlineHeuristic :: HLExpr -> Int -> Bool
 inlineHeuristic e appears =
@@ -59,35 +60,42 @@ inline l ie e@(c, t, ExprLambda l' le)
 inline l ie (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline l ie) vs)
     (map (\(p, e)->if any (appearsPat l) p then (p, e) else (p, inline l ie e)) pses))
 
+inlineComb :: (String, [(String, DataType)], HLExpr) -> HLExpr -> HLExpr
+inlineComb cmb e@(_, _, ExprLiteral _) = e
+inlineComb cmb e@(_, _, ExprLabel l') = e
+inlineComb cmb (c, t, ExprApp f a) = (c, t, ExprApp (inlineComb cmb f) (inlineComb cmb a))
+inlineComb cmb (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inlineComb cmb) es))
+inlineComb cmb@(cn, as, e) (c, t, ExprCombinator mcn es)
+    | cn == mcn =
+        let binds = zip (map fst as) es
+            newe = foldl (\me (l, ie) -> inline l ie me) e binds
+        in newe
+    | otherwise = (c, t, ExprCombinator mcn (map (inlineComb cmb) es))
+-- (c, t, ExprCombinator cn (map (inlineComb cmb) es))
+inlineComb cmb e@(c, t, ExprLambda l' le) = (c, t, ExprLambda l' (inlineComb cmb le))
+inlineComb cmb (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inlineComb cmb) vs)
+    (map (\(p, e)-> (p, inlineComb cmb e)) pses))
+
 -- TODO: Inline più furbo, per esempio dai la precedenza alle definizioni che appaiono di meno
 sortInlines :: Program -> Program
 sortInlines (ep, defs) =
-    (ep, sortBy (\(l,e) (l',e')->
+    (ep, sortBy (\(l,as,e) (l',as',e')->
         compare (appears l ep + appearsDefs l defs) (appears l' ep + appearsDefs l' defs)
     ) defs)
 
+-- TODO: non considera l'esplosione della dimensione a causa di argomenti utilizzati più volte
 inlineProgram :: Program -> Program
 inlineProgram prog = loop [] (sortInlines prog)
     where
         loop procd (ep, []) = (ep, procd)
-        loop procd (ep, (l, e):defs)
+        loop procd (ep, cmb@(l, as, e):defs)
             | (appears l ep + appearsDefs l (procd ++ defs)) == 0
                 = loop procd (ep, defs)
             | appears l e /= 0 || not (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
-                = loop ((l,e):procd) (ep, defs)
-            | otherwise = loop (inlineDefs l e procd) (inline l e ep, inlineDefs l e defs)
-        inlineDefs l ie [] = []
-        inlineDefs l ie ((ld, e):defs') = (ld, inline l ie e):inlineDefs l ie defs'
---     where
---         loop myep procd [] = (myep, procd)
---         loop myep procd ((l, e):defs')
---             | (appears l myep + appearsDefs l (procd ++ defs')) == 0
---                 = loop myep procd defs'
---             | appears l e /= 0 || not (inlineHeuristic e (appears l myep + appearsDefs l procd + appearsDefs l defs'))
---                 = loop myep ((l, e):procd) defs'
---             | otherwise = loop (inline l e myep) (inlineDefs l e procd) (inlineDefs l e defs')
---         inlineDefs l ie [] = []
---         inlineDefs l ie ((ld, e):defs') = (ld, inline l ie e):inlineDefs l ie defs'
+                = loop (cmb:procd) (ep, defs)
+            | otherwise = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
+        inlineDefs cmb [] = []
+        inlineDefs cmb ((ld, as, e):defs') = (ld, as, inlineComb cmb e):inlineDefs cmb defs'
 
 data SieveRes
     = Always [(String, HLExpr)]
@@ -190,4 +198,4 @@ optimizeProgram p =
         p''' = optimizeDefExprs p''
     in p''' -- inlineProgram p'''
     where optimizeDefExprs (ep, defs) = (optimizeExpr ep,
-            map (\(l,e)->(l,optimizeExpr e)) defs)
+            map (\(l,as,e)->(l,as,optimizeExpr e)) defs)
