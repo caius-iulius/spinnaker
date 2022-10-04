@@ -46,10 +46,10 @@ exprToVm vs (_, _, ExprPut v pses) =
     in v' ++ [ICase (length v) pscs]
 exprToVm vs (_, _, ExprHint _ e) = exprToVm vs e
 
-combToVm :: (String, [(String, DataType)], HLExpr) -> (Name, VMCode)
+combToVm :: Combinator -> (Name, VMCode)
 combToVm (l, as, e) = (l, exprToVm (reverse $ map fst as) e ++ [IRet])
 
-progToVm :: (HLExpr, [(String, [(String, DataType)], HLExpr)]) -> (VMCode, [(Name, VMCode)])
+progToVm :: MonoProgram -> (VMCode, [(Name, VMCode)])
 progToVm (ep, defs) =
     let cep = exprToVm [] ep ++ [IRet]
         cdefs = map combToVm defs

@@ -12,9 +12,8 @@ import TypeTyper(substApplyExpr)
 
 type Instances = [(DataType, String)]
 type Generators = [(DataType, HLExpr)]
-type Definitions = [(String, [(String, DataType)], HLExpr)]
 
-type MonoEnv = (Int, Definitions, Map.Map String (Instances, Generators))
+type MonoEnv = (Int, [Combinator], Map.Map String (Instances, Generators))
 type MonoState t = StateT MonoEnv IO t
 
 monoLog :: String -> MonoState ()
@@ -146,7 +145,7 @@ myListMerge ((k,v):kvs) =
     let (isk, isntk) = partition ((k==) . fst) kvs
         in (k, v:map snd isk):myListMerge isntk
 
-monomorphizeProgram :: (HLExpr, BlockProgram) -> IO (HLExpr, Definitions)
+monomorphizeProgram :: (HLExpr, BlockProgram) -> IO MonoProgram
 monomorphizeProgram (entryPoint, BlockProgram datagroups extdefs reldefs valgroups instdefs) =
     let
         valbinds = join valgroups
