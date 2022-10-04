@@ -266,7 +266,7 @@ mod ShowCore {
             | False -> 'F'::'a'::'l'::'s'::'e'::Nil
     }
 
-    def showDigit : Int -> Chr = \i -> toEnum (48 + i)
+    def showDigit : Int -> Chr = \i -> toEnum (fromEnum '0' + i)
 
     def showNonNegAux = \s, i -> put (i < 10)
         | True -> showDigit i :: s

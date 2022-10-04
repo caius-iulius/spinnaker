@@ -1,0 +1,9 @@
+use Std
+use Monad
+use State
+
+def main = flip runStateT 0 $
+    puts 10 >>
+    s <- gets;
+    (lift $ print s) >>
+    puts (s + 1)
