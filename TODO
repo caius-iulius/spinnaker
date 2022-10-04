@@ -3,6 +3,8 @@ TODO, NOTE e FIXME non sono evidenziati per qualche motivo
 i typesyn sono implementati alla cazzo
 vengono sostituiti durante il demod, quindi senza controlli di kind, devono ricevere sempre l'esatto numero di argomenti richiesti consecutivamente e impediscono i controlli di posizione nelle rel
 
+Inlining più furbo degli apply: in generale visto che i combinatori apply vengono chiamati più volte non vengono inlinizzati in posti ovvi (quando la funzione da chiamare è determinata)
+
 --- Esempi:
 data A a b = A a b
 typesyn B a b = A a b
@@ -51,7 +53,7 @@ Attualmente la sintassi con '{' e '}' va bene, ma sarà ambigua appena implement
 
 Il lexer fa casini coi numeri di colonna(forse anche linea) dopo i caratteri speciali. Non è detto che la gestione dei caratteri al momento sia corretta
 
-i file sono implementati in modo inefficiente e fragile
+i file sono implementati in modo inefficiente e fragile (fa compare byte per byte dei contenuti)
 
 1. [OK] cosotruttori sempre completamente applicati (Cons --> \a0, a1 -> Cons a0 a1)
 2. typing typerel
@@ -78,7 +80,7 @@ i file sono implementati in modo inefficiente e fragile
     - [OK] valori, relazioni
     - datatype (come fa MLTon, selettiva sulle varianti usate)
 5. [TEST] notazione bind, il parser per i pattern non va in fatal quando forse dovrebbe, serve per accomodare il parsing dei bind semplici
-6. defunzionalizzazione e semplificazione a un branch per putexpr
+6. [TEST] defunzionalizzazione
 7. ottimizzazioni (guarda il video di SPJ "Haskell in 9 constructors")
     - [TEST] inlining globale
     - [TEST] inlining locale
