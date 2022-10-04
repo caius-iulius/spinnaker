@@ -51,3 +51,6 @@ data HLInstDef
     deriving Show
 
 data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [HLExtDef] [[HLValDef]] [HLInstDef]
+
+type Combinator = (String, [(String, DataType)], HLExpr)
+type MonoProgram = (HLExpr, [Combinator])

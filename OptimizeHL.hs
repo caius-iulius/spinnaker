@@ -4,9 +4,6 @@ import HLDefs
 import Data.Char (ord, chr)
 import Data.List (sortBy)
 
-type Definitions = [(String, [(String, DataType)], HLExpr)]
-type Program = (HLExpr, Definitions)
-
 appearsPatInner l PatWildcard = False
 appearsPatInner l (PatLiteral _) = False
 appearsPatInner l (PatVariant c ps) = any (appearsPat l) ps
@@ -24,7 +21,7 @@ appears l (_, _, ExprLambda l' e) = if l == l' then 0 else appears l e
 appears l (_, _, ExprPut vs pses) = sum (map (appears l) vs) +
     sum (map (\(ps, e)->if any (appearsPat l) ps then 0 else appears l e) pses)
 
-appearsDefs :: String -> Definitions -> Int
+appearsDefs :: String -> [Combinator] -> Int
 appearsDefs l defs = sum $ map (\(_,as,e) -> if elem l (map fst as) then 0 else appears l e) defs
 
 exprSize :: HLExpr -> Int
@@ -37,7 +34,7 @@ exprSize (_, _, ExprLambda p e) = 1 + exprSize e --TODO patSize p?
 exprSize (_, _, ExprPut vs pses) = length pses + sum (map exprSize vs) + sum (map (exprSize . snd) pses) --TODO patsize pses?
 exprSize (_, _, ExprHint _ e) = exprSize e
 
-programSize :: Program -> Int
+programSize :: MonoProgram -> Int
 programSize (ep, defs) = exprSize ep + sum (map (exprSize . (\(_,_,a)->a)) defs)
 
 inlineHeuristic :: HLExpr -> Int -> Bool
@@ -67,7 +64,8 @@ inlineComb cmb (c, t, ExprApp f a) = (c, t, ExprApp (inlineComb cmb f) (inlineCo
 inlineComb cmb (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inlineComb cmb) es))
 inlineComb cmb@(cn, as, e) (c, t, ExprCombinator mcn es)
     | cn == mcn =
-        let binds = zip (map fst as) es
+        let es' = map (inlineComb cmb) es
+            binds = zip (map fst as) es'
             newe = foldl (\me (l, ie) -> inline l ie me) e binds
         in newe
     | otherwise = (c, t, ExprCombinator mcn (map (inlineComb cmb) es))
@@ -76,15 +74,14 @@ inlineComb cmb e@(c, t, ExprLambda l' le) = (c, t, ExprLambda l' (inlineComb cmb
 inlineComb cmb (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inlineComb cmb) vs)
     (map (\(p, e)-> (p, inlineComb cmb e)) pses))
 
--- TODO: Inline più furbo, per esempio dai la precedenza alle definizioni che appaiono di meno
-sortInlines :: Program -> Program
+sortInlines :: MonoProgram -> MonoProgram
 sortInlines (ep, defs) =
     (ep, sortBy (\(l,as,e) (l',as',e')->
         compare (appears l ep + appearsDefs l defs) (appears l' ep + appearsDefs l' defs)
     ) defs)
 
 -- TODO: non considera l'esplosione della dimensione a causa di argomenti utilizzati più volte
-inlineProgram :: Program -> Program
+inlineProgram :: MonoProgram -> MonoProgram
 inlineProgram prog = loop [] (sortInlines prog)
     where
         loop procd (ep, []) = (ep, procd)
@@ -191,7 +188,7 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
 optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
 optimizeExpr (_, _, ExprHint _ e) = optimizeExpr e
 
-optimizeProgram :: Program -> Program
+optimizeProgram :: MonoProgram -> MonoProgram
 optimizeProgram p =
     let p' = optimizeDefExprs p
         p'' = inlineProgram p'
