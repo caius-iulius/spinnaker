@@ -3,7 +3,9 @@ TODO, NOTE e FIXME non sono evidenziati per qualche motivo
 i typesyn sono implementati alla cazzo
 vengono sostituiti durante il demod, quindi senza controlli di kind, devono ricevere sempre l'esatto numero di argomenti richiesti consecutivamente e impediscono i controlli di posizione nelle rel
 
-Inlining più furbo degli apply: in generale visto che i combinatori apply vengono chiamati più volte non vengono inlinizzati in posti ovvi (quando la funzione da chiamare è determinata)
+Inlining più furbo degli apply: al momento uso la tag inline per suggerire, ma non è determinata (segue comunque inlineHeuristic). se fosse determinata in certi casi la dimensione del codice esploderebbe
+l'optimizer ha dei bug se ci sono label ripetute che interagiscono fra loro, non so come
+a quanto pare (l'esecuzone lazy non lo fa capire bene) l'optimizer è lentissimo, considera riscrittura?
 
 --- Esempi:
 data A a b = A a b

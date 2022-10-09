@@ -33,7 +33,7 @@ toTreeBlockProgram (BlockProgram datagroups reldefs extdefs valgroups instdefs) 
         Node "Insts" (map toTreeHLInstDef instdefs)
     ]
 
-toTreeMonoDef (l, as, e) = Node (show l) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeHLExpr e]
+toTreeMonoDef (l, il, as, e) = Node (show l ++ " inline: " ++ show il) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeHLExpr e]
 toTreeMonoDefs defs = Node "MonoDefs" (map toTreeMonoDef defs)
 showMonoProg (ep, defs) = "EP: " ++ (drawTree $ toTreeHLExpr ep) ++ "\nDefs: " ++ (drawTree $ toTreeMonoDefs defs)
 

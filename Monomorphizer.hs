@@ -22,7 +22,7 @@ monoLog = lift . compLog
 addDef :: String -> HLExpr -> MonoState ()
 addDef l e = do
     (u, defs, env) <- get
-    put (u, (l, [], e) : defs, env)
+    put (u, (l, False, [], e) : defs, env)
 getInsts :: String -> MonoState Instances
 getInsts l = do
     (_, _, e) <- get

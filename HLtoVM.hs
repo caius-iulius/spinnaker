@@ -47,7 +47,7 @@ exprToVm vs (_, _, ExprPut v pses) =
 exprToVm vs (_, _, ExprHint _ e) = exprToVm vs e
 
 combToVm :: Combinator -> (Name, VMCode)
-combToVm (l, as, e) = (l, exprToVm (reverse $ map fst as) e ++ [IRet])
+combToVm (l, _, as, e) = (l, exprToVm (reverse $ map fst as) e ++ [IRet])
 
 progToVm :: MonoProgram -> (VMCode, [(Name, VMCode)])
 progToVm (ep, defs) =

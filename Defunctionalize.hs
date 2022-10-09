@@ -28,17 +28,18 @@ getApply t = do
             (u', _, _) <- get
             put (u', cs, (t, (combl, [])):env)
             return combl
-addApply :: DataType -> [(String, DataType)] -> String -> DefunState String
-addApply t frees cmb = do
+addApply :: DataType -> [DataType] -> String -> DefunState String
+addApply t freets cmb = do
     (u, cs, env) <- get
     ((combl, brs), aps) <-
         case lookup t env of
-            Just dat -> return (dat, filter ((t /=) . fst) env) --SBAGLIATO
+            Just dat -> return (dat, filter ((t /=) . fst) env)
             Nothing -> do
                 s <- getUid
                 let combl = "_apply" ++ s
                 return ((combl, []), env)
     sv <- getUid
+    frees <- mapM (\ft -> fmap (\s -> ("_v" ++ s, ft)) getUid) freets
     let varl = "Lamvar_" ++ sv
         brs' = (varl, frees, cmb) : brs
     (u', _, _) <- get
@@ -46,15 +47,15 @@ addApply t frees cmb = do
     return varl
 
 addComb :: Combinator -> DefunState ()
-addComb (combl, as, e) = do
+addComb cmb = do
     (u, cs, env) <- get
-    put (u, (combl, as, e):cs, env)
+    put (u, cmb:cs, env)
 newComb :: [(String, DataType)] -> HLExpr -> DefunState String
 newComb as e = do
     s <- getUid
     let combl = "_comb" ++ s
     (u, cs, env) <- get
-    put (u, (combl, as, e):cs, env)
+    put (u, (combl, False, as, e):cs, env)
     return combl
 
 freeLabls :: HLExpr -> [(String, DataType)]
@@ -91,20 +92,21 @@ defunExpr le@(c, t@(DataTypeApp (DataTypeApp _ at) _), ExprLambda l e) = do
     let frees = freeLabls le
     e' <- defunExpr e
     myc <- newComb (frees ++ [(l, at)]) e'
-    myv <- addApply t frees myc
+    myv <- addApply t (map snd frees) myc
     let freerefs = map (\(myl, myt) -> (c, myt, ExprLabel myl)) frees
     return (c, t, ExprConstructor myv freerefs)
 defunExpr (c, t, ExprPut vs pses) = do
     vs' <- mapM defunExpr vs
     pses' <- mapM (\(ps, e) -> fmap (\e' -> (ps, e')) (defunExpr e)) pses
     return (c, t, ExprPut vs' pses')
+defunExpr (_, _, ExprHint _ e) = defunExpr e
 
 applyToComb (t@(DataTypeApp (DataTypeApp _ at) rt), (combl, vars)) = do
     s <- getUid
     let funl = "_fun" ++ s
         argl = "_arg" ++ s
         vartobranch = \(vname, ls, cmb) -> ([(dummyStdCoord, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, Just l, PatWildcard)) ls))], (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
-    return (combl, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
+    return (combl, True, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
 
 applysToComb = do
     (_, _, aps) <- get
@@ -117,9 +119,9 @@ defunProgram (ep, defs) n = do
     return (ep', combs)
     where defunmon = do
             ep' <- defunExpr ep
-            mapM (\(l, as, e) -> do
+            mapM (\(l, il, as, e) -> do
                 e' <- defunExpr e
-                addComb (l, as, e')
+                addComb (l, il, as, e')
                 ) defs
             (_, _, aps) <- get
             applysToComb

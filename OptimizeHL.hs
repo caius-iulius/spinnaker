@@ -22,7 +22,7 @@ appears l (_, _, ExprPut vs pses) = sum (map (appears l) vs) +
     sum (map (\(ps, e)->if any (appearsPat l) ps then 0 else appears l e) pses)
 
 appearsDefs :: String -> [Combinator] -> Int
-appearsDefs l defs = sum $ map (\(_,as,e) -> if elem l (map fst as) then 0 else appears l e) defs
+appearsDefs l defs = sum $ map (\(_,_,as,e) -> if elem l (map fst as) then 0 else appears l e) defs
 
 exprSize :: HLExpr -> Int
 exprSize (_, _, ExprLiteral _) = 1
@@ -35,7 +35,7 @@ exprSize (_, _, ExprPut vs pses) = length pses + sum (map exprSize vs) + sum (ma
 exprSize (_, _, ExprHint _ e) = exprSize e
 
 programSize :: MonoProgram -> Int
-programSize (ep, defs) = exprSize ep + sum (map (exprSize . (\(_,_,a)->a)) defs)
+programSize (ep, defs) = exprSize ep + sum (map (exprSize . (\(_,_,_,a)->a)) defs)
 
 inlineHeuristic :: HLExpr -> Int -> Bool
 inlineHeuristic e appears =
@@ -43,30 +43,33 @@ inlineHeuristic e appears =
         addedSize = size*(appears - 1)
     in size < 8 || addedSize < size
 
-inline :: String -> HLExpr -> HLExpr -> HLExpr
-inline l ie e@(_, _, ExprLiteral _) = e
-inline l ie e@(_, _, ExprLabel l')
-    | l == l' = ie
-    | otherwise = e
-inline l ie (c, t, ExprApp f a) = (c, t, ExprApp (inline l ie f) (inline l ie a))
-inline l ie (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inline l ie) es))
-inline l ie (c, t, ExprCombinator cn es) = (c, t, ExprCombinator cn (map (inline l ie) es))
-inline l ie e@(c, t, ExprLambda l' le)
-    | l == l' = e
-    | otherwise = (c, t, ExprLambda l' (inline l ie le))
-inline l ie (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline l ie) vs)
-    (map (\(p, e)->if any (appearsPat l) p then (p, e) else (p, inline l ie e)) pses))
+inline :: [(String, HLExpr)] -> HLExpr -> HLExpr
+inline binds e@(_, _, ExprLiteral _) = e
+inline binds e@(c, _, ExprLabel l') =
+    case lookup l' binds of
+        Just ie -> ie
+        Nothing -> e
+inline binds (c, t, ExprApp f a) = (c, t, ExprApp (inline binds f) (inline binds a))
+inline binds (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inline binds) es))
+inline binds (c, t, ExprCombinator cn es) = (c, t, ExprCombinator cn (map (inline binds) es))
+inline binds (c, t, ExprLambda l' le) =
+    let newbinds = filter ((l' /=) . fst) binds
+        in (c, t, ExprLambda l' (inline newbinds le))
+inline binds (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline binds) vs)
+    (map (\(p, e)->
+        let newbinds = filter (\(sl, _) -> not $ any (appearsPat sl) p) binds
+            in (p, inline binds e)) pses))
 
-inlineComb :: (String, [(String, DataType)], HLExpr) -> HLExpr -> HLExpr
+inlineComb :: Combinator -> HLExpr -> HLExpr
 inlineComb cmb e@(_, _, ExprLiteral _) = e
 inlineComb cmb e@(_, _, ExprLabel l') = e
 inlineComb cmb (c, t, ExprApp f a) = (c, t, ExprApp (inlineComb cmb f) (inlineComb cmb a))
 inlineComb cmb (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inlineComb cmb) es))
-inlineComb cmb@(cn, as, e) (c, t, ExprCombinator mcn es)
+inlineComb cmb@(cn, _, as, e) (c, t, ExprCombinator mcn es)
     | cn == mcn =
         let es' = map (inlineComb cmb) es
             binds = zip (map fst as) es'
-            newe = foldl (\me (l, ie) -> inline l ie me) e binds
+            newe = inline binds e
         in newe
     | otherwise = (c, t, ExprCombinator mcn (map (inlineComb cmb) es))
 -- (c, t, ExprCombinator cn (map (inlineComb cmb) es))
@@ -76,8 +79,8 @@ inlineComb cmb (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inlineComb cmb) vs
 
 sortInlines :: MonoProgram -> MonoProgram
 sortInlines (ep, defs) =
-    (ep, sortBy (\(l,as,e) (l',as',e')->
-        compare (appears l ep + appearsDefs l defs) (appears l' ep + appearsDefs l' defs)
+    (ep, sortBy (\(l,il,as,e) (l',il',as',e')->
+        compare (il', (appears l ep + appearsDefs l defs)) (il, (appears l' ep + appearsDefs l' defs))
     ) defs)
 
 -- TODO: non considera l'esplosione della dimensione a causa di argomenti utilizzati più volte
@@ -85,14 +88,14 @@ inlineProgram :: MonoProgram -> MonoProgram
 inlineProgram prog = loop [] (sortInlines prog)
     where
         loop procd (ep, []) = (ep, procd)
-        loop procd (ep, cmb@(l, as, e):defs)
+        loop procd (ep, cmb@(l, il, as, e):defs)
             | (appears l ep + appearsDefs l (procd ++ defs)) == 0
                 = loop procd (ep, defs)
             | appears l e /= 0 || not (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
                 = loop (cmb:procd) (ep, defs)
             | otherwise = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
         inlineDefs cmb [] = []
-        inlineDefs cmb ((ld, as, e):defs') = (ld, as, inlineComb cmb e):inlineDefs cmb defs'
+        inlineDefs cmb ((ld, il, as, e):defs') = (ld, il, as, inlineComb cmb e):inlineDefs cmb defs'
 
 data SieveRes
     = Always [(String, HLExpr)]
@@ -180,7 +183,7 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
                 if all (\(ml,me)->inlineHeuristic me (appears ml e)) bs
                 then optimizeExpr $
                     --TODO: questo effettua un inline forse troppo permissivo
-                    foldl (\me (l,e')->inline l e' me) e bs
+                    foldl (\me (l,e')->inline [(l, e')] me) e bs
                 else (c, t, ExprPut vals' pses'')
             _ -> (c, t, ExprPut vals' pses'')
         _ -> (c, t, ExprPut vals' pses'')
@@ -195,4 +198,4 @@ optimizeProgram p =
         p''' = optimizeDefExprs p''
     in p''' -- inlineProgram p'''
     where optimizeDefExprs (ep, defs) = (optimizeExpr ep,
-            map (\(l,as,e)->(l,as,optimizeExpr e)) defs)
+            map (\(l,il,as,e)->(l,il,as,optimizeExpr e)) defs)
