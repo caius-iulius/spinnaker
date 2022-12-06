@@ -97,7 +97,7 @@ def filterAux
     | [x | xs] ->
         let newc = if f x then x :: c else c ->
         filterAux newc f xs
-and pub filter: forall a. (a -> Bool) -> List a -> List a
+and pub filter : forall a. (a -> Bool) -> List a -> List a
     = filterAux []
 
 def pub find : forall a. (a -> Bool) -> List a -> Maybe.Maybe a =
@@ -142,7 +142,12 @@ def pub (\\) : forall a. {Eq a} => List a -> List a -> List a
     = \l, m -> filter (\x -> all (x !=) m) l
 
 # TODO?: inits, tails
-# TODO: nub, nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
+
+def pub nub : forall a. {Eq a} => List a -> List a =
+    \ [] -> []
+    | [x | xs] -> x :: nub (filter (x !=) xs)
+
+# TODO: nubBy, union, unionBy, intersect, intersectBy, insert, insertBy, sort, sortBy, sortOn, delete, deleteBy
 
 def pub concat : forall a. List (List a) -> List a
     = (>>= id)
@@ -164,4 +169,4 @@ mod pub Text {
         | [l | ls] -> l ++ '\n'::unlines ls
 }
 
-# TODO: intercalate, subsequences, permutations, enumerate
+# TODO: words, lines, intercalate, subsequences, permutations, enumerate

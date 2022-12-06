@@ -79,9 +79,12 @@ inlineComb cmb (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inlineComb cmb) vs
 
 sortInlines :: MonoProgram -> MonoProgram
 sortInlines (ep, defs) =
-    (ep, sortBy (\(l,il,as,e) (l',il',as',e')->
-        compare (il', (appears l ep + appearsDefs l defs)) (il, (appears l' ep + appearsDefs l' defs))
-    ) defs)
+    let weighted = map (\c@(_,il,_,e)->((il,exprSize e), c)) defs
+    in (ep, map snd $ sortBy (\(w,_) (w', _) -> compare w' w) weighted)
+
+--    (ep, sortBy (\(l,il,as,e) (l',il',as',e')->
+--        compare (il', (appears l ep + appearsDefs l defs)) (il, (appears l' ep + appearsDefs l' defs))
+--    ) defs)
 
 -- TODO: non considera l'esplosione della dimensione a causa di argomenti utilizzati più volte
 inlineProgram :: MonoProgram -> MonoProgram
@@ -91,9 +94,10 @@ inlineProgram prog = loop [] (sortInlines prog)
         loop procd (ep, cmb@(l, il, as, e):defs)
             | (appears l ep + appearsDefs l (procd ++ defs)) == 0
                 = loop procd (ep, defs)
-            | appears l e /= 0 || not (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
-                = loop (cmb:procd) (ep, defs)
-            | otherwise = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
+            | appears l e == 0 && (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
+                = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
+            | otherwise = loop (cmb:procd) (ep, defs)
+
         inlineDefs cmb [] = []
         inlineDefs cmb ((ld, il, as, e):defs') = (ld, il, as, inlineComb cmb e):inlineDefs cmb defs'
 

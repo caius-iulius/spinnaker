@@ -76,7 +76,8 @@ mod NumCore {
         (*) : a -> a -> a,
         (/) : a -> a -> a,
         fromInt : Int -> a
-rel pub Eq a =
+
+    rel pub Eq a =
         (==) : a -> a -> Bool,
         (!=) : a -> a -> Bool
 
@@ -84,7 +85,6 @@ rel pub Eq a =
         def (==) = \(a, b), (a', b') -> (a == a') && (b == b')
         def (!=) = \a, b -> not $ a == b
     }
-
 
     rel pub {Eq a} => Ord a =
         (<) : a -> a -> Bool,
@@ -95,6 +95,7 @@ rel pub Eq a =
     rel pub Enum a =
         fromEnum : a -> Int,
         toEnum : Int -> a
+
 
     use Builtins
 
@@ -281,6 +282,7 @@ mod ShowCore {
 
     inst Show Int { def show = showInt }
 
+    # TODO: showFlt è sbagliato
     def showFracAux =
         \ 0, curr, i -> curr
         | n, curr, i ->
@@ -328,6 +330,10 @@ mod ShowCore {
 
     inst forall a b. {Show a, Show b} => Show (a, b) {
         def show = \(a, b) -> '(' :: show a ++ (','::' '::Nil) ++ show b ++ (')'::Nil)
+    }
+
+    inst forall a b c. {Show a, Show b, Show c} => Show (a, b, c) {
+        def show = \(a, b, c) -> '(' :: show a ++ (','::' '::Nil) ++ show b ++ (','::' '::Nil) ++ show c ++ (')'::Nil)
     }
 } use pub ShowCore
 
