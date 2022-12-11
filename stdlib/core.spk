@@ -27,6 +27,7 @@ mod Builtins {
     ext pub _convCtoI : Chr -> Int
     ext pub _putChr : Chr, RealWorld_ -> RealWorld_
     ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
+    ext pub _isEOF : RealWorld_ -> (Bool, RealWorld_)
     ext pub _exit : RealWorld_ -> RealWorld_
 }
 
@@ -363,6 +364,7 @@ mod IOCore {
 
         def pub putChr = _putChr
         def pub getChr = _getChr
+        def pub isEOF = _isEOF
         def pub exit = _exit
 
         def pub putStr : String -> RealWorld_ -> RealWorld_
@@ -394,6 +396,8 @@ mod IOCore {
         = \l -> IO(\s->((), UnsafeIO.putStrLn l s))
     def pub getLn : IO String
         = IO UnsafeIO.getLn
+    def pub isEOF : IO Bool
+        = IO UnsafeIO.isEOF
 
     def pub print : forall a. {Show a} => a -> IO ()
         = show |> putStrLn

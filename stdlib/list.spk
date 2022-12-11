@@ -128,6 +128,7 @@ def splitWhileAux =
     | c, f, [x | xs] ->
         if f x then splitWhileAux (x :: c) f xs
         else (reverse c, x :: xs)
+#TODO: equivalente a 'span' di haskell. considera di rinominare
 and pub splitWhile : forall a. (a -> Bool) -> List a -> (List a, List a)
     = splitWhileAux []
 
@@ -135,8 +136,6 @@ def pub takeWhile : forall a. (a -> Bool) -> List a -> List a
     = \f, l -> fst (splitWhileAux [] f l)
 def pub dropWhile : forall a. (a -> Bool) -> List a -> List a
     = \f, l -> snd (splitWhileAux [] f l)
-
-# TODO: span
 
 def pub (\\) : forall a. {Eq a} => List a -> List a -> List a
     = \l, m -> filter (\x -> all (x !=) m) l

@@ -1,5 +1,5 @@
 module VM where
-import System.IO(hFlush,stdout)
+import System.IO(hFlush,stdout,isEOF)
 import System.Exit(exitSuccess)
 import Control.Monad.Reader
 import Data.Char(ord,chr)
@@ -112,6 +112,10 @@ execComb "_getChr" s (rw:[]) = do
     lift $ hFlush stdout
     c <- lift getChar
     execVM ([IRet], (VVariant "(,)" [VConst(LitCharacter c), rw]):s, [])
+execComb "_isEOF" s (rw:[]) = do
+    cond <- lift isEOF
+    let v = VVariant (if cond then "True#BI" else "False#BI") []
+    execVM ([IRet], (VVariant "(,)" [v, rw]):s, [])
 
 execComb "_exit" s (rw:[]) = lift $ exitSuccess
 
