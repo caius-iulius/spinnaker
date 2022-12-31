@@ -283,14 +283,15 @@ mod ShowCore {
 
     inst Show Int { def show = showInt }
 
-    # TODO: showFlt è sbagliato
+    # TODO Test
     def showFracAux =
-        \ 0, curr, i -> curr
-        | n, curr, i ->
-            showFracAux (n - 1) (showDigit (rem i 10) :: curr) (i / 10)
-    # TODO: 1000 e 3 significa 3 cifre dopo il punto, magari usane di più. Forse bisogna fare un arrotondamento invece di un floor
-    # TODO: quest'algoritmo non è flessibile, va riscritto
-    def showFrac = \f -> showFracAux 3 Nil (floor (1000.0*f))
+        \ 0, _ -> Nil
+        | n, f ->
+            let f' = f * 10.0 ->
+            let flr = floor f' ->
+            showDigit flr :: showFracAux (n - 1) (f' - fromInt flr)
+    # TODO taglio a 4 cifre decimali, non considera la prima cifra esclusa (fa un floor quindi)
+    def showFrac = showFracAux 4
 
     def showNonNegFlt = \f ->
         let flr = floor f ->
