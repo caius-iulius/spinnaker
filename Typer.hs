@@ -13,14 +13,11 @@ builtinTypingTypes =
     [   ("->#BI", KFun KType (KFun KType KType))
     ,   ("Int#BI", KType)
     ,   ("Flt#BI", KType)
-    ,   ("Bool#BI", KType)
     ,   ("Chr#BI", KType)
     ,   ("RealWorld_#BI", KType)
     ]
 builtinTypingVars =
-    [   VariantData "True#BI" [] [] boolT
-    ,   VariantData "False#BI" [] [] boolT
-    ,   VariantData "RealWorld_#BI" [] [] realworldT
+    [   VariantData "RealWorld_#BI" [] [] realworldT
     ]
 initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty Map.empty
 
