@@ -1,4 +1,4 @@
-module HLtoVM where
+module HLtoVM (progToVm) where
 import Data.List(elemIndex)
 import Data.Maybe(fromMaybe)
 import TypingDefs

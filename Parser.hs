@@ -223,7 +223,7 @@ getTerm = describeError "Expected term" $ do { --String
     (c, l) <- getLiteral;
     return (c, SynExprLiteral l)
 } <|| do { -- Sintassi bind per evitare casini con le sections
-    (c, _) <- thisUsefulChar '(';
+    thisUsefulChar '(';
     m <- getBindSyn;
     require $ thisUsefulChar ')';
     return m

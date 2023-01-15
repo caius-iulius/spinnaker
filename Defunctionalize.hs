@@ -1,4 +1,4 @@
-module Defunctionalize where
+module Defunctionalize (defunProgram) where
 import Control.Monad.State
 import MPCL(dummyStdCoord)
 import Data.List(nub, find)
@@ -113,6 +113,11 @@ applysToComb = do
     acmbs <- mapM applyToComb aps
     (n, cmbs, _) <- get
     put (n, acmbs ++ cmbs, [])
+
+applysToDataSummary = map summarizeApply
+    where summarizeApply (dt, (_, brs)) = (dt, map summarizeBranch brs)
+          summarizeBranch (varl, datalabs, _) = (varl, map snd datalabs)
+
 defunProgram :: MonoProgram -> Int -> IO MonoProgram
 defunProgram (ep, defs) n = do
     (ep', (_, combs, _)) <- runStateT defunmon (n, [], [])
@@ -124,5 +129,6 @@ defunProgram (ep, defs) n = do
                 addComb (l, il, as, e')
                 ) defs
             (_, _, aps) <- get
+            lift $ compLog $ ("Defunctionalization datatypes\n" ++) $ show $ applysToDataSummary aps
             applysToComb
             return ep'
