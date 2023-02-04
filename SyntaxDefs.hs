@@ -40,6 +40,7 @@ type SyntaxBranch = ([SyntaxPattern], SyntaxExpr)
 data SyntaxTypeExprData
     = SynTypeExprQuantifier String -- Nome del quantifier
     | SynTypeExprNTuple Int -- Numero di elementi della tupla
+    | SynTypeExprList -- Costruttore del tipo delle liste
     | SynTypeExprName Path -- Nome del tipo
     | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show

@@ -25,10 +25,10 @@ mod Matrix {
     use TypeNat
 
     # Una matrice è un wrapper di una lista di liste, con due phantom type che rappresentano il numero di righe e colonne
-    data pub Matrix r c a = Matrix (List (List a))
+    data pub Matrix r c a = Matrix [[a]]
 
     # Stampa la matrice
-    inst forall r c a.{TyNat r, TyNat c, Show (List a)} => Show (Matrix r c a) {
+    inst forall r c a.{TyNat r, TyNat c, Show [a]} => Show (Matrix r c a) {
         def show = \Matrix l -> "Matrix " ++ show (tynatInt $ NatWrap : NatWrap r) ++ "x" ++ show (tynatInt $ NatWrap : NatWrap c) ++ ':'::show l
     }
 
@@ -47,7 +47,7 @@ mod Matrix {
             Matrix $ map (const $ map (const $ fromInt 0) iterc) iterr
 
     # Converti una list di liste in matrice controllandone le dimensioni, un crash è possibile solo qui
-    def pub mxfromList : forall r c a. {TyNat r, TyNat c, Num a} => List (List a) -> Matrix r c a
+    def pub mxfromList : forall r c a. {TyNat r, TyNat c, Num a} => [[a]] -> Matrix r c a
         = \l ->
             let r = tynatInt (NatWrap : NatWrap r) ->
             let c = tynatInt (NatWrap : NatWrap c) ->
@@ -64,7 +64,7 @@ mod Matrix {
         = \Matrix l, Matrix l' -> Matrix $ map2 (map2 (+)) l l'
 
     # Prodotto interno generalizzato
-    def pub mxinner : forall m n p a b c. (List a -> List b -> c) -> Matrix m n a -> Matrix n p b -> Matrix m p c
+    def pub mxinner : forall m n p a b c. ([a] -> [b] -> c) -> Matrix m n a -> Matrix n p b -> Matrix m p c
         = \f, Matrix l, Matrix l' ->
             let tl' = transpose l' ->
             Matrix $ map (\rowa -> map (f rowa) tl') l

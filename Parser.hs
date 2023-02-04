@@ -362,13 +362,25 @@ getParenTyName = do {
     }
 }
 
+getTypeList = do {
+    (c, _) <- thisUsefulChar '[';
+    require $ do {
+        (thisUsefulChar ']' >> return (c, SynTypeExprList)) <|| do {
+            t <- getTypeMeta;
+            thisUsefulChar ']';
+            return (c, SynTypeExprApp (c, SynTypeExprList) [t])
+        }
+    }
+}
+
 getTypeTerm = do { --Tipo quantifier
     (c, l) <- getLabel;
     return (c, SynTypeExprQuantifier l)
 } <|| do { --Tipo data
     (c, l) <- getPathCapitalLabel;
     return (c, SynTypeExprName l)
-} <|| getParenTyName
+} <|| getTypeList
+  <|| getParenTyName
   <|| do {
     (c, _) <- thisUsefulChar '(';
     types <- sepBy getTypeMeta (thisUsefulChar ',');

@@ -248,6 +248,12 @@ demodTypeExprLoc env qmap (c, SynTypeExprQuantifier l) =
         Nothing -> fail $ show c ++ " Type quantifier: " ++ show l ++ " not bound"
         Just q -> return (False, DataCOORD c (DataQuant q))
 demodTypeExprLoc env qmap (c, SynTypeExprNTuple n) = return (False, DataCOORD c (DataTypeName (makeTupLabl n) KindNOTHING))
+demodTypeExprLoc env qmap (c, SynTypeExprList) = do
+    (DemodEnv _ _ ts _ _) <- getPathEnv c env ["Core"]
+    (_, nlabl) <- envmapLookup (show c ++ " The Core module does not provide a definition for List") "List" ts
+    case nlabl of --TODO: hack, bisogna sistemare syn e types
+        Left l -> return (False, DataCOORD c (DataTypeName l KindNOTHING))
+        _ -> fail $ show c ++ "The Core module cannot define the List type as a type synonym for now"
 demodTypeExprLoc env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     (DemodEnv _ _ ts _ _) <- getPathEnv c env path
     (v, either) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts

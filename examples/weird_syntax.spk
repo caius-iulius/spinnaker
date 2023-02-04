@@ -4,12 +4,12 @@ def minus_six : Int = (-6)
 def six_sub : Int -> Int = (6 -)
 def sub_six : Int -> Int = (- 6)
 
-def range : List Int = (-6..10)
+def range : [Int] = (-6..10)
 def weird_pat : Int -> Int -> Int =
     let (!-!) = (-) -> (!-!)
 def minus_pat = let (-5) = -5 -> ()
 
-def diff_range : List Int =
+def diff_range : [Int] =
     map sub_six range
 
 def main = print minus_six >> print diff_range

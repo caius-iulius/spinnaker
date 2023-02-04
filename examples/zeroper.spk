@@ -53,7 +53,7 @@ def getInput : IO (Int, Int)
             else putStr "Invalid input: " >> getInput
     | _ -> putStr "Invalid input: " >> getInput
 
-def loop : Segno -> List (List Segno) -> IO ()
+def loop : Segno -> [[Segno]] -> IO ()
     = \p, brd -> putStrLn (showBoard brd) >>
     putStr ("Player " ++ show p ++ " input x,y: ") >>
     (x, y) <- getInput;

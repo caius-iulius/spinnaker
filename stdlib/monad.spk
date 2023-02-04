@@ -5,7 +5,7 @@ def mapMAux = \procd, f, l -> put l
     | [x | xs] ->
         a <- f x;
         mapMAux (a :: procd) f xs
-def pub mapM : forall m a b. {Monad m} => (a -> m b) -> List a -> m (List b)
+def pub mapM : forall m a b. {Monad m} => (a -> m b) -> [a] -> m [b]
     = mapMAux []
 
 
@@ -24,8 +24,8 @@ def pub guard : forall m. {MonadPlus m} => Bool -> m () =
     \ True -> return ()
     | False -> mzero
 
-inst MonadPlus List {
-    def mzero = Nil
+inst MonadPlus [] {
+    def mzero = []
     def mplus = (++)
 }
 

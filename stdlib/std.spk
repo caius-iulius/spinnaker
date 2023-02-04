@@ -13,12 +13,12 @@ def pub max : forall a. {Ord a} => a -> a -> a
 
 def innerdotdot = \from, to ->
     put from >= to
-    | True -> Nil
+    | True -> []
     | _ -> toEnum from :: innerdotdot (from+1) to
-def pub (..) : forall a. {Enum a} => a -> a -> List a
+def pub (..) : forall a. {Enum a} => a -> a -> [a]
     = \from, to ->
         innerdotdot (fromEnum from) (fromEnum to)
-def pub (..=) : forall a. {Enum a} => a -> a -> List a
+def pub (..=) : forall a. {Enum a} => a -> a -> [a]
     = \from, to ->
         innerdotdot (fromEnum from) (fromEnum to + 1)
 

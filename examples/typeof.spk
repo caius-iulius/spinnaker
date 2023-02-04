@@ -17,8 +17,8 @@ mod Typeof {
     inst forall a b. {Typeof a, Typeof b} => Typeof (a, b) {
         def typeofT = const $ "(" ++ typeofT (TOTok:TOTok a)  ++ ", " ++ typeofT (TOTok:TOTok b) ++ ")"
     }
-    inst forall a. {Typeof a} => Typeof (List a) {
-        def typeofT = const $ "List " ++ typeofT (TOTok:TOTok a)
+    inst forall a. {Typeof a} => Typeof [a] {
+        def typeofT = const $ "[" ++ typeofT (TOTok:TOTok a) ++ "]"
     }
     inst Typeof String { def typeofT = const "String" }
 
