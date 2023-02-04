@@ -114,6 +114,7 @@ applysToComb = do
     (n, cmbs, _) <- get
     put (n, acmbs ++ cmbs, [])
 
+applysToDataSummary :: ApplysEnv -> [DataSummary]
 applysToDataSummary = map summarizeApply
     where summarizeApply (dt, (_, brs)) = (dt, map summarizeBranch brs)
           summarizeBranch (varl, datalabs, _) = (varl, map snd datalabs)

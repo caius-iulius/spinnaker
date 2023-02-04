@@ -52,6 +52,8 @@ data HLInstDef
 
 data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [HLExtDef] [[HLValDef]] [HLInstDef]
 
+type DataSummary = (DataType, [(String, [DataType])])
+
 type Inline = Bool
 type Combinator = (String, Inline, [(String, DataType)], HLExpr)
 type MonoProgram = (HLExpr, [Combinator])
