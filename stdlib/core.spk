@@ -209,6 +209,10 @@ mod MonadCore {
     inst forall m. {Monad m} => Functor m {
         def fmap = \f, m -> bind m (\x->return (f x))
     }
+
+    inst forall l. Functor ((,) l) {
+        def fmap = \f, (l, a) -> (l, f a)
+    }
 } use pub MonadCore
 
 mod ListCore {

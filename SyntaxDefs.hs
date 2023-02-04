@@ -38,8 +38,8 @@ type SyntaxExpr = (StdCoord, SyntaxExprData)
 type SyntaxBranch = ([SyntaxPattern], SyntaxExpr)
 
 data SyntaxTypeExprData
-    = SynTypeExprQuantifier String -- Nome del quantifier, forse va incorporato con SynTypeExprName?
-    | SynTypeExprTuple [SyntaxTypeExpr] --Lista di tipi della n-tupla
+    = SynTypeExprQuantifier String -- Nome del quantifier
+    | SynTypeExprNTuple Int -- Numero di elementi della tupla
     | SynTypeExprName Path -- Nome del tipo
     | SynTypeExprApp SyntaxTypeExpr [SyntaxTypeExpr] --Tipo funzione, tipi argomento
     deriving Show

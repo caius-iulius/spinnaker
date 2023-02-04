@@ -351,12 +351,11 @@ getTypeVar = getLabel
 
 getParenTyName = do {
     (c, _) <- thisUsefulChar '(';
-    {- do {
+    do {
         commas <- munch1 $ thisUsefulChar ',';
         require $ thisUsefulChar ')';
-        return (c, SynTypeExprName $ Path [] $ '(':map snd commas++")")
-    } <|| -}
-    do {
+        return (c, SynTypeExprNTuple $ length commas + 1)
+    } <|| do {
         thisSyntaxElem "->";
         require $ thisUsefulChar ')';
         return (c, SynTypeExprName $ Path [] "->")
@@ -374,9 +373,10 @@ getTypeTerm = do { --Tipo quantifier
     (c, _) <- thisUsefulChar '(';
     types <- sepBy getTypeMeta (thisUsefulChar ',');
     require $ thisUsefulChar ')';
-    if length types == 1
+    let l = length types in
+    if l == 1
     then return $ head types
-    else return (c, SynTypeExprTuple types)
+    else return (c, SynTypeExprApp (c, SynTypeExprNTuple l) types)
 }
 
 getTypeExpr = do {

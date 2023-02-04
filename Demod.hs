@@ -247,9 +247,7 @@ demodTypeExprLoc env qmap (c, SynTypeExprQuantifier l) =
     case Map.lookup l qmap of
         Nothing -> fail $ show c ++ " Type quantifier: " ++ show l ++ " not bound"
         Just q -> return (False, DataCOORD c (DataQuant q))
-demodTypeExprLoc env qmap (c, SynTypeExprTuple stes) = do
-    (islocs, tes) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) stes
-    return (any id islocs, foldl (\tef tea -> DataCOORD c (DataTypeApp tef tea)) (DataCOORD c (DataTypeName (makeTupLabl $ length tes) KindNOTHING)) tes)
+demodTypeExprLoc env qmap (c, SynTypeExprNTuple n) = return (False, DataCOORD c (DataTypeName (makeTupLabl n) KindNOTHING))
 demodTypeExprLoc env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     (DemodEnv _ _ ts _ _) <- getPathEnv c env path
     (v, either) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts
