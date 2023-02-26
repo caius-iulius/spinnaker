@@ -78,6 +78,7 @@ getFloat = do {
 getEscape = do {
     (c, _) <- thisChar '\\';
     char <- (thisChar 'n' >> return '\n')
+        <|| (thisChar 't' >> return '\t')
         <|| (thisChar '\\' >> return '\\')
         <|| (thisChar '"' >> return '"')
         <|| (thisChar '\'' >> return '\''); --TODO Altri escape

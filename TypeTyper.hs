@@ -99,10 +99,10 @@ typeExprInternal env (c, _, ExprApp f a) = do
     (s1, ps1, t1, f') <- typeExpr env f
     (s2, ps2, t2, a') <- typeExpr (substApply s1 env) a
     s3 <- mgu c (substApply s2 t1) (buildFunType t2 q)
-    -- typerLog $ show c ++" TypingApp s:" ++ show (composeSubst s3 (composeSubst s2 s1)) ++ " Call:" ++ show t1 ++ " with:" ++ show t2
     let finals = composeSubst s3 (composeSubst s2 s1)
         finalt = substApply finals q
         finalps = map (substApply finals) (ps1++ps2)
+    -- typerLog $ show c ++" TYPINGAPP s:" ++ show finals ++ " Call:" ++ show t1 ++ " with:" ++ show t2
     return (finals, finalps, finalt, (c, finalt, ExprApp f' a'))
 -- TODO: Da qui in poi controllare bene, non so se è giusto
 typeExprInternal env (c, _, ExprLambda labl expr) = do
@@ -114,10 +114,12 @@ typeExprInternal env (c, _, ExprLambda labl expr) = do
 typeExprInternal env (c, _, ExprPut vals pses) = do
     (s, ps, tvals, vals') <- typeExprs env vals
     (s', tvals') <- unifyPats (substApply s env) tvals pses
+    let temps = composeSubst s' s
     tempt <- freshType KType--TODO GIUSTO IL FRESH?
-    (s'', ps'', texpr, pses') <- typePutBranches (substApply (composeSubst s' s) env) ps tvals' tempt pses
+    typerLog $ show c ++ " PUT temps:" ++ show temps ++ " ps:" ++ show (map (substApply temps) ps) ++ " tval:" ++ show tvals'
+    (s'', ps'', texpr, pses') <- typePutBranches (substApply temps env) (map (substApply temps) ps) tvals' tempt pses
     typerLog $ show c ++ " PUT" ++ show tempt ++ " tval:" ++ show tvals' ++ " texpr:"++show texpr
-    let finals = composeSubst s'' (composeSubst s' s)
+    let finals = composeSubst s'' temps
         finalps = map (substApply finals) (ps++ps'')
         finalt = substApply finals texpr
         in return (finals, finalps, finalt, (c, finalt, ExprPut vals' pses'))
