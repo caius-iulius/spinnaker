@@ -1,6 +1,0 @@
-#!/bin/sh
-
-SPKDIR=$(dirname $BASH_SOURCE)
-echo "compiler source location: $SPKDIR"
-echo "Building compiler..."
-ghc -working-dir $SPKDIR -outputdir $SPKDIR/target Main.hs -o $SPKDIR/target/build && echo "Running compiler..." && $SPKDIR/target/build $@

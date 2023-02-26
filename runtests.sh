@@ -1,9 +1,9 @@
 #!/bin/sh
 
-for i in "$@"    # same as your "for i"
+for file in examples/*.spk
 do
-    echo "########### Running test: $i"
-    ./run $i -v | awk '/Unoptimized program size:/,0'
+    echo "########### Running test: $file"
+    cabal run spinnaker -- $file -v | awk '/Unoptimized program size:/,0'
     echo "###########"
     echo ""
 done

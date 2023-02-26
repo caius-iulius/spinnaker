@@ -4,6 +4,8 @@ import System.CPUTime
 import Data.Tree
 import Control.Monad.State
 
+import Paths_spinnaker
+
 import PrettyPrinter
 import Demod
 import Typer
@@ -32,9 +34,9 @@ timeTyper a = do
     return (v, diff)
 
 frontendCompile fname = fmap (\(either, (uid, _, _)) -> (either, uid)) $ runTyperState (0,0,0) $ do
-    mypath <- lift $ lift $ getExecutablePath
-    let rootpath = (++ "../") $ reverse $ dropWhile ('/' /=) $ reverse mypath
-    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram rootpath "stdlib/core.spk" "stdlib/std.spk" fname
+    rootpath <- lift $ lift $ getDataDir
+    typerLog $ "Current data dir: " ++ rootpath
+    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram (rootpath ++ "/")  "stdlib/core.spk" "stdlib/std.spk" fname
     typerLog $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
     ((env, tyblock), t_typer) <- timeTyper $ typeBlockProgram block
     typerLog $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
