@@ -1,7 +1,7 @@
 module SyntaxDefs where
-import MPCL(StdCoord)
-import TypingDefs
 import HLDefs(Literal(..))
+import Typer.TypingDefs
+import Parser.MPCL(StdCoord)
 
 data Path = Path [String] String
     deriving Show

@@ -27,8 +27,26 @@ executable spinnaker
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    -- other-modules:
-
+    other-modules:
+        Defunctionalize
+        HLDefs
+        Monomorphizer
+        OptimizeHL
+        Parser.Demod
+        Parser.MPCL
+        Parser.Parser
+        Paths_spinnaker
+        PrettyPrinter
+        ResultT
+        SyntaxDefs
+        Typer.KindTyper
+        Typer.MGUs
+        Typer.TypeTyper
+        Typer.Typer
+        Typer.TypingDefs
+        Typer.VariantComplete
+        VM.HLtoVM
+        VM.VM
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:    base ^>=4.17.0.0, mtl, containers

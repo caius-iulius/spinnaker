@@ -1,16 +1,17 @@
-module Demod (DemodEnv(..), concatBlockPrograms, demodExpr, demodProgram) where
+module Parser.Demod (DemodEnv(..), concatBlockPrograms, demodExpr, demodProgram) where
 
 import System.IO
 import System.Environment
 
 import Control.Monad.Trans
 import qualified Data.Map as Map
-import MPCL(parse, ParseResult(..), StdCoord(Coord))
-import Parser
-import TypingDefs
+
 import HLDefs
 import SyntaxDefs
-import MGUs
+import Parser.MPCL(parse, ParseResult(..), StdCoord(Coord))
+import Parser.Parser
+import Typer.TypingDefs
+import Typer.MGUs
 
 data EnvVisib = LocPub | LocPriv | ExtPub | ExtPriv
     deriving Show

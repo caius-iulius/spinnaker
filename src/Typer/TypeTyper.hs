@@ -1,12 +1,13 @@
-module TypeTyper where
+module Typer.TypeTyper where
 import System.IO
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import MPCL (StdCoord)
-import TypingDefs
-import MGUs
+
 import HLDefs
+import Typer.TypingDefs
+import Typer.MGUs
+import Parser.MPCL (StdCoord)
 
 getVariantData :: TypingEnv -> String -> TyperState VariantData
 getVariantData (TypingEnv _ _ vs _ _) l

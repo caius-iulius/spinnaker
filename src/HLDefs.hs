@@ -1,6 +1,6 @@
 module HLDefs where
-import MPCL(StdCoord)
-import TypingDefs
+import Parser.MPCL(StdCoord)
+import Typer.TypingDefs
 
 data Literal
     = LitInteger Int

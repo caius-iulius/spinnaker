@@ -1,12 +1,12 @@
-module Typer (typeBlockProgram) where
+module Typer.Typer (typeBlockProgram) where
 import qualified Data.Map as Map
 import Control.Monad.Trans
 
 import HLDefs
-import TypingDefs
-import KindTyper
-import TypeTyper
-import VariantComplete
+import Typer.TypingDefs
+import Typer.KindTyper
+import Typer.TypeTyper
+import Typer.VariantComplete
 
 --Definizioni builtin per Typing
 builtinTypingTypes =

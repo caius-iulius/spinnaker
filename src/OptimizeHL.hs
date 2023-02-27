@@ -1,8 +1,9 @@
 module OptimizeHL where
-import TypingDefs
-import HLDefs
 import Data.Char (ord, chr)
 import Data.List (sortBy)
+
+import HLDefs
+import Typer.TypingDefs
 
 appearsPatInner l PatWildcard = False
 appearsPatInner l (PatLiteral _) = False

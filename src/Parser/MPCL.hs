@@ -1,5 +1,5 @@
 --Micro Parser Combinator Library -- Just Enough To Be Dangerous!
-module MPCL where
+module Parser.MPCL where
 
 import GHC.Base
 import GHC.Unicode

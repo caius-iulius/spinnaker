@@ -4,11 +4,12 @@ import qualified Data.Set as Set
 import Data.List(find, partition)
 import Data.Maybe(isJust, catMaybes)
 import Control.Monad.State
-import MPCL(dummyStdCoord)
-import TypingDefs
-import MGUs
+
 import HLDefs
-import TypeTyper(substApplyExpr)
+import Parser.MPCL(dummyStdCoord)
+import Typer.TypingDefs
+import Typer.MGUs
+import Typer.TypeTyper(substApplyExpr)
 
 type Instances = [(DataType, String)]
 type Generators = [(DataType, HLExpr)]

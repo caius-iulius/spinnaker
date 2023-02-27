@@ -1,10 +1,11 @@
-module MGUs where
+module Typer.MGUs where
 import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe(isJust, isNothing, catMaybes)
-import MPCL(StdCoord, dummyStdCoord)
-import TypingDefs
+
+import Typer.TypingDefs
+import Parser.MPCL(StdCoord, dummyStdCoord)
 -- MGU per i kinds
 instance Kinds Kind where
     kind = id

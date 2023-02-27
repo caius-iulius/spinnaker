@@ -1,7 +1,7 @@
-module VariantComplete(completeVariantValDefGroups, completeVariantInstDefs) where
+module Typer.VariantComplete(completeVariantValDefGroups, completeVariantInstDefs) where
 import HLDefs
-import TypingDefs
-import TypeTyper(getVariantData)
+import Typer.TypingDefs
+import Typer.TypeTyper(getVariantData)
 
 completeVariant :: TypingEnv -> HLExpr -> TyperState HLExpr
 completeVariant _ e@(_, _, ExprLiteral _) = return e

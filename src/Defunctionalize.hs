@@ -1,10 +1,11 @@
 module Defunctionalize (defunProgram) where
 import Control.Monad.State
-import MPCL(dummyStdCoord)
 import Data.List(nub, find)
 import Data.Maybe(fromJust)
-import TypingDefs
+
 import HLDefs
+import Typer.TypingDefs
+import Parser.MPCL(dummyStdCoord)
 import OptimizeHL(inline, appearsPat)
 
 type ApplysEnv = [(DataType, (String, [(String, [(String, DataType)], String)]))]

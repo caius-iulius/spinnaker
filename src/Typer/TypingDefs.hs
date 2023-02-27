@@ -1,10 +1,11 @@
-module TypingDefs where
+module Typer.TypingDefs where
 import Control.Monad.State
 import System.Environment
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+
 import ResultT
-import MPCL(StdCoord)
+import Parser.MPCL(StdCoord)
 
 type KindQuant = Int
 

@@ -1,11 +1,12 @@
 -- TODO FORSE: Parsing dei commenti multilinea
 -- TODO: Se voglio considerare questa la specifica formale della grammatica devo aggiungere molti commenti
-module Parser where
+module Parser.Parser where
 import Data.Char
-import MPCL
-import TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
+
 import HLDefs
 import SyntaxDefs
+import Parser.MPCL
+import Typer.TypingDefs(DataType(DataNOTHING), TyQuant(TyQuant), Kind(KindNOTHING))
 
 labelFirst = thisChar '_' <|| asciiAlphaLower
 capitalLabelFirst = asciiAlphaUpper
@@ -18,7 +19,7 @@ validSymbols = [":", "=", "->", "|", "\\", ".", "=>", ";", "<-"]
 
 keywords = ["_", "put", "let", "if", "then", "else", "do", "pub", "and", "forall", "def", "data", "ext", "typesyn", "rel", "inst", "use", "mod"]
 
-lineComment = thisChar '#' >> munch (stdSatisfy (not . ('\n'==)) "")
+lineComment = thisChar '#' >> munch (stdSatisfy ('\n'/=) "")
 
 skipUseless = munch (discard whiteSpace <|| discard lineComment)
 
@@ -49,30 +50,30 @@ getInteger = do {
     skipUseless;
     (coord, firsts) <- describeError "Expected either a '-' or a digit in an integer" $ do {
         (c, first) <- digit;
-        return (c, first:[])
+        return (c, [first])
     } <|| do {
         (c, sign) <- thisChar '-';
         (_, first) <- digit;
-        return (c, sign:first:[])
+        return (c, [sign, first])
     };
     others <- munch tailDigit;
-    return (coord, read $ filter ('_' /=) $ (firsts ++ map snd others))
+    return (coord, read $ filter ('_' /=) (firsts ++ map snd others))
 }
 
 getFloat = do {
     skipUseless;
     (coord, firsts) <- describeError "Expected either a '-' or a digit in a float" $ do {
         (c, first) <- digit;
-        return (c, first:[])
+        return (c, [first])
     } <|| do {
         (c, sign) <- thisChar '-';
         (_, first) <- digit;
-        return (c, sign:first:[])
+        return (c, [sign, first])
     };
     othersFirst <- munch tailDigit;
     thisChar '.';
     othersSecond <- munch1 tailDigit;
-    return (coord, read $ filter ('_' /=) $ (firsts ++ map snd othersFirst ++ "." ++ map snd othersSecond))
+    return (coord, read $ filter ('_' /=) (firsts ++ map snd othersFirst ++ "." ++ map snd othersSecond))
 }
 
 getEscape = do {
@@ -112,7 +113,7 @@ getLiteral = describeError "Expected literal" $ do {
 getOperatorText = do {
     skipUseless;
     chars <- munch1 opChar;
-    return (fst $ head $ chars, map snd chars)
+    return (fst $ head chars, map snd chars)
 }
 
 getOperator = do {
@@ -149,13 +150,13 @@ getPath = munch $ do{l <- getModName; thisSyntaxElem "."; return l}
 getPathLabel = do {
     path <- getPath;
     (c, label) <- getLabelOrOp;
-    return (if length path == 0 then c else fst $ head path, Path (map snd $ path) label)
+    return (if null path then c else fst $ head path, Path (map snd path) label)
 }
 
 getPathCapitalLabel = do {
     path <- getPath;
     (c, label) <- getCapitalLabel;
-    return (if length path == 0 then c else fst $ head path, Path (map snd $ path) label)
+    return (if null path then c else fst $ head path, Path (map snd path) label)
 }
 
 -- Analisi semantica
@@ -272,7 +273,7 @@ getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| d
 } <|| do {
     expr <- getExpr;
     (c,_) <- thisSyntaxElem ":";
-    tyexpr <- require $ getTypeExpr;
+    tyexpr <- require getTypeExpr;
     return (c, SynExprHint tyexpr expr)
 } <|| getExpr
 
@@ -318,7 +319,7 @@ getPut = do
 
 getLambda = do {
     (c, _) <- thisSyntaxElem "\\";
-    branches <- require $ getBranches;
+    branches <- require getBranches;
     return (c, SynExprLambda branches)
 }
 
@@ -336,12 +337,12 @@ getIfThenElse = do {
 
 getInlineUse = do {
     path <- getPath;
-    if length path == 0 then pfail "Expected at least a module name" else return ();
+    if null path then pfail "Expected at least a module name" else return ();
     thisUsefulChar '(';
     m <- require getMeta;
     require $ thisUsefulChar ')';
     let lablonlypath = map snd path in
-        return $ (fst $ head path, SynExprInlineUse (Path (init lablonlypath) (last lablonlypath)) m)
+        return (fst $ head path, SynExprInlineUse (Path (init lablonlypath) (last lablonlypath)) m)
 }
 
 -- Parser globali

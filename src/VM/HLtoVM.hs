@@ -1,9 +1,9 @@
-module HLtoVM (progToVm) where
+module VM.HLtoVM (progToVm) where
 import Data.List(elemIndex)
 import Data.Maybe(fromMaybe)
-import TypingDefs
+
 import HLDefs
-import VM
+import VM.VM
 
 patToVmInner PatWildcard = (PWildcard, [])
 patToVmInner (PatLiteral lit) = (PConst lit, [])

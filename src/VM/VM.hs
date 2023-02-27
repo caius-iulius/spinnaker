@@ -1,8 +1,9 @@
-module VM where
+module VM.VM where
 import System.IO(hFlush,stdout,isEOF)
 import System.Exit(exitSuccess)
 import Control.Monad.Reader
 import Data.Char(ord,chr)
+
 import HLDefs(Literal(..))
 
 type VMCode = [VMInstr]

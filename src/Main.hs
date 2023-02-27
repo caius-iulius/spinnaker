@@ -6,40 +6,40 @@ import Control.Monad.State
 
 import Paths_spinnaker
 
-import PrettyPrinter
-import Demod
-import Typer
 import HLDefs
-import TypingDefs
-import OptimizeHL
+import PrettyPrinter
+import Parser.Demod
+import Typer.TypingDefs
+import Typer.Typer
 import Monomorphizer
-import HLtoVM
+import OptimizeHL
 import Defunctionalize
-import qualified VM as VM
+import VM.HLtoVM
+import qualified VM.VM as VM
 
 time :: IO t -> IO (t, Double)
 time a = do
     start <- getCPUTime
     v <- a
     end <- getCPUTime
-    let diff = (fromIntegral (end - start)) / (10^9)
+    let diff = fromIntegral (end - start) / (10^9)
     return (v, diff)
 
 timeTyper :: TyperState t -> TyperState (t, Double)
 timeTyper a = do
-    start <- lift $ lift $ getCPUTime
+    start <- lift $ lift getCPUTime
     v <- a
-    end <- lift $ lift $ getCPUTime
-    let diff = (fromIntegral (end - start)) / (10^9)
+    end <- lift $ lift getCPUTime
+    let diff = fromIntegral (end - start) / (10^9)
     return (v, diff)
 
 frontendCompile fname = fmap (\(either, (uid, _, _)) -> (either, uid)) $ runTyperState (0,0,0) $ do
-    rootpath <- lift $ lift $ getDataDir
+    rootpath <- lift $ lift getDataDir
     typerLog $ "Current data dir: " ++ rootpath
     ((denv, entry, block), t_demod) <- timeTyper $ demodProgram (rootpath ++ "/")  "stdlib/core.spk" "stdlib/std.spk" fname
-    typerLog $ "DemodProgram:\n" ++ (drawTree $ toTreeBlockProgram block)
+    typerLog $ "DemodProgram:\n" ++ drawTree (toTreeBlockProgram block)
     ((env, tyblock), t_typer) <- timeTyper $ typeBlockProgram block
-    typerLog $ "Typed Program:\n" ++ (drawTree $ toTreeBlockProgram tyblock)
+    typerLog $ "Typed Program:\n" ++ drawTree (toTreeBlockProgram tyblock)
     return (env, entry, tyblock, (t_demod, t_typer))
 
 main = do {
@@ -58,7 +58,7 @@ main = do {
     (vmprog, t_tovm) <- time $ return $ progToVm defopti;
     compLog $ "VM Bytecode: " ++ show vmprog;
     compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti);
-    compLog $ "Timings: frontend:" ++ show t_frontend ++ (show ts) ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms tovm:" ++ show t_tovm ++ "ms";
+    compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms tovm:" ++ show t_tovm ++ "ms";
     hFlush stdout;
     (_, t_eval) <- time $ VM.evalProg vmprog;
     compLog $ "Program eval time:" ++ show t_eval ++ "ms";

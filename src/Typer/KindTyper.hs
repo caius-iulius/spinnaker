@@ -1,12 +1,13 @@
-module KindTyper where
+module Typer.KindTyper where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe(isJust)
 import Control.Monad.Trans
-import MPCL(StdCoord)
+
 import HLDefs
-import TypingDefs
-import MGUs
+import Typer.TypingDefs
+import Typer.MGUs
+import Parser.MPCL(StdCoord)
 
 substApplyKindEnv s (TypingEnv ts ks vs cs rs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs cs rs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
