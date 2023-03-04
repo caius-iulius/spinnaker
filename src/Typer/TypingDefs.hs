@@ -16,6 +16,13 @@ data Kind
     | KFun Kind Kind
     deriving Eq
 
+data DataType
+    = DataNOTHING --Tipo temporaneo generato dal parser
+    | DataCOORD StdCoord DataType --Tipo temporaneo generato dal parser, serve per migliorare i messaggi di errore nel kind inference, dopodiché vengono eliminati.
+    | DataQuant TyQuant --Quantificatore
+    | DataTypeName String Kind -- Nome del tipo, kind del tipo
+    | DataTypeApp DataType DataType --Funzione di tipi, argomento
+
 type KindSubst = Map.Map KindQuant Kind
 -- Classe kinds, usata per sostituzioni e per avere il kind
 class Kinds t where
@@ -27,6 +34,82 @@ type Subst = Map.Map TyQuant DataType
 class Types t where
     freetyvars :: t -> Set.Set TyQuant
     substApply :: Subst -> t -> t
+
+
+instance Kinds Kind where
+    kind = id
+    kSubstApply _ KType = KType
+    kSubstApply s (KindQuant q) = case Map.lookup q s of
+        Nothing -> KindQuant q
+        Just k -> k
+    kSubstApply s (KFun a r) = KFun (kSubstApply s a) (kSubstApply s r)
+    kSubstApply _ KindNOTHING = KindNOTHING
+
+    freeKindQuants KType = Set.empty
+    freeKindQuants (KindQuant q) = Set.singleton q
+    freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
+
+
+instance Kinds TyQuant where
+    kind (TyQuant _ k) = k
+    kSubstApply s (TyQuant t k) = TyQuant t (kSubstApply s k)
+    freeKindQuants (TyQuant _ k) = freeKindQuants k
+
+instance Kinds DataType where
+    kind (DataQuant q) = kind q
+    --kind (DataTuple _) = KType
+    kind (DataTypeName _ k) = k
+    kind (DataTypeApp t _) = let (KFun _ k) = kind t in k
+    kind (DataCOORD _ t) = kind t
+
+    kSubstApply s (DataQuant q) = DataQuant (kSubstApply s q)
+    --kSubstApply s (DataTuple ts) = DataTuple (map (kSubstApply s) ts)
+    kSubstApply s (DataTypeName l k) = DataTypeName l (kSubstApply s k)
+    kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
+    kSubstApply s (DataCOORD c t) = DataCOORD c (kSubstApply s t)
+
+    freeKindQuants (DataQuant q) = freeKindQuants q
+    freeKindQuants (DataTypeName _ k) = freeKindQuants k
+    freeKindQuants (DataTypeApp f a) = Set.union (freeKindQuants f) (freeKindQuants a)
+    freeKindQuants (DataCOORD _ t) = freeKindQuants t
+
+substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
+freeKindQuantsPred (Pred l ts) = Set.unions (map freeKindQuants ts)
+instance Kinds t => Kinds (Qual t) where
+    kind (Qual _ t) = kind t
+    kSubstApply s (Qual ps t) = Qual (map (substApplyPred s) ps) (kSubstApply s t)
+    freeKindQuants (Qual ps t) = Set.unions (freeKindQuants t : map freeKindQuantsPred ps)
+
+instance Types DataType where
+    freetyvars (DataQuant q) = Set.singleton q
+    freetyvars (DataTypeName _ _) = Set.empty
+    freetyvars (DataTypeApp dta dtb) = Set.union (freetyvars dta) (freetyvars dtb)
+    freetyvars (DataCOORD _ t) = freetyvars t
+
+    substApply s (DataQuant q) = case Map.lookup q s of
+        Nothing -> DataQuant q
+        Just t -> t
+    substApply s (DataTypeApp dta dtb) =
+        DataTypeApp (substApply s dta) (substApply s dtb)
+    substApply s (DataTypeName tn k) = DataTypeName tn k
+    --substApply s t = error $ "APPLY: " ++ show s ++ show t
+    substApply s (DataCOORD c t) = DataCOORD c (substApply s t)
+
+instance Types Pred where
+    freetyvars (Pred _ ts) = Set.unions $ map freetyvars ts
+    substApply s (Pred l ts) = Pred l $ map (substApply s) ts
+
+instance Types t => Types (Qual t) where
+    freetyvars (Qual ps t) = Set.unions $ (freetyvars t):(map freetyvars ps)
+    substApply s (Qual ps t) = Qual (map (substApply s) ps) (substApply s t)
+
+instance Types TyScheme where
+    freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
+    substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
+
+instance Types TypingEnv where
+    freetyvars (TypingEnv ts _ _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
+    substApply s (TypingEnv ts ks vs cs rs) = TypingEnv (Map.map (substApply s) ts) ks vs cs rs
 
 instance Show Kind where
     show KindNOTHING = "NOTHING"
@@ -41,13 +124,6 @@ instance Ord TyQuant where
     compare (TyQuant t1 _) (TyQuant t2 _) = compare t1 t2
 instance Show TyQuant where
     show (TyQuant i k) = "q"++show i++":"++show k
-
-data DataType
-    = DataNOTHING --Tipo temporaneo generato dal parser
-    | DataCOORD StdCoord DataType --Tipo temporaneo generato dal parser, serve per migliorare i messaggi di errore nel kind inference, dopodiché vengono eliminati.
-    | DataQuant TyQuant --Quantificatore
-    | DataTypeName String Kind -- Nome del tipo, kind del tipo
-    | DataTypeApp DataType DataType --Funzione di tipi, argomento
 
 instance Eq DataType where
     DataCOORD _ t == t' = t == t'
@@ -162,6 +238,9 @@ freshKind :: TyperState Kind
 freshKind = do
     q <- newKindQuant
     return $ KindQuant q
+
+dataQsToKind :: [(String, TyQuant)] -> Kind
+dataQsToKind qs = foldr KFun KType $ map (kind . snd) qs
 
 runTyperState :: TyperStateData -> TyperState t -> IO (Either String t, TyperStateData)
 runTyperState state t =

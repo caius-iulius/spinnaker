@@ -46,14 +46,17 @@ frontendCompile fname = fmap (\(either, (uid, _, _)) -> (either, uid)) $ runType
 main = do {
     args <- getArgs;
     ((either, uid),t_frontend) <- time $ frontendCompile (head args);
-    let (ep, b, ts) = case either of
+    let (ep, block, ts) = case either of
             Left e -> error $ "Frontend compilation error: " ++ e
             Right (env, ep, block, ts) -> (ep, block, ts)
     ;
-    (prog, t_mono) <- time $ monomorphizeProgram (ep, b);
+    let typeddatasummary = blockProgramToDataSummary block --TODO sposta questa operazione in qualche altro file
+    ;
+    (prog, t_mono) <- time $ monomorphizeProgram (ep, block);
     (mono, t_opti) <- time $ return $ optimizeProgram prog;
     compLog $ "Mono " ++ showMonoProg mono;
-    ((defraw, uid'), t_defun) <- time $ defunProgram mono uid;
+    ((defundatasummary, defraw, uid'), t_defun) <- time $ defunProgram mono uid;
+    compLog $ "Final data summary: " ++ show (typeddatasummary ++ defundatasummary);
     (defopti, t_opti2) <- time $ return $ optimizeProgram defraw;
     compLog $ "Defun " ++ showMonoProg defopti;
 

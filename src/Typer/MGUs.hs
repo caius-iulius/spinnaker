@@ -7,50 +7,6 @@ import Data.Maybe(isJust, isNothing, catMaybes)
 import Typer.TypingDefs
 import Parser.MPCL(StdCoord, dummyStdCoord)
 -- MGU per i kinds
-instance Kinds Kind where
-    kind = id
-    kSubstApply _ KType = KType
-    kSubstApply s (KindQuant q) = case Map.lookup q s of
-        Nothing -> KindQuant q
-        Just k -> k
-    kSubstApply s (KFun a r) = KFun (kSubstApply s a) (kSubstApply s r)
-    kSubstApply _ KindNOTHING = KindNOTHING
-
-    freeKindQuants KType = Set.empty
-    freeKindQuants (KindQuant q) = Set.singleton q
-    freeKindQuants (KFun k k') = Set.union (freeKindQuants k) (freeKindQuants k')
-
-
-instance Kinds TyQuant where
-    kind (TyQuant _ k) = k
-    kSubstApply s (TyQuant t k) = TyQuant t (kSubstApply s k)
-    freeKindQuants (TyQuant _ k) = freeKindQuants k
-
-instance Kinds DataType where
-    kind (DataQuant q) = kind q
-    --kind (DataTuple _) = KType
-    kind (DataTypeName _ k) = k
-    kind (DataTypeApp t _) = let (KFun _ k) = kind t in k
-    kind (DataCOORD _ t) = kind t
-
-    kSubstApply s (DataQuant q) = DataQuant (kSubstApply s q)
-    --kSubstApply s (DataTuple ts) = DataTuple (map (kSubstApply s) ts)
-    kSubstApply s (DataTypeName l k) = DataTypeName l (kSubstApply s k)
-    kSubstApply s (DataTypeApp t1 t2) = DataTypeApp (kSubstApply s t1) (kSubstApply s t2)
-    kSubstApply s (DataCOORD c t) = DataCOORD c (kSubstApply s t)
-
-    freeKindQuants (DataQuant q) = freeKindQuants q
-    freeKindQuants (DataTypeName _ k) = freeKindQuants k
-    freeKindQuants (DataTypeApp f a) = Set.union (freeKindQuants f) (freeKindQuants a)
-    freeKindQuants (DataCOORD _ t) = freeKindQuants t
-
-substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
-freeKindQuantsPred (Pred l ts) = Set.unions (map freeKindQuants ts)
-instance Kinds t => Kinds (Qual t) where
-    kind (Qual _ t) = kind t
-    kSubstApply s (Qual ps t) = Qual (map (substApplyPred s) ps) (kSubstApply s t)
-    freeKindQuants (Qual ps t) = Set.unions (freeKindQuants t : map freeKindQuantsPred ps)
-
 nullKSubst :: KindSubst
 nullKSubst = Map.empty
 
@@ -72,43 +28,10 @@ kindmgu c (KFun a r) (KFun a' r') = do
 kindmgu c k1 k2 = fail $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
 
 -- MGU per i tipi
-instance Types DataType where
-    freetyvars (DataQuant q) = Set.singleton q
-    freetyvars (DataTypeName _ _) = Set.empty
-    freetyvars (DataTypeApp dta dtb) = Set.union (freetyvars dta) (freetyvars dtb)
-    freetyvars (DataCOORD _ t) = freetyvars t
-
-    substApply s (DataQuant q) = case Map.lookup q s of
-        Nothing -> DataQuant q
-        Just t -> t
-    substApply s (DataTypeApp dta dtb) =
-        DataTypeApp (substApply s dta) (substApply s dtb)
-    substApply s (DataTypeName tn k) = DataTypeName tn k
-    --substApply s t = error $ "APPLY: " ++ show s ++ show t
-    substApply s (DataCOORD c t) = DataCOORD c (substApply s t)
-
-instance Types Pred where
-    freetyvars (Pred _ ts) = Set.unions $ map freetyvars ts
-    substApply s (Pred l ts) = Pred l $ map (substApply s) ts
-
-instance Types t => Types (Qual t) where
-    freetyvars (Qual ps t) = Set.unions $ (freetyvars t):(map freetyvars ps)
-    substApply s (Qual ps t) = Qual (map (substApply s) ps) (substApply s t)
-
-instance Types TyScheme where
-    freetyvars (TyScheme qs dt) = Set.difference (freetyvars dt) (Set.fromList qs)
-    substApply s (TyScheme qs dt) = TyScheme qs (substApply (foldr Map.delete s qs) dt)
-
-instance Types TypingEnv where
-    freetyvars (TypingEnv ts _ _ _ _) = Set.unions $ map freetyvars (Map.elems ts)
-    substApply s (TypingEnv ts ks vs cs rs) = TypingEnv (Map.map (substApply s) ts) ks vs cs rs
-
-
 composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
 
 nullSubst :: Subst
 nullSubst = Map.empty
-
 
 --TODO: Sposta in altro file, sono funzioni per l'env
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv

@@ -77,24 +77,23 @@ typeDataDefsLoop env (ddef:ddefs) = do
     (s', ddefs') <- typeDataDefsLoop (substApplyKindEnv s env) ddefs
     return (composeKSubst s' s, ddef':ddefs')
 
-qstokind qs = foldr KFun KType $ map (kind . snd) qs
 
 addDataDefsEnv :: TypingEnv -> [HLDataDef] -> TypingEnv
 addDataDefsEnv env ddefs =
     let datadeftotype (DataDef _ l qs vs) =
-            foldl DataTypeApp (DataTypeName l (qstokind qs)) (map (DataQuant . snd) qs)
+            foldl DataTypeApp (DataTypeName l (dataQsToKind qs)) (map (DataQuant . snd) qs)
         varianttovdata t qs (DataVariant _ l ts) =
             Map.singleton l (VariantData l (map snd qs) (map snd ts) t)
         getvariantdatas ddef@(DataDef _ l qs vs) =
             Map.unions $ map (varianttovdata (datadeftotype ddef) qs) vs
     in foldl (\(TypingEnv ts ks vs cs rs) ddef@(DataDef c l qs _)->
-            TypingEnv ts (Map.insert l (qstokind qs) ks) (Map.union vs (getvariantdatas ddef)) cs rs
+            TypingEnv ts (Map.insert l (dataQsToKind qs) ks) (Map.union vs (getvariantdatas ddef)) cs rs
         ) env ddefs
 
 unionDataDefEnv (TypingEnv _ ks _ _ _) (DataDef c l qs _) = 
     case Map.lookup l ks of
         Just kFromEnv -> do
-            s <- kindmgu c (qstokind qs) kFromEnv
+            s <- kindmgu c (dataQsToKind qs) kFromEnv
             return s
 
 kindMonomorphize :: Kinds k => k -> KindSubst

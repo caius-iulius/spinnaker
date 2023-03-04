@@ -120,17 +120,17 @@ applysToDataSummary = map summarizeApply
     where summarizeApply (dt, (_, brs)) = (dt, map summarizeBranch brs)
           summarizeBranch (varl, datalabs, _) = (varl, map snd datalabs)
 
-defunProgram :: MonoProgram -> Int -> IO (MonoProgram, Int)
+defunProgram :: MonoProgram -> Int -> IO ([DataSummary], MonoProgram, Int)
 defunProgram (ep, defs) n = do
-    (ep', (n', combs, _)) <- runStateT defunmon (n, [], [])
-    return ((ep', combs), n')
+    ((datasummary, ep'), (n', combs, _)) <- runStateT defunmon (n, [], [])
+    return (datasummary, (ep', combs), n')
     where defunmon = do
             ep' <- defunExpr ep
-            mapM (\(l, il, as, e) -> do
+            mapM_ (\(l, il, as, e) -> do
                 e' <- defunExpr e
                 addComb (l, il, as, e')
                 ) defs
             (_, _, aps) <- get
-            lift $ compLog $ ("Defunctionalization datatypes\n" ++) $ show $ applysToDataSummary aps
+            let datasummary = applysToDataSummary aps
             applysToComb
-            return ep'
+            return (datasummary, ep')

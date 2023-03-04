@@ -53,6 +53,14 @@ data HLInstDef
 data BlockProgram = BlockProgram [[HLDataDef]] [HLRelDef] [HLExtDef] [[HLValDef]] [HLInstDef]
 
 type DataSummary = (DataType, [(String, [DataType])])
+blockProgramToDataSummary :: BlockProgram -> [DataSummary]
+blockProgramToDataSummary (BlockProgram ddefgroups _ _ _ _) = do
+    ddefs <- ddefgroups
+    flip map ddefs $ \(DataDef _ l qs variants) ->
+        let datakind = dataQsToKind qs
+            datatype = foldl DataTypeApp (DataTypeName l datakind) $ map (DataQuant . snd) qs
+            variantinfo = map (\(DataVariant _ vl csds) -> (vl, map snd csds)) variants
+        in (datatype, variantinfo)
 
 type Inline = Bool
 type Combinator = (String, Inline, [(String, DataType)], HLExpr)
