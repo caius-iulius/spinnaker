@@ -1,4 +1,5 @@
 module VM.VM where
+
 import System.IO(hFlush,stdout,isEOF)
 import System.Exit(exitSuccess)
 import Control.Monad.Reader
@@ -18,7 +19,10 @@ data VMInstr
     | IRet
     | IVariant Name Int
     | ICombApp Name Int
-    | ICase Int [([VMPat], VMCode)]
+    | ITest VMPat VMCode VMCode
+    | ILet
+    | IUnlet
+    | IError String
 
 instance Show VMInstr where
     show (IConst lit) = show lit
@@ -28,14 +32,15 @@ instance Show VMInstr where
     show IRet = "RET"
     show (IVariant n i) = "VAR"++show n++ '(':show i++")"
     show (ICombApp n i) = "COMB"++show n++ '(':show i++")"
-    show (ICase i pscs) = "CASE("++show i++")"++show pscs
+    show (ITest pat c0 c1) = "CASE("++show pat++")"++ "POS("++show c0 ++")NEG("++ show c1++")"
+    show ILet = "LET"
+    show IUnlet = "UNLET"
+    show (IError s) = "ERROR(" ++ show s ++ ")"
 
-data VMPatData
+data VMPat
     = PConst Literal
-    | PVariant Name [VMPat]
-    | PWildcard
+    | PVariant Name
     deriving Show
-type VMPat = (Bool, VMPatData)
 
 data VMVal
     = VConst Literal
@@ -127,27 +132,15 @@ execComb n s e = do
                 Nothing -> error $ "LOOKUP:" ++ show n
     execVM (c,s,e)
 
-sievePatternInner v PWildcard = return []
-sievePatternInner (VConst vlit) (PConst plit)
-    | vlit == plit = return []
-    | otherwise = Nothing
-sievePatternInner (VVariant vn vas) (PVariant pn pas)
-    | vn == pn = sievePatterns vas pas
-    | otherwise = Nothing
-sievePatternInner v p = error $ "UNMATCHED PAT:" ++ show v ++ show p
-sievePattern v (True, p) = fmap (v :) (sievePatternInner v p)
-sievePattern v (False, p) = sievePatternInner v p
-sievePatterns :: [VMVal] -> [VMPat] -> Maybe [VMVal]
-sievePatterns vs ps = fmap concat $ zipWithM sievePattern vs ps
-
-chooseBranch vs ((ps,c):pscs) =
-    case sievePatterns vs ps of
-        Nothing -> chooseBranch vs pscs
-        Just bs -> (bs, c)
-chooseBranch vs [] = error $ "Pattern match failed on values (non-exhaustive): " ++ show vs
+chooseBranch (VConst vlit) (PConst plit) c0 c1
+    | vlit == plit = ([], c0)
+    | otherwise = ([], c1)
+chooseBranch (VVariant vc args) (PVariant pc) c0 c1
+    | vc == pc = (args, c0)
+    | otherwise = ([], c1)
 
 execVM :: VMState -> VMMonad VMVal
-execVM (IRet:c, v:[], e) = return v
+execVM (IRet:c, [v], e) = return v
 execVM (IConst k:c, s, e) = execVM (c, VConst k:s, e)
 execVM (IAccess i:c, s, e) = execVM (c, (e!!i):s, e)
 execVM (IClos c':c, s, e) = execVM (c, VClos c' e:s, e)
@@ -163,14 +156,15 @@ execVM (ICombApp n i:IRet:_, s, e) = --TCO comb
 execVM (ICombApp n i:c, s, e) = 
     let (as,s') = splitAt i s
     in execComb n (VClos c e:s') as
-execVM (ICase i pscs:IRet:_, s, e) = --TCO case
-    let (vs,s') = splitAt i s
-        (bs, c') = chooseBranch (reverse vs) pscs
-    in execVM (c', s', reverse bs ++ e)
-execVM (ICase i pscs:c, s, e) =
-    let (vs,s') = splitAt i s
-        (bs, c') = chooseBranch (reverse vs) pscs
-    in execVM (c', VClos c e:s', reverse bs ++ e)
+execVM (ITest pat c0 c1:IRet:_, v:s, e) = --TCO case
+    let (bs, c') = chooseBranch v pat c0 c1
+    in execVM (c', s, reverse bs ++ e)
+execVM (ITest pat c0 c1:c, v:s, e) =
+    let (bs, c') = chooseBranch v pat c0 c1
+    in execVM (c', VClos c e:s, reverse bs ++ e)
+execVM (ILet:c, v:s, e) = execVM (c, s, v:e)
+execVM (IUnlet:c, s, _:e) = execVM (c, s, e)
+execVM (IError s:_, _, _) = error s
 execVM (c, s, e) = error $ "INVALID STATE:" ++ show c ++ show s ++ show e
 
 evalProg :: (VMCode, [(String, VMCode)]) -> IO ()

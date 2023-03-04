@@ -1,3 +1,6 @@
+HLTOML:
+    expr -> lambdalet per evitare sdoppiamenti nei put
+    test test test
 TODO, NOTE e FIXME non sono evidenziati per qualche motivo
 
 Inlining più furbo degli apply: al momento uso la tag inline per suggerire, ma non è determinata (segue comunque inlineHeuristic). se fosse determinata in certi casi la dimensione del codice esploderebbe

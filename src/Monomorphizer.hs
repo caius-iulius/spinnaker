@@ -63,7 +63,7 @@ findGenerator l t = getMostSpecific
                 specifics = reduceMostSpecifics [] matching
             in case specifics of
                 [] -> error $ "No matching generators of: " ++ show l ++ " with type: " ++ show t ++ "\nAvailable gens: " ++ show tses
-                ((te, e):[]) -> do
+                [(te, e)] -> do
                     s <- match dummyStdCoord te t
                     Just (substApplyExpr s e)
                 xs -> error $ "Cannot find most specific instance of: " ++ show l ++ " with type: " ++ show t ++ "\n    Possible instances are: " ++ show (map fst xs)
@@ -79,7 +79,7 @@ generateInstance l t = do
     return (l++s)
 
 findInstance :: String -> DataType -> MonoState String
-findInstance l t =  if length (freetyvars t) /= 0 then error $ "WHAT: there are free type variables in instance search" else do
+findInstance l t =  if (not . null) (freetyvars t) then error "WHAT: there are free type variables in instance search" else do
     monoLog $ "Looking for instance of: " ++ show l ++ " with type: " ++ show t
     is <- getInsts l
     case find ((==) t . fst) is of
@@ -87,7 +87,7 @@ findInstance l t =  if length (freetyvars t) /= 0 then error $ "WHAT: there are 
             monoLog $ "Instance found: " ++ show l'
             return l'
         Nothing -> do
-            monoLog $ "Instance not found, generating..."
+            monoLog "Instance not found, generating..."
             generateInstance l t
 
 monomorphizePatInner :: String -> HLPatternData -> MonoState HLPatternData
@@ -111,11 +111,10 @@ monomorphizeInner _ s (ExprApp f a) = do
     return (ExprApp f' a')
 monomorphizeInner t s (ExprLabel l) = do
     isglob <- isGlobal l
-    case isglob of
-        False -> return (ExprLabel (l++s))
-        True -> do
-            l' <- findInstance l t
-            return (ExprCombinator l' [])
+    if isglob then do
+        l' <- findInstance l t
+        return (ExprCombinator l' [])
+    else return (ExprLabel (l++s))
 monomorphizeInner _ s (ExprConstructor c es) = do
     es' <- mapM (monomorphize s) es
     return (ExprConstructor c es')
@@ -154,7 +153,7 @@ monomorphizeProgram (entryPoint, BlockProgram datagroups extdefs reldefs valgrou
         instsList = myListMerge $ map (\(InstDef _ (Qual _ (Pred l _)) cles) -> (l, cles)) instdefs
         instsListTEs = map (\(il, cless) -> (il, map (\(c, l, e@(_, t, _))->(l, (t, e))) (concat cless))) instsList
         instsVtables :: [(String, [(DataType, HLExpr)])]
-        instsVtables = concat $ map (myListMerge . snd) instsListTEs
+        instsVtables = concatMap (myListMerge . snd) instsListTEs
 
         env = Map.fromList $ map (\(l, tses) -> (l, ([], tses))) (valVtables ++ instsVtables)
     in do

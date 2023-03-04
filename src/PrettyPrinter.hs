@@ -1,7 +1,8 @@
 module PrettyPrinter where
 import Data.Tree
-import HLDefs
 import SyntaxDefs
+import HLDefs
+import MLDefs
 
 --Roba per HL
 toTreeHLPattern p = Node (show p) []
@@ -37,6 +38,20 @@ toTreeMonoDef (l, il, as, e) = Node (show l ++ " inline: " ++ show il) [Node "ar
 toTreeMonoDefs defs = Node "MonoDefs" (map toTreeMonoDef defs)
 showMonoProg (ep, defs) = "EP: " ++ (drawTree $ toTreeHLExpr ep) ++ "\nDefs: " ++ (drawTree $ toTreeMonoDefs defs)
 
+--Roba per ML
+toTreeMLPattern p = Node (show p) []
+
+toTreeMLExpr (c, dt, MLLiteral l) = Node (show c ++ " DT:" ++ show dt ++ " Literal: " ++ show l) []
+toTreeMLExpr (c, dt, MLLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: " ++ show l) []
+toTreeMLExpr (c, dt, MLConstructor l es) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) (map toTreeMLExpr es)
+toTreeMLExpr (c, dt, MLCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeMLExpr es)
+toTreeMLExpr (c, dt, MLTest l pat pos neg) = Node (show c ++ " DT:" ++ show dt ++ " TEST:" ++ show l) [Node "pat" [toTreeMLPattern pat], Node "pos" [toTreeMLExpr pos], Node "neg" [toTreeMLExpr neg]]
+toTreeMLExpr (c, dt, MLLet l e0 e1) = Node (show c ++ " DT:" ++ show dt ++ " LET:" ++ show l) [Node "val" [toTreeMLExpr e0], Node "expr" [toTreeMLExpr e1]]
+toTreeMLExpr (c, dt, MLError _ s) = Node (show c ++ " DT:" ++ show dt ++ " ERROR:" ++ show s) []
+
+toTreeMLDef (l, as, e) = Node (show l) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeMLExpr e]
+toTreeMLDefs defs = Node "MLDefs" (map toTreeMLDef defs)
+showMLProg (ep, defs) = "EP: " ++ (drawTree $ toTreeMLExpr ep) ++ "\nDefs: " ++ (drawTree $ toTreeMLDefs defs)
 --Roba per Syn
 toTreeSynPattern p = Node (show p) []
 

@@ -45,7 +45,9 @@ executable spinnaker
         Typer.Typer
         Typer.TypingDefs
         Typer.VariantComplete
-        VM.HLtoVM
+        MLDefs
+        HLtoML
+        VM.MLtoVM
         VM.VM
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

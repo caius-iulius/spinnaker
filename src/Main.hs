@@ -14,7 +14,8 @@ import Typer.Typer
 import Monomorphizer
 import OptimizeHL
 import Defunctionalize
-import VM.HLtoVM
+import HLtoML
+import VM.MLtoVM
 import qualified VM.VM as VM
 
 time :: IO t -> IO (t, Double)
@@ -52,10 +53,14 @@ main = do {
     (prog, t_mono) <- time $ monomorphizeProgram (ep, b);
     (mono, t_opti) <- time $ return $ optimizeProgram prog;
     compLog $ "Mono " ++ showMonoProg mono;
-    (defraw, t_defun) <- time $ defunProgram mono uid;
+    ((defraw, uid'), t_defun) <- time $ defunProgram mono uid;
     (defopti, t_opti2) <- time $ return $ optimizeProgram defraw;
     compLog $ "Defun " ++ showMonoProg defopti;
-    (vmprog, t_tovm) <- time $ return $ progToVm defopti;
+
+    (mlprog, uid'') <- hltoml defopti uid';
+    compLog $ "MLProg " ++ showMLProg mlprog;
+
+    (vmprog, t_tovm) <- time $ return $ progToVm mlprog;
     compLog $ "VM Bytecode: " ++ show vmprog;
     compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti);
     compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms tovm:" ++ show t_tovm ++ "ms";

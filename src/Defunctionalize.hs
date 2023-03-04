@@ -120,10 +120,10 @@ applysToDataSummary = map summarizeApply
     where summarizeApply (dt, (_, brs)) = (dt, map summarizeBranch brs)
           summarizeBranch (varl, datalabs, _) = (varl, map snd datalabs)
 
-defunProgram :: MonoProgram -> Int -> IO MonoProgram
+defunProgram :: MonoProgram -> Int -> IO (MonoProgram, Int)
 defunProgram (ep, defs) n = do
-    (ep', (_, combs, _)) <- runStateT defunmon (n, [], [])
-    return (ep', combs)
+    (ep', (n', combs, _)) <- runStateT defunmon (n, [], [])
+    return ((ep', combs), n')
     where defunmon = do
             ep' <- defunExpr ep
             mapM (\(l, il, as, e) -> do
