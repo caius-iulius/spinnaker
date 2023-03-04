@@ -43,11 +43,14 @@ pushvalassigns = map (uncurry $ pushvals [])
                       Just patlab -> mllabsubst patlab l e
               in pushvals ps' lps e'
 
-chooseTestHeuristic ((lps,_):_) = case head lps of
+chooseTestHeuristic ((lps,_):lpsses) = 
+    let occurences = map (\(l, p) -> ((l,p), length $ filter (any ((l ==) . fst) . fst) lpsses)) lps in
+    case fst $ maximumOn snd occurences of
     (lab, (c, _, PatLiteral lit)) -> return (c, (lab, MLPLiteral lit))
     (lab, (c, _, PatVariant var subps)) -> do
         newlabs <- mapM (const newlab) [1..length subps]
         return (c, (lab, MLPVariant var newlabs))
+    where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
 patCompatibility (MLPLiteral l) (_,_, PatLiteral l') = if l == l' then Just [] else Nothing
 patCompatibility (MLPVariant v ls) (_,_, PatVariant v' ps) = if v == v' then Just $ zip ls ps else Nothing
