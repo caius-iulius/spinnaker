@@ -55,7 +55,7 @@ builtinDemodVars = ["RealWorld_"]
 buildBIDemodTypeMap = Map.fromList . map buildBIDemod
     where buildBIDemod l = (l, [(LocPub, Left $ l++"#BI")])
 buildBIDemodVarMap = Map.fromList . map buildBIDemod
-    where buildBIDemod l = (l, [(LocPub, l++"#BI")])
+    where buildBIDemod l = (l, [(LocPub, l)]) --TODO: non ho messo il tag per la compatibilità con JS (gli hash non sono ammessi nei nomi), forse va riaggiunto in qualche altro modo
 
 initCoreDemodEnv = DemodEnv Map.empty Map.empty (buildBIDemodTypeMap builtinDemodTypes) (buildBIDemodVarMap builtinDemodVars) Map.empty
 

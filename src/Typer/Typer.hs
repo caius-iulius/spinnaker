@@ -17,7 +17,7 @@ builtinTypingTypes =
     ,   ("RealWorld_#BI", KType)
     ]
 builtinTypingVars =
-    [   VariantData "RealWorld_#BI" [] [] realworldT
+    [   VariantData "RealWorld_" [] [] realworldT
     ]
 initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty Map.empty
 

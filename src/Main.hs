@@ -16,8 +16,9 @@ import OptimizeHL
 import Defunctionalize
 import MLDefs
 import HLtoML
-import VM.MLtoVM
-import qualified VM.VM as VM
+--import VM.MLtoVM
+--import qualified VM.VM as VM
+import MLtoJS
 
 time :: IO t -> IO (t, Double)
 time a = do
@@ -61,14 +62,19 @@ main = do {
     (defopti, t_opti2) <- time $ return $ optimizeProgram defraw;
     compLog $ "Defun " ++ showMonoProg defopti;
 
-    (mlprog, uid'') <- hltoml defopti uid';
+    ((mlprog, uid''), t_toml) <- time $ hltoml defopti uid';
     compLog $ "MLProg " ++ showMLProg mlprog;
 
-    (vmprog, t_tovm) <- time $ return $ progToVm mlprog;
-    compLog $ "VM Bytecode: " ++ show vmprog;
+    writeFile "out.js" $ tojsProgram (typeddatasummary ++ defundatasummary) mlprog;
     compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti) ++ ", ML program size: " ++ show (mlprogramSize mlprog);
-    compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms tovm:" ++ show t_tovm ++ "ms";
-    hFlush stdout;
-    (_, t_eval) <- time $ VM.evalProg vmprog;
-    compLog $ "Program eval time:" ++ show t_eval ++ "ms";
+    compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms toml:" ++ show t_toml ++ "ms";
+    
+
+    -- (vmprog, t_tovm) <- time $ return $ progToVm mlprog;
+    -- compLog $ "VM Bytecode: " ++ show vmprog;
+    -- compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti) ++ ", ML program size: " ++ show (mlprogramSize mlprog);
+    -- compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms tovm:" ++ show t_tovm ++ "ms";
+    -- hFlush stdout;
+    -- (_, t_eval) <- time $ VM.evalProg vmprog;
+    -- compLog $ "Program eval time:" ++ show t_eval ++ "ms";
 }
