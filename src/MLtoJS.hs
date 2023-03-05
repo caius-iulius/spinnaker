@@ -64,6 +64,8 @@ tojsLit (LitFloating f) = show f
 tojsLit (LitCharacter c) = show c
 
 emitTest l (MLPLiteral lit) = emit $ "if(" ++ l ++ " === " ++ tojsLit lit ++ "){\n"
+emitTest l (MLPVariant "True" []) = emit $ "if(" ++ l ++ "){\n"
+emitTest l (MLPVariant "False" []) = emit $ "if(!" ++ l ++ "){\n"
 emitTest l (MLPVariant v ls) = do
     v' <- getVariant v
     emit $ "if(" ++ l ++ " instanceof " ++ v' ++ "){\n"
@@ -85,6 +87,8 @@ tojsBlock final other = do
 
 tojsExpr (_, _, MLLiteral lit) = return $ tojsLit lit
 tojsExpr (_, _, MLLabel l) = getLabel l
+tojsExpr (_, _, MLConstructor "True" []) = return "true"
+tojsExpr (_, _, MLConstructor "False" []) = return "false"
 tojsExpr (_, _, MLConstructor v es) = do
     v' <- getVariant v
     es' <- mapM tojsExpr es

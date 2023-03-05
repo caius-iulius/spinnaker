@@ -66,16 +66,16 @@ execComb "_divInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VConst (LitInteger (div i0 i1))
     in execVM ([IRet], v:s, [])
 execComb "_equInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
-    let v = VConst (LitInteger (if i0 == i1 then 1 else 0))
+    let v = VVariant (if i0 == i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_neqInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
-    let v = VConst (LitInteger (if i0 /= i1 then 1 else 0))
+    let v = VVariant (if i0 /= i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_leqInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
-    let v = VConst (LitInteger (if i0 <= i1 then 1 else 0))
+    let v = VVariant (if i0 <= i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_greInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
-    let v = VConst (LitInteger (if i0 > i1 then 1 else 0))
+    let v = VVariant (if i0 > i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 
 execComb "_addFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
@@ -91,16 +91,16 @@ execComb "_divFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
     let v = VConst (LitFloating (f0/f1))
     in execVM ([IRet], v:s, [])
 execComb "_equFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
-    let v = VConst (LitInteger (if f0 == f1 then 1 else 0))
+    let v = VVariant (if f0 == f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_neqFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
-    let v = VConst (LitInteger (if f0 /= f1 then 1 else 0))
+    let v = VVariant (if f0 /= f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_leqFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
-    let v = VConst (LitInteger (if f0 <= f1 then 1 else 0))
+    let v = VVariant (if f0 <= f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_greFlt" s (VConst(LitFloating f1):VConst(LitFloating f0):[]) =
-    let v = VConst (LitInteger (if f0 > f1 then 1 else 0))
+    let v = VVariant (if f0 > f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 execComb "_convItoF" s (VConst(LitInteger i):[]) =
     execVM ([IRet], (VConst(LitFloating(fromIntegral i))):s, [])
@@ -120,7 +120,7 @@ execComb "_getChr" s (rw:[]) = do
     execVM ([IRet], (VVariant "(,)" [VConst(LitCharacter c), rw]):s, [])
 execComb "_isEOF" s (rw:[]) = do
     cond <- lift isEOF
-    let v = VConst(LitInteger(if cond then 1 else 0))
+    let v = VVariant (if cond then "True" else "False") []
     execVM ([IRet], (VVariant "(,)" [v, rw]):s, [])
 
 execComb "_exit" s (rw:[]) = lift $ exitSuccess

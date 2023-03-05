@@ -1,3 +1,9 @@
+TOJS:
+    tail-call
+    rimuovi varianti inutili
+    usa liste e stringhe native?
+    IO con unicode
+
 HLTOML:
     expr -> lambdalet per evitare sdoppiamenti nei put
     test test test

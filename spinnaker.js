@@ -35,32 +35,16 @@ function _divInt(a, b) {
     return Math.floor(a / b); //TODO euclidean division
 }
 function _equInt (a, b) {
-    if (a === b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a === b;
 }
 function _neqInt (a, b) {
-    if (a !== b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a !== b;
 }
 function _leqInt (a, b) {
-    if (a <= b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a <= b;
 }
 function _greInt (a, b) {
-    if (a > b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a > b;
 }
 
 function _addFlt(a, b) {
@@ -76,32 +60,16 @@ function _divFlt(a, b) {
     return a / b;
 }
 function _equFlt (a, b) {
-    if (a === b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a === b;
 }
 function _neqFlt (a, b) {
-    if (a !== b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a !== b;
 }
 function _leqFlt (a, b) {
-    if (a <= b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a <= b;
 }
 function _greFlt (a, b) {
-    if (a === b) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return a > b;
 }
 
 function _floorFlt(a) {

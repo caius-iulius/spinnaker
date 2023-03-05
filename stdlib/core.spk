@@ -2,26 +2,23 @@
 
 mod Builtins {
     # Combinatori primitivi
-
-    typesyn BoolSurrogate = Int
-
     ext pub _addInt : Int, Int -> Int
     ext pub _subInt : Int, Int -> Int
     ext pub _mulInt : Int, Int -> Int
     ext pub _divInt : Int, Int -> Int
-    ext pub _equInt : Int, Int -> BoolSurrogate
-    ext pub _neqInt : Int, Int -> BoolSurrogate
-    ext pub _leqInt : Int, Int -> BoolSurrogate
-    ext pub _greInt : Int, Int -> BoolSurrogate
+    ext pub _equInt : Int, Int -> Bool
+    ext pub _neqInt : Int, Int -> Bool
+    ext pub _leqInt : Int, Int -> Bool
+    ext pub _greInt : Int, Int -> Bool
 
     ext pub _addFlt : Flt, Flt -> Flt
     ext pub _subFlt : Flt, Flt -> Flt
     ext pub _mulFlt : Flt, Flt -> Flt
     ext pub _divFlt : Flt, Flt -> Flt
-    ext pub _equFlt : Flt, Flt -> BoolSurrogate
-    ext pub _neqFlt : Flt, Flt -> BoolSurrogate
-    ext pub _leqFlt : Flt, Flt -> BoolSurrogate
-    ext pub _greFlt : Flt, Flt -> BoolSurrogate
+    ext pub _equFlt : Flt, Flt -> Bool
+    ext pub _neqFlt : Flt, Flt -> Bool
+    ext pub _leqFlt : Flt, Flt -> Bool
+    ext pub _greFlt : Flt, Flt -> Bool
     ext pub _floorFlt : Flt -> Int
     ext pub _convItoF : Int -> Flt
 
@@ -29,7 +26,7 @@ mod Builtins {
     ext pub _convCtoI : Chr -> Int
     ext pub _putChr : Chr, RealWorld_ -> RealWorld_
     ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
-    ext pub _isEOF : RealWorld_ -> (BoolSurrogate, RealWorld_)
+    ext pub _isEOF : RealWorld_ -> (Bool, RealWorld_)
     ext pub _exit : RealWorld_ -> RealWorld_
 }
 
@@ -57,8 +54,6 @@ def pub snd : forall a b. (a, b) -> b
     = \(_,b)->b
 
 mod BoolCore {
-    data pub Bool = True | False
-
     def pub (&&) : Bool -> Bool -> Bool =
         \ True, True -> True
         | _, _ -> False
@@ -138,15 +133,9 @@ mod NumCore {
         def fromInt = id
     }
 
-    # TODO: sopsta in un posto migliore
-    def bsurroptobool : forall a b. (a -> b -> Int) -> a -> b -> Bool
-        = \op, x, y -> put op x y
-            | 0 -> False
-            | _ -> True
-
     inst Eq Int {
-        def (==) = bsurroptobool _equInt
-        def (!=) = bsurroptobool _neqInt
+        def (==) = _equInt
+        def (!=) = _neqInt
     }
 
     inst Num Flt {
@@ -159,8 +148,8 @@ mod NumCore {
     def pub floor = _floorFlt
 
     inst Eq Flt {
-        def (==) = bsurroptobool _equFlt
-        def (!=) = bsurroptobool _neqFlt
+        def (==) = _equFlt
+        def (!=) = _neqFlt
     }
 
     inst Eq Chr {
@@ -169,17 +158,17 @@ mod NumCore {
     }
 
     inst Ord Int {
-        def (<) = \a,b->(bsurroptobool _greInt) b a #TODO semplifica argomenti
-        def (>) = bsurroptobool _greInt
-        def (<=)= bsurroptobool _leqInt
-        def (>=)= \a,b->(bsurroptobool _leqInt) b a
+        def (<) = \a,b->_greInt b a #TODO semplifica argomenti
+        def (>) = _greInt
+        def (<=)= _leqInt
+        def (>=)= \a,b->_leqInt b a
     }
 
     inst Ord Flt {
-        def (<) = \a,b->(bsurroptobool _greFlt) b a
-        def (>) = bsurroptobool _greFlt
-        def (<=)= bsurroptobool _leqFlt
-        def (>=)= \a,b->(bsurroptobool _leqFlt) b a
+        def (<) = \a,b->_greFlt b a
+        def (>) = _greFlt
+        def (<=)= _leqFlt
+        def (>=)= \a,b->_leqFlt b a
     }
 } use pub NumCore
 
@@ -379,10 +368,7 @@ mod IOCore {
 
         def pub putChr = _putChr
         def pub getChr = _getChr
-        def pub isEOF =
-            \rw -> put _isEOF rw
-                | (0, rw') -> (False, rw')
-                | (_, rw') -> (True, rw')
+        def pub isEOF = _isEOF
         def pub exit = _exit
 
         def pub putStr : String -> RealWorld_ -> RealWorld_

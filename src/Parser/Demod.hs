@@ -49,8 +49,8 @@ envmapDefd l em = case Map.lookup l em of
     _ -> True
 
 --Definizioni builtin per Demod
-builtinDemodTypes = ["->", "Int", "Flt", "Chr", "RealWorld_"]
-builtinDemodVars = ["RealWorld_"]
+builtinDemodTypes = ["->", "Int", "Bool", "Flt", "Chr", "RealWorld_"]
+builtinDemodVars = ["RealWorld_", "True", "False"]
 
 buildBIDemodTypeMap = Map.fromList . map buildBIDemod
     where buildBIDemod l = (l, [(LocPub, Left $ l++"#BI")])
