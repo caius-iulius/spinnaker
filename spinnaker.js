@@ -34,6 +34,9 @@ function _mulInt(a, b) {
 function _divInt(a, b) {
     return Math.floor(a / b); //TODO euclidean division
 }
+function _remInt(a, b) {
+    return a % b;
+}
 function _equInt (a, b) {
     return a === b;
 }
@@ -99,6 +102,6 @@ function _putChr(c,rw) {
 
 //TODO _putChr serio, _getChr, _isEOF
 function _exit(a) {
-    throw new Error('Program exited');
+    process.exit(0);
     return a;
 }

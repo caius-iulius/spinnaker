@@ -6,7 +6,7 @@ do
     cabal run spinnaker -- $file -v | awk '/Unoptimized program size:/,0'
     cat spinnaker.js out.js > out_stitched.js
     echo "----"
-    time node out_stitched.js
+    time bun run out_stitched.js
     echo "###########"
     echo ""
 done

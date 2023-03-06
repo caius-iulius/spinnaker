@@ -6,6 +6,7 @@ mod Builtins {
     ext pub _subInt : Int, Int -> Int
     ext pub _mulInt : Int, Int -> Int
     ext pub _divInt : Int, Int -> Int
+    ext pub _remInt : Int, Int -> Int
     ext pub _equInt : Int, Int -> Bool
     ext pub _neqInt : Int, Int -> Bool
     ext pub _leqInt : Int, Int -> Bool
@@ -27,7 +28,7 @@ mod Builtins {
     ext pub _putChr : Chr, RealWorld_ -> RealWorld_
     ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
     ext pub _isEOF : RealWorld_ -> (Bool, RealWorld_)
-    ext pub _exit : RealWorld_ -> RealWorld_
+    ext pub _exit : Int, RealWorld_ -> RealWorld_
 }
 
 def pub (|>) : forall a b c. (a -> b) -> (b -> c) -> (a -> c)
@@ -99,9 +100,8 @@ mod NumCore {
 
     use Builtins
 
-    # TODO: usa un intrinseco
     def pub rem : Int -> Int -> Int
-        = \a, b -> a - b * a / b
+        = _remInt
 
     # TODO: forse incorpora in Num
     def pub abs : forall a. {Num a, Ord a} => a -> a
@@ -407,7 +407,7 @@ mod IOCore {
         = show |> putStrLn
 
     def errorAux : forall a. String -> RealWorld_ -> a
-        = \s, rw -> errorAux s (UnsafeIO.exit (UnsafeIO.putStrLn s rw))
+        = \s, rw -> errorAux s (UnsafeIO.exit 1 (UnsafeIO.putStrLn s rw))
     def pub error : forall a. String -> a
         = \s -> errorAux ('e'::'r'::'r'::'o'::'r'::':'::' '::s) RealWorld_
 } use pub IOCore

@@ -9,6 +9,8 @@ HLTOML:
     test test test
 TODO, NOTE e FIXME non sono evidenziati per qualche motivo
 
+Elimina i test di varianti mai costruite
+
 Inlining più furbo degli apply: al momento uso la tag inline per suggerire, ma non è determinata (segue comunque inlineHeuristic). se fosse determinata in certi casi la dimensione del codice esploderebbe
 l'optimizer ha dei bug se ci sono label ripetute che interagiscono fra loro, non so come
 a quanto pare (l'esecuzone lazy non lo fa capire bene) l'optimizer è lentissimo, considera riscrittura?
