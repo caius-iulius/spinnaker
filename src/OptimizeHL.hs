@@ -147,6 +147,7 @@ optimizeBI c t "_addInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral
 optimizeBI c t "_subInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (i0-i1)))
 optimizeBI c t "_mulInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (i0*i1)))
 optimizeBI c t "_divInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (div i0 i1)))
+optimizeBI c t "_remInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (rem i0 i1)))
 optimizeBI c t "_equInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 == i1 then "True" else "False") [])
 optimizeBI c t "_neqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 /= i1 then "True" else "False") [])
 optimizeBI c t "_leqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 <= i1 then "True" else "False") [])

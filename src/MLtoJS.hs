@@ -1,8 +1,9 @@
 module MLtoJS where
 import Control.Monad.State
-import Data.Maybe(fromJust, fromMaybe)
+import Data.Maybe(isNothing, fromJust, fromMaybe)
 import HLDefs
 import MLDefs
+import MLOps
 import Typer.TypingDefs(isTupLabl)
 
 type IdentMap = [(String, String)]
@@ -108,20 +109,21 @@ tojsExpr other = do
     tojsBlock (\e -> l ++ " = " ++ e ++ ";\n") other
     return l
 
-tojsVariant vname numargs = do
-    vname' <- newMapVariant vname
-    let args = map (("x"++) . show) [0..numargs-1]
-    emit $ "class " ++ vname' ++ "{\nconstructor(" ++ toCommaList args ++ "){\n"
-    mapM_ (\(n, arg) -> emit $ "this["++show n++"] = " ++ arg ++ ";\n"
-            ) $ zip [0..] args
-    emit "}\n}\n\n"
+tojsVariant vused vname numargs =
+    if isNothing $ lookup vname vused then return ()
+    else do
+        vname' <- newMapVariant vname
+        let args = map (("x"++) . show) [0..numargs-1]
+        emit $ "class " ++ vname' ++ "{\nconstructor(" ++ toCommaList args ++ "){\n"
+        mapM_ (\(n, arg) -> emit $ "this["++show n++"] = " ++ arg ++ ";\n"
+                ) $ zip [0..] args
+        emit "}\n}\n\n"
 
-tojsDataSummaries :: [DataSummary] -> CodeGen ()
-tojsDataSummaries summaries =
+tojsDataSummaries vused summaries =
     let stripped = do
             (_, variants) <- summaries
             map (\(vname, args) -> (vname, length args)) variants
-    in mapM_ (uncurry tojsVariant) stripped
+    in mapM_ (uncurry $ tojsVariant vused) stripped
 
 tojsCombinators combs = do
     mapM_ (\(c, _, _) -> newMapCombinator c) combs
@@ -134,6 +136,7 @@ tojsCombinators combs = do
             ) combs
 
 tojsProgram datasummaries (ep, defs) = concat $ reverse $ (\(_,(_,_,_,_,code))->code) $ flip runState (0, [], [], [], []) $ do
-    tojsDataSummaries datasummaries
+    let vused = variantsUsedProg (ep, defs)
+    tojsDataSummaries vused datasummaries
     tojsCombinators defs
     tojsBlock (++ ";\n") ep

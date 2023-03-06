@@ -15,6 +15,8 @@ import Monomorphizer
 import OptimizeHL
 import Defunctionalize
 import MLDefs
+import MLOps
+import MLOptimize
 import HLtoML
 --import VM.MLtoVM
 --import qualified VM.VM as VM
@@ -63,10 +65,12 @@ main = do {
     compLog $ "Defun " ++ showMonoProg defopti;
 
     ((mlprog, uid''), t_toml) <- time $ hltoml defopti uid';
-    compLog $ "MLProg " ++ showMLProg mlprog;
+    let mlopti = optimizeMLProg mlprog
+    ;
+    compLog $ "MLProg " ++ showMLProg mlopti;
 
-    writeFile "out.js" $ tojsProgram (typeddatasummary ++ defundatasummary) mlprog;
-    compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti) ++ ", ML program size: " ++ show (mlprogramSize mlprog);
+    writeFile "out.js" $ tojsProgram (typeddatasummary ++ defundatasummary) mlopti;
+    compLog $ "Unoptimized program size: " ++ show (programSize prog) ++ ", optimized program size: " ++ show (programSize mono) ++ ", defun program size: " ++ show (programSize defopti) ++ ", ML program size: " ++ show (mlprogramSize mlopti);
     compLog $ "Timings: frontend:" ++ show t_frontend ++ show ts ++ "ms mono:" ++ show t_mono ++ "ms opti:" ++ show t_opti ++ "ms defun:" ++ show t_defun ++ "ms opti2:" ++ show t_opti2 ++ "ms toml:" ++ show t_toml ++ "ms";
     
 

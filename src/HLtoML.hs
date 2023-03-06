@@ -3,26 +3,8 @@ import Parser.MPCL(StdCoord)
 import Typer.TypingDefs
 import HLDefs
 import MLDefs
+import MLOps
 import Control.Monad.State
-
-mllabsubst l l' (c, t, mled) = (c, t, inner mled)
-    where
-        inner (MLLiteral l) = MLLiteral l
-        inner (MLLabel myl) = if myl == l then MLLabel l' else MLLabel myl
-        inner (MLConstructor v es) = MLConstructor v $ map (mllabsubst l l') es
-        inner (MLCombinator cmb es) = MLCombinator cmb $ map (mllabsubst l l') es
-        inner (MLTest tl p e0 e1) = MLTest (if tl == l then l' else tl) p (mllabsubst l l' e0) (mllabsubst l l' e1)
-        inner (MLLet ll e0 e1) = MLLet ll (mllabsubst l l' e0) (mllabsubst l l' e1)
-        inner (MLError c s) = MLError c s
-
-simplifylets (c, t, MLLiteral l) = (c, t, MLLiteral l)
-simplifylets (c, t, MLLabel l) = (c, t, MLLabel l)
-simplifylets (c, t, MLConstructor v es) = (c, t, MLConstructor v $ map simplifylets es)
-simplifylets (c, t, MLCombinator v es) = (c, t, MLCombinator v $ map simplifylets es)
-simplifylets (c, t, MLTest l p e0 e1) = (c, t, MLTest l p (simplifylets e0) (simplifylets e1))
-simplifylets (c, t, MLLet l (_, _, MLLabel l') e1) = mllabsubst l l' $ simplifylets e1
-simplifylets (c, t, MLLet l e0 e1) = (c, t, MLLet l (simplifylets e0) (simplifylets e1))
-simplifylets (c, t, MLError c' s) = (c, t, MLError c' s)
 
 type MLState t = StateT Int IO t
 
@@ -100,7 +82,7 @@ hltoml :: MonoProgram -> Int -> IO (MLProgram, Int)
 hltoml (expr, combs) uid = flip runStateT uid $ do
     mlexpr <- exprtomlexpr expr
     defs <- mapM combtodef combs
-    return (simplifylets mlexpr, defs)
+    return (mlexpr, defs)
         where combtodef (labl, il, args, expr) = do
                 mlexpr <- exprtomlexpr expr
-                return (labl, args, simplifylets mlexpr)
+                return (labl, args, mlexpr)

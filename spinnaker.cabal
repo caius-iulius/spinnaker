@@ -46,6 +46,8 @@ executable spinnaker
         Typer.TypingDefs
         Typer.VariantComplete
         MLDefs
+        MLOps
+        MLOptimize
         HLtoML
         VM.MLtoVM
         VM.VM
