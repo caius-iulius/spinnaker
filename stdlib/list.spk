@@ -13,7 +13,11 @@ def pub init : forall a. [a] -> [a] =
     \ [x] -> []
     | [x | xs] -> x :: (init xs)
 
-# TODO: uncons, null
+# TODO: uncons
+
+def pub null : forall a. [a] -> Bool =
+    \ [] -> True
+    | _ -> False
 
 def lengthAux = \n, l -> put l
     | [] -> n
