@@ -434,8 +434,8 @@ getDirOf = reverse . dropWhile ('/' /=) . reverse --TODO: ci sono tanti edge-cas
 
 demodFile :: String -> DemodEnv -> FilesEnv -> TyperState (DemodEnv, FilesEnv, BlockProgram)
 demodFile fname core files = do
-    handle <- lift $ lift $ openFile fname ReadMode
-    contents <- lift $ lift $ hGetContents handle
+    handle <- lift $ lift $ lift $ openFile fname ReadMode
+    contents <- lift $ lift $ lift $ hGetContents handle
     typerLog $ "File " ++ show fname ++ ": " ++ contents
     case Map.lookup contents files of
         Just modenv -> return (modenv, files, BlockProgram [] [] [] [] [])

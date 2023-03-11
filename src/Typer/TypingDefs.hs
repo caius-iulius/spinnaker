@@ -1,9 +1,9 @@
 module Typer.TypingDefs where
 import Control.Monad.State
-import System.Environment
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+import CompDefs
 import ResultT
 import Parser.MPCL(StdCoord)
 
@@ -200,14 +200,7 @@ realworldT = DataTypeName "RealWorld_#BI" KType
 
 type TyperStateData = (Int, KindQuant, TyQuantId)
 
-type TyperState t = ResultT (StateT TyperStateData IO) t
-
-compLog :: String -> IO ()
-compLog l = do
-    args <- getArgs
-    if elem "-v" args
-    then putStrLn l
-    else return ()
+type TyperState t = ResultT (StateT TyperStateData CompMon) t
 
 typerLog :: String -> TyperState ()
 typerLog = lift . lift . compLog
@@ -242,6 +235,6 @@ freshKind = do
 dataQsToKind :: [(String, TyQuant)] -> Kind
 dataQsToKind qs = foldr KFun KType $ map (kind . snd) qs
 
-runTyperState :: TyperStateData -> TyperState t -> IO (Either String t, TyperStateData)
+runTyperState :: TyperStateData -> TyperState t -> CompMon (Either String t, TyperStateData)
 runTyperState state t =
     runStateT (runResultT t) state

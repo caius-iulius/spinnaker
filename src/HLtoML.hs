@@ -1,12 +1,13 @@
 module HLtoML(hltoml) where
 import Parser.MPCL(StdCoord)
+import CompDefs
 import Typer.TypingDefs
 import HLDefs
 import MLDefs
 import MLOps
 import Control.Monad.State
 
-type MLState t = StateT Int IO t
+type MLState t = StateT Int CompMon t
 
 newlab :: MLState String
 newlab = do
@@ -78,7 +79,7 @@ exprtomlexpr (c, t, ExprPut es psses) = do
     mlmatch <- treatput c t mergedlps_etoml
     return $ foldr (\(l, e) e' -> (c, t, MLLet l e e')) mlmatch $ zip ls mles
 
-hltoml :: MonoProgram -> Int -> IO (MLProgram, Int)
+hltoml :: MonoProgram -> Int -> CompMon (MLProgram, Int)
 hltoml (expr, combs) uid = flip runStateT uid $ do
     mlexpr <- exprtomlexpr expr
     defs <- mapM combtodef combs

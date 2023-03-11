@@ -65,6 +65,9 @@ execComb "_mulInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
 execComb "_divInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VConst (LitInteger (div i0 i1))
     in execVM ([IRet], v:s, [])
+execComb "_remInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
+    let v = VConst (LitInteger (rem i0 i1))
+    in execVM ([IRet], v:s, [])
 execComb "_equInt" s (VConst(LitInteger i1):VConst(LitInteger i0):[]) =
     let v = VVariant (if i0 == i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])

@@ -3,6 +3,7 @@ import Control.Monad.State
 import Data.List(nub, find)
 import Data.Maybe(fromJust)
 
+import CompDefs
 import HLDefs
 import Typer.TypingDefs
 import Parser.MPCL(dummyStdCoord)
@@ -10,7 +11,7 @@ import OptimizeHL(inline, appearsPat)
 
 type ApplysEnv = [(DataType, (String, [(String, [(String, DataType)], String)]))]
 type DefunEnv = (Int, [Combinator], ApplysEnv)
-type DefunState t = StateT DefunEnv IO t
+type DefunState t = StateT DefunEnv CompMon t
 
 getUid :: DefunState String
 getUid = do
@@ -120,7 +121,7 @@ applysToDataSummary = map summarizeApply
     where summarizeApply (dt, (_, brs)) = (dt, map summarizeBranch brs)
           summarizeBranch (varl, datalabs, _) = (varl, map snd datalabs)
 
-defunProgram :: MonoProgram -> Int -> IO ([DataSummary], MonoProgram, Int)
+defunProgram :: MonoProgram -> Int -> CompMon ([DataSummary], MonoProgram, Int)
 defunProgram (ep, defs) n = do
     ((datasummary, ep'), (n', combs, _)) <- runStateT defunmon (n, [], [])
     return (datasummary, (ep', combs), n')

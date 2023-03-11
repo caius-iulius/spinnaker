@@ -5,6 +5,7 @@ import Data.List(find, partition)
 import Data.Maybe(isJust, catMaybes)
 import Control.Monad.State
 
+import CompDefs
 import HLDefs
 import Parser.MPCL(dummyStdCoord)
 import Typer.TypingDefs
@@ -15,7 +16,7 @@ type Instances = [(DataType, String)]
 type Generators = [(DataType, HLExpr)]
 
 type MonoEnv = (Int, [Combinator], Map.Map String (Instances, Generators))
-type MonoState t = StateT MonoEnv IO t
+type MonoState t = StateT MonoEnv CompMon t
 
 monoLog :: String -> MonoState ()
 monoLog = lift . compLog
@@ -145,7 +146,7 @@ myListMerge ((k,v):kvs) =
     let (isk, isntk) = partition ((k==) . fst) kvs
         in (k, v:map snd isk):myListMerge isntk
 
-monomorphizeProgram :: (HLExpr, BlockProgram) -> IO MonoProgram
+monomorphizeProgram :: (HLExpr, BlockProgram) -> CompMon MonoProgram
 monomorphizeProgram (entryPoint, BlockProgram datagroups extdefs reldefs valgroups instdefs) =
     let
         valbinds = join valgroups
