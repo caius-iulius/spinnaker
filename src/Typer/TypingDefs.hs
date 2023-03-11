@@ -100,7 +100,7 @@ instance Types Pred where
     substApply s (Pred l ts) = Pred l $ map (substApply s) ts
 
 instance Types t => Types (Qual t) where
-    freetyvars (Qual ps t) = Set.unions $ (freetyvars t):(map freetyvars ps)
+    freetyvars (Qual ps t) = Set.unions $ freetyvars t : map freetyvars ps
     substApply s (Qual ps t) = Qual (map (substApply s) ps) (substApply s t)
 
 instance Types TyScheme where
@@ -145,18 +145,18 @@ instance Show DataType where
 data Pred = Pred String [DataType]
     deriving Eq
 instance Show Pred where
-    show (Pred l ts) = l ++ (foldr (++) [] . map ((' ':) . show)) ts
+    show (Pred l ts) = l ++ concatMap ((' ':) . show) ts
 
 data Qual t = Qual [Pred] t
     deriving Eq
 
 instance Show t => Show (Qual t) where
-    show (Qual ps a) = '{': (foldr (\l r->l ++ ", " ++ r) "} => " (map show ps)) ++ show a
+    show (Qual ps a) = '{': foldr (\l r->show l ++ ", " ++ r) "} => " ps ++ show a
 
 data TyScheme = TyScheme [TyQuant] (Qual DataType)
 instance Show TyScheme where
     show (TyScheme qs dt) = let showq (TyQuant q k) = " " ++ show q ++ ":" ++ show k in
-        "forall" ++ foldl (++) "" (map showq qs) ++ "." ++ show dt
+        "forall" ++ concatMap showq qs ++ "." ++ show dt
 
 data VariantData = VariantData String [TyQuant] [DataType] DataType -- Nome della variante, quantificatori generici, argomenti, datatype di appartenenza
     deriving Show
@@ -175,12 +175,12 @@ data TypingEnv = TypingEnv (Map.Map String TyScheme) (Map.Map String Kind) (Map.
 --Definizioni utili
 isTupLabl :: String -> (Bool, Int) --TODO: usa un maybe
 isTupLabl "()" = (True, 0)
-isTupLabl ('(':rest) = (")" == (dropWhile (','==) rest), length rest)
+isTupLabl ('(':rest) = (")" == dropWhile (','==) rest, length rest)
 isTupLabl _ = (False, 0)
 
 makeTupLabl 0 = "()"
 makeTupLabl 1 = error "Tuples of length 1 are forbidden"
-makeTupLabl len = '(':take (len - 1) (repeat ',')++")"
+makeTupLabl len = '(':replicate (len - 1) ',' ++")"
 
 buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
 buildTupType ts =
@@ -214,7 +214,7 @@ newUniqueSuffix = do
 newTyQuant :: Kind -> TyperState TyQuant
 newTyQuant k = do
     (u, kq, tq) <- get
-    put (u, kq, (tq+1))
+    put (u, kq, tq+1)
     return $ TyQuant tq k
 
 freshType k = do
@@ -224,16 +224,14 @@ freshType k = do
 newKindQuant :: TyperState KindQuant
 newKindQuant = do
     (u, k, t) <- get
-    put (u, (k+1), t)
+    put (u, k+1, t)
     return k
 
 freshKind :: TyperState Kind
-freshKind = do
-    q <- newKindQuant
-    return $ KindQuant q
+freshKind = KindQuant <$> newKindQuant
 
 dataQsToKind :: [(String, TyQuant)] -> Kind
-dataQsToKind qs = foldr KFun KType $ map (kind . snd) qs
+dataQsToKind = foldr (KFun . kind . snd) KType
 
 runTyperState :: TyperStateData -> TyperState t -> CompMon (Either String t, TyperStateData)
 runTyperState state t =

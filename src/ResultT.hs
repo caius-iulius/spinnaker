@@ -3,7 +3,7 @@ module ResultT where
 import Control.Monad.Trans
 import Control.Monad.State
 
-data ResultT m a = ResultT (m (Either String a))
+newtype ResultT m a = ResultT (m (Either String a))
 runResultT (ResultT m) = m
 
 instance Functor m => Functor (ResultT m) where
@@ -19,8 +19,7 @@ instance Monad m => Monad (ResultT m) where
                 Right a -> let ResultT m' = mf a in m'
         )
 instance MonadTrans ResultT where
-    lift m = ResultT (do v <- m
-                         return (Right v))
+    lift m = ResultT (Right <$> m)
 instance MonadState s m => MonadState s (ResultT m) where
     get = lift get
     put = lift . put

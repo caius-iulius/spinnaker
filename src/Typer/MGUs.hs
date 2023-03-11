@@ -98,9 +98,8 @@ match c src tgt = do
         keyss = Set.fromList $ map fst $ Map.toList s
         frees = freetyvars tgt
         transformsInTgt = Set.intersection keyss frees
-        in if length transformsInTgt /= 0
-        then fail $ show c ++ " Could not match type: " ++ show src ++ " into: " ++ show tgt
-        else return s
+        in if null transformsInTgt then return s
+        else fail $ show c ++ " Could not match type: " ++ show src ++ " into: " ++ show tgt
 
 liftUnionPred m c (Pred l ts) (Pred l' ts')
     | l == l' = liftUnionList m c (zip ts ts')
@@ -136,10 +135,10 @@ chooseInst :: TypingEnv -> Pred -> ChooseInstRes
 chooseInst env p@(Pred l ts) =
     let matchInsts = getBestUniInsts matchPred
         mguInsts = getBestUniInsts mguPred
-        in if length mguInsts == 0 then NoUnifiers
+        in if null mguInsts then NoUnifiers
         else case matchInsts of
             [] -> PossibleUnifiers mguInsts --No matching instances, failure?
-            (i@(Qual ps h):[]) -> --Se è l'unica instance specifica
+            [i@(Qual ps h)] -> --Se è l'unica instance specifica
                 if elem i mguInsts then case matchPred h p of--Se è tra i più specifici di tutte le possibili instances
                     --TODO: elem controlla tutto il predicato qualificato, forse dovrebbe ignorare i qualificatori
                     Just u -> OneMatch (map (substApply u) ps) --Allora prendi i constraint
@@ -152,9 +151,9 @@ chooseInst env p@(Pred l ts) =
             let areThereMoreSpecific = any (\(Qual _ h') ->
                         isJust (matchPred h h') && isNothing (matchPred h' h)
                     ) (sqs ++ qs)
-                in case areThereMoreSpecific of
-                    True -> reduceToSpecifics sqs qs
-                    False -> reduceToSpecifics (q:sqs) qs
+                in if areThereMoreSpecific
+                    then reduceToSpecifics sqs qs
+                    else reduceToSpecifics (q:sqs) qs
         tryInstUnion m q@(Qual _ h) = do
             u <- m h p
             Just q
@@ -164,7 +163,7 @@ chooseInst env p@(Pred l ts) =
 
 entail :: TypingEnv -> [Pred] -> Pred -> Bool
 entail env ps p
-    = any (elem p) (map (bySuper env) ps)
+    = any (elem p . bySuper env) ps
     || case chooseInst env p of
         OneMatch qs -> all (entail env ps) qs
         _ -> False
@@ -195,5 +194,5 @@ checkAmbiguousQual c env (Qual ps t) =
     let freepsvars = Set.unions $ map freetyvars ps
         freedatavars = Set.union (freetyvars t) (freetyvars env)
         difference = Set.difference freepsvars freedatavars
-        in if length difference == 0 then return ()
+        in if null difference then return ()
         else fail $ show c ++ " Qualifier is ambiguous, it qualifies over type variables: " ++ show (Set.toList difference) ++ " in: " ++ show (Qual ps t)

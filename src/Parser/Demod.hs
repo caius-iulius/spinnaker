@@ -41,7 +41,7 @@ envmapLookup :: Show a => String -> String -> EnvMap a -> TyperState (EnvVisib, 
 envmapLookup err l em = case Map.lookup l em of
     Nothing -> fail $ err ++ show em
     Just [] -> fail $ err ++ show em
-    Just (v:[]) -> return v
+    Just [v] -> return v
     _ -> fail (err ++ ", choice is ambiguous")
 envmapDefd l em = case Map.lookup l em of
     Nothing -> False
@@ -69,8 +69,8 @@ entryPointBlock env = do
 
 -- Demod vero e proprio
 
-envGetPubs (DemodEnv m v t c r) = (DemodEnv (filterpub m) (filterpub v) (filterpub t) (filterpub c) (filterpub r))
-    where filterpub = Map.filter ((0 /=) . length) . (fmap $ filter (\(v, _)->
+envGetPubs (DemodEnv m v t c r) = DemodEnv (filterpub m) (filterpub v) (filterpub t) (filterpub c) (filterpub r)
+    where filterpub = Map.filter (not . null) . fmap (filter (\(v, _)->
             case v of
                 LocPub -> True
                 ExtPub -> True
@@ -83,7 +83,7 @@ envGetExts (DemodEnv m v t c r) = envGetPubs (DemodEnv (filterpub m) (filterpub 
                 LocPriv -> ExtPriv
                 _ -> v, e)
             )
-envSetPrivate (DemodEnv m v t c r) = (DemodEnv (setpriv m) (setpriv v) (setpriv t) (setpriv c) (setpriv r))
+envSetPrivate (DemodEnv m v t c r) = DemodEnv (setpriv m) (setpriv v) (setpriv t) (setpriv c) (setpriv r)
     where setpriv = fmap $ map (\(v, e)->
             (case v of
                 LocPub -> LocPriv
@@ -218,12 +218,12 @@ demodExpr env qmap (c, SynExprHint hint e) = do
 demodTySchemeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTySchemeExpr -> TyperState (Map.Map String TyQuant, Qual DataType)
 demodTySchemeExpr env qmap (c, qls, ps, te) = do
     (qmap', _) <- buildQmapQlist c qls
-    if (length $ Map.intersection qmap qmap') /= 0
-        then fail $ show c ++ " Type scheme declares already used tyquants (TODO: migliora l'error reporting)"
-        else do
+    if null (Map.intersection qmap qmap')
+        then do
             ps' <- mapM (demodPred env (Map.union qmap' qmap)) ps
             te' <- demodTypeExpr env (Map.union qmap' qmap) te
             return (qmap', Qual ps' te')
+        else fail $ show c ++ " Type scheme declares already used tyquants (TODO: migliora l'error reporting)"
 
 demodValDef env (SynValDef c _ l t e) = do
     (qmap, t') <- case t of
@@ -261,24 +261,24 @@ demodTypeExprLoc env qmap (c, SynTypeExprName pathlabl@(Path path labl)) = do
     case either of
         Left nlabl -> return (isLocal v, DataCOORD c (DataTypeName nlabl KindNOTHING))
         Right (quants, syn) ->
-            if length quants == 0 then return (False, DataCOORD c syn)
+            if null quants then return (False, DataCOORD c syn)
             else fail $ show c ++ " Type synonym is applied to 0 arguments, but needs " ++ show (length quants)
 demodTypeExprLoc env qmap (c, SynTypeExprApp (_, SynTypeExprName pathlabl@(Path path labl)) steas) = do
     (DemodEnv _ _ ts _ _) <- getPathEnv c env path
     (v, either) <- envmapLookup (show c ++ " Type label: " ++ show pathlabl ++ " not bound") labl ts
-    (islocs, teas) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) steas
+    (islocs, teas) <- unzip <$> mapM (demodTypeExprLoc env qmap) steas
     case either of
-        Left nlabl -> return (any id (isLocal v : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) (DataCOORD c (DataTypeName nlabl KindNOTHING)) teas)
+        Left nlabl -> return (or (isLocal v : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) (DataCOORD c (DataTypeName nlabl KindNOTHING)) teas)
         Right (quants, syn) ->
-            if length quants == length teas then return (any id islocs, substApply (Map.fromList $ zip quants teas) syn)
+            if length quants == length teas then return (or islocs, substApply (Map.fromList $ zip quants teas) syn)
             else fail $ show c ++ " Type synonym is applied to " ++ show (length teas) ++ " arguments, but needs " ++ show (length quants)
 demodTypeExprLoc env qmap (c, SynTypeExprApp stef steas) = do
     (isloc, tef) <- demodTypeExprLoc env qmap stef
-    (islocs, teas) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) steas
+    (islocs, teas) <- unzip <$> mapM (demodTypeExprLoc env qmap) steas
     return (any id (isloc : islocs), foldl (\f a -> DataCOORD c (DataTypeApp f a)) tef teas)
 
 demodTypeExpr :: DemodEnv -> Map.Map String TyQuant -> SyntaxTypeExpr -> TyperState DataType
-demodTypeExpr e q t = fmap snd $ demodTypeExprLoc e q t
+demodTypeExpr e q t = snd <$> demodTypeExprLoc e q t
 
 buildQmapQlist c qls =
     foldl (\mqmapqlist ql -> do
@@ -287,7 +287,7 @@ buildQmapQlist c qls =
         newq <- newTyQuant newk
         if Map.member ql qmap
             then fail $ show c ++ " Type quantifier: " ++ show ql ++ " already bound"
-            else return $ (Map.insert ql newq qmap, qlist ++ [(ql, newq)])
+            else return (Map.insert ql newq qmap, qlist ++ [(ql, newq)])
         ) (return (Map.empty, [])) qls
 
 demodDataVar :: DemodEnv -> Map.Map String TyQuant -> SyntaxDataVariant -> TyperState HLDataVariant
@@ -336,14 +336,14 @@ demodRelDecls env qmap visib (decl:decls) = do
 demodPredLoc env qmap (c, pathlabl@(Path path labl), steas) = do
     (DemodEnv _ _ _ _ rs) <- getPathEnv c env path
     (v, (nlabl, _)) <- envmapLookup (show c ++ " Rel label: " ++ show pathlabl ++ " not bound") labl rs
-    (islocs, teas) <- fmap unzip $ mapM (demodTypeExprLoc env qmap) steas
-    return $ (any id (isLocal v : islocs), Pred nlabl teas)
-demodPred env qmap p = fmap snd $ demodPredLoc env qmap p
+    (islocs, teas) <- unzip <$> mapM (demodTypeExprLoc env qmap) steas
+    return (or (isLocal v : islocs), Pred nlabl teas)
+demodPred env qmap p = snd <$> demodPredLoc env qmap p
 
 demodInstDefs rc env qmap relenv rpath defs = loop [] relenv defs
     where loop final mrelenv []
-            | length mrelenv == 0 = return $ reverse final
-            | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ (show $ map fst $ Map.toList mrelenv)
+            | null mrelenv = return $ reverse final
+            | otherwise = fail $ show rc ++ " Instance for: " ++ show rpath ++ " should define: " ++ show (map fst $ Map.toList mrelenv)
           loop final mrelenv ((c, l, e):mdefs) =
             case Map.lookup l mrelenv of
                 Nothing -> fail $ show c ++ " Member " ++ show l ++ " of instance for: " ++ show rpath ++ 
@@ -405,14 +405,14 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModTypeSyn c visib l 
     | otherwise = do
         (qmap, qlist) <- buildQmapQlist c qls
         te <- demodTypeExpr env qmap ste
-        return ((DemodEnv ms vs (envmapInsert l (visibtoenv visib, Right (map snd qlist, te)) ts) cs rs), fs, BlockProgram [] [] [] [] [])
+        return (DemodEnv ms vs (envmapInsert l (visibtoenv visib, Right (map snd qlist, te)) ts) cs rs, fs, BlockProgram [] [] [] [] [])
 demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
     | envmapDefd l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
     | otherwise = do
         tas' <- mapM (demodTypeExpr env Map.empty) tas
         tr' <- demodTypeExpr env Map.empty tr
         defsuffix <- newUniqueSuffix
-        suffixes <- mapM (\_->newUniqueSuffix) [0..length tas-1]
+        suffixes <- mapM (const newUniqueSuffix) [0..length tas-1]
         let vnames = map ("_v"++) suffixes
             ves = map (\myl->(c,DataNOTHING,ExprLabel myl)) vnames
             finale = foldr (\myl e->(c,DataNOTHING, ExprLambda myl e)) (c, DataNOTHING, ExprCombinator l ves) vnames

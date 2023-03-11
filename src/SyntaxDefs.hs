@@ -49,7 +49,7 @@ type SyntaxTyPred = (StdCoord, Path, [SyntaxTypeExpr])
 type SyntaxTySchemeExpr = (StdCoord, [String], [SyntaxTyPred], SyntaxTypeExpr)
 
 data SyntaxValDef
-    = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) (SyntaxExpr) -- Cordinate della definizione, nome del valore, espressione
+    = SynValDef StdCoord Visibility String (Maybe SyntaxTySchemeExpr) SyntaxExpr -- Cordinate della definizione, nome del valore, espressione
     deriving Show
 
 data SyntaxDataVariant

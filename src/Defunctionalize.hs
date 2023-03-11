@@ -62,7 +62,7 @@ newComb as e = do
 
 freeLabls :: HLExpr -> [(String, DataType)]
 freeLabls (_, _, ExprLiteral _) = []
-freeLabls (_, _, ExprApp f a) = (nub $ freeLabls f ++ freeLabls a) --TODO: le coppie labl, datatype sono sempre uguali?
+freeLabls (_, _, ExprApp f a) = nub $ freeLabls f ++ freeLabls a --TODO: le coppie labl, datatype sono sempre uguali?
 freeLabls (_, t, ExprLabel l) = [(l, t)]
 freeLabls (_, _, ExprConstructor l es) = nub $ es >>= freeLabls
 freeLabls (_, _, ExprCombinator l es) = nub $ es >>= freeLabls
@@ -79,7 +79,7 @@ freeLabls (_, _, ExprHint _ e) = freeLabls e
 defunExpr :: HLExpr -> DefunState HLExpr
 defunExpr e@(_, _, ExprLiteral _) = return e
 defunExpr e@(_, _, ExprLabel _) = return e
-defunExpr (c, t, ExprApp (f@(_, tf, _)) a) = do
+defunExpr (c, t, ExprApp f@(_, tf, _) a) = do
     f' <- defunExpr f
     a' <- defunExpr a
     apl <- getApply tf
@@ -107,7 +107,7 @@ applyToComb (t@(DataTypeApp (DataTypeApp _ at) rt), (combl, vars)) = do
     s <- getUid
     let funl = "_fun" ++ s
         argl = "_arg" ++ s
-        vartobranch = \(vname, ls, cmb) -> ([(dummyStdCoord, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, Just l, PatWildcard)) ls))], (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
+        vartobranch (vname, ls, cmb) = ([(dummyStdCoord, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, Just l, PatWildcard)) ls))], (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
     return (combl, True, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
 
 applysToComb = do

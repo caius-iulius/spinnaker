@@ -27,16 +27,16 @@ toTreeHLRelDef (RelDef c label quants preds decls) = Node (show c ++ " Defining 
 toTreeHLInstDef (InstDef c qualpred defs) = Node (show c ++ " Defining inst: " ++ show qualpred) (map (\(c, l, e)->Node (show c ++ " Def: " ++ show l) [toTreeHLExpr e]) defs)
 
 toTreeBlockProgram (BlockProgram datagroups reldefs extdefs valgroups instdefs) = Node "BlockProgram" [
-        Node "Datas" (map (\group->Node "Group of datas" (map toTreeHLDataDef group)) datagroups),
+        Node "Datas" (map (Node "Group of datas" . map toTreeHLDataDef) datagroups),
         Node "Rels" (map toTreeHLRelDef reldefs),
         Node "Exts" (map toTreeHLExtDef extdefs),
-        Node "Vals" (map (\group->Node "Group of vals" (map toTreeHLValDef group)) valgroups),
+        Node "Vals" (map (Node "Group of vals" . map toTreeHLValDef) valgroups),
         Node "Insts" (map toTreeHLInstDef instdefs)
     ]
 
 toTreeMonoDef (l, il, as, e) = Node (show l ++ " inline: " ++ show il) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeHLExpr e]
 toTreeMonoDefs defs = Node "MonoDefs" (map toTreeMonoDef defs)
-showMonoProg (ep, defs) = "EP: " ++ (drawTree $ toTreeHLExpr ep) ++ "\nDefs: " ++ (drawTree $ toTreeMonoDefs defs)
+showMonoProg (ep, defs) = "EP: " ++ drawTree (toTreeHLExpr ep) ++ "\nDefs: " ++ drawTree (toTreeMonoDefs defs)
 
 --Roba per ML
 toTreeMLPattern p = Node (show p) []
@@ -51,7 +51,7 @@ toTreeMLExpr (c, dt, MLError _ s) = Node (show c ++ " DT:" ++ show dt ++ " ERROR
 
 toTreeMLDef (l, as, e) = Node (show l) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeMLExpr e]
 toTreeMLDefs defs = Node "MLDefs" (map toTreeMLDef defs)
-showMLProg (ep, defs) = "EP: " ++ (drawTree $ toTreeMLExpr ep) ++ "\nDefs: " ++ (drawTree $ toTreeMLDefs defs)
+showMLProg (ep, defs) = "EP: " ++ drawTree (toTreeMLExpr ep) ++ "\nDefs: " ++ drawTree (toTreeMLDefs defs)
 --Roba per Syn
 toTreeSynPattern p = Node (show p) []
 

@@ -14,7 +14,7 @@ completeVariant env (c, t, ExprConstructor l es) = do
     es' <- mapM (completeVariant env) es
     VariantData _ vqs vts vt <- getVariantData env l
     let zerotoadde = [0..length vts - length es -1]
-    addesuffixes <- mapM (\_->newUniqueSuffix) zerotoadde
+    addesuffixes <- mapM (const newUniqueSuffix) zerotoadde
     return $ let
             addenames = map ("_v"++) addesuffixes
             addees = map (\myl -> (c, DataNOTHING, ExprLabel myl)) addenames
@@ -34,10 +34,11 @@ completeVariant env (c, t, ExprHint hint e) = do
     return (c, t, ExprHint hint e')
 
 completeVariantValDefGroups :: TypingEnv -> [[HLValDef]] -> TyperState [[HLValDef]]
-completeVariantValDefGroups env = mapM (mapM (\(ValDef c l t ps e)-> completeVariant env e >>= (return . ValDef c l t ps)))
+completeVariantValDefGroups env = mapM (mapM (\(ValDef c l t ps e)-> ValDef c l t ps <$> completeVariant env e))
 
 completeVariantInstDefs :: TypingEnv -> [HLInstDef] -> TyperState [HLInstDef]
-completeVariantInstDefs env =
-    mapM (\(InstDef c qh defs)->(mapM (\(c', l, e)-> do
+completeVariantInstDefs env = mapM (\(InstDef c qh defs)->
+    InstDef c qh <$>
+    mapM (\(c', l, e)-> do
         e' <- completeVariant env e
-        return (c', l, e')) defs) >>= return . InstDef c qh)
+        return (c', l, e')) defs)

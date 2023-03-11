@@ -38,12 +38,12 @@ typePat env (c, _, PatVariant v ps) = do
         typerLog $ show c ++ " Variante:"++v++" di tipo-istanza:"++show (substApply s dt) ++ " unificato in:" ++ show (substApply s' (substApply s dt))
         return $ substApply s' $ substApply s dt
 typePats :: TypingEnv -> [HLPattern] -> TyperState [DataType]
-typePats env ps = mapM (typePat env) ps
+typePats = mapM . typePat
 
 --TODO Da testare
 patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf e p t}) (return env) (zip ps ts)
 
-innerPatVarsInEnv _ _ env (PatWildcard) dt = return env
+innerPatVarsInEnv _ _ env PatWildcard dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
 innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
     (VariantData _ qs vts vdt) <- getVariantData env v
@@ -156,7 +156,7 @@ typePutBranches env pspat tpats texpr ((pats, expr@(c, _, _)):branches) = do
     (s, psexpr, texpr', expr') <- typeExpr env' expr
     typerLog $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
     s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?
-    mys <- return $ composeSubst s' s
+    let mys = composeSubst s' s
     (s'', psbranches, tfinal, others) <- typePutBranches (substApply mys env) (map (substApply mys) pspat) (map (substApply mys) tpats) (substApply s' texpr) branches
     typerLog $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     let finals = composeSubst s'' mys
@@ -188,7 +188,7 @@ quantifiedValDefEnv env (ValDef c l mhint _ _:vdefs) = do
         Nothing -> fmap (Qual []) (freshType KType)
         Just hint -> return hint
     typerLog $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
-    env' <- return $ tyBindAdd c env l (TyScheme [] t)
+    let env' = tyBindAdd c env l (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
 typeValDefsLoop _ [] = return (nullSubst, [])
@@ -245,13 +245,13 @@ typeValDefGroup env vdefs = do
     s'' <- checkValDefsHint (substApply s' vars_env) (map (substApplyValDef s') vdefs') --TODO: La posizione è giusta?
     let sfinal = composeSubst s'' (composeSubst s' s)
         vdefs'' = map (substApplyValDef sfinal) vdefs'
-        ps = concat $ map (\(ValDef _ _ _ ps _) -> ps) vdefs''
+        ps = concatMap (\(ValDef _ _ _ ps _) -> ps) vdefs''
         vdefs''' = map (\(ValDef c l h _ e)->ValDef c l h ps e) vdefs''
             --typerLog $ "Final ValDef Subst: " ++ show sfinal
-    mapM (\(ValDef c _ _ ps' (_, t, _))->checkAmbiguousQual c env (Qual ps' t)) vdefs'''
+    mapM_ (\(ValDef c _ _ ps' (_, t, _))->checkAmbiguousQual c env (Qual ps' t)) vdefs'''
     vdefs'''' <- checkValDefsHintPreds env vdefs'''
     let env' = addValDefsEnv (substApply sfinal env) vdefs''''
-    if (0 == (length $ freetyvars env')) then return (sfinal, env', vdefs'''')
+    if null $ freetyvars env' then return (sfinal, env', vdefs'''')
     else fail $ show ((\(ValDef c _ _ _ _)->c) $ head vdefs''') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
 typeValDefGroups env [] = return (nullSubst, env, [])
@@ -267,11 +267,11 @@ typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) def
                 substdecls = map (\(ld, td)->(ld, substApply instSubst td)) decls
             defs' <- typeInstMembers (Map.fromList substdecls) [] defs
             -- TODO: Forse questo controllo va spostato da qualche altra parte (check superrel)
-            mapM (\p ->
+            mapM_ ((\p ->
                 if entail env ps p
                     then return ()
                     else fail $ show c ++ " L'istanza " ++ show qh ++ " non verifica il predicato: " ++ show p
-                ) (map (substApply instSubst) preds)
+                ) . substApply instSubst) preds
             return $ InstDef c qh defs'
     where typeInstMembers declmap final [] = return $ reverse final
           typeInstMembers declmap final ((dc,dl,e):members) =

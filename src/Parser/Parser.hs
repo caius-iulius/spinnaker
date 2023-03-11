@@ -441,10 +441,9 @@ getTyScheme = do {
 getValDefinition = require $ do {
     visib <- getVisibility;
     (c, label) <- getLabelOrOp;
-    typehint <- option Nothing (thisSyntaxElem ":" >> (require $ getTyScheme >>= return . Just));
+    typehint <- option Nothing (thisSyntaxElem ":" >> require (fmap Just getTyScheme));
     thisSyntaxElem "=";
-    meta <- getMeta;
-    return $ SynValDef c visib label typehint meta
+    SynValDef c visib label typehint <$> getMeta
 }
 
 getValDefinitions = do {
@@ -453,14 +452,13 @@ getValDefinitions = do {
     return $ ModValGroup defs
 }
 
-getExternalDef = thisSyntaxElem "ext" >> (require $ do {
+getExternalDef = thisSyntaxElem "ext" >> require (do {
     v <- getVisibility;
     (c, label) <- getLabel;
     thisSyntaxElem ":";
     tas <- sepBy getTypeExpr (thisUsefulChar ',');
     thisSyntaxElem "->";
-    tr <- getTypeExpr;
-    return $ ModExt c v label tas tr
+    ModExt c v label tas <$> getTypeExpr
 })
 -- Parser vari per datatype
 getVariant = do {
@@ -550,7 +548,7 @@ getModuleDef = do {
         (_, label) <- getCapitalLabel;
         do {
             thisUsefulChar '{';
-            mod <- require $ getModuleInnerDefs;
+            mod <- require getModuleInnerDefs;
             require $ thisUsefulChar '}';
             return $ ModMod c visib label mod
         } <|| fmap (ModFromFile c visib label . snd) getString
@@ -564,8 +562,7 @@ getTypeSyn = do {
         (_, label) <- getCapitalLabel;
         qs <- munch getLabel;
         thisSyntaxElem "=";
-        te <- getTypeMeta;
-        return $ ModTypeSyn c visib label (map snd qs) te
+        ModTypeSyn c visib label (map snd qs) <$> getTypeMeta
     }
 }
 getModuleInnerDefs = do {

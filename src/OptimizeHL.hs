@@ -1,6 +1,7 @@
 module OptimizeHL where
 import Data.Char (ord, chr)
 import Data.List (sortBy)
+import Data.Maybe(fromMaybe)
 
 import HLDefs
 import Typer.TypingDefs
@@ -46,10 +47,7 @@ inlineHeuristic e appears =
 
 inline :: [(String, HLExpr)] -> HLExpr -> HLExpr
 inline binds e@(_, _, ExprLiteral _) = e
-inline binds e@(c, _, ExprLabel l') =
-    case lookup l' binds of
-        Just ie -> ie
-        Nothing -> e
+inline binds e@(c, _, ExprLabel l') = fromMaybe e (lookup l' binds)
 inline binds (c, t, ExprApp f a) = (c, t, ExprApp (inline binds f) (inline binds a))
 inline binds (c, t, ExprConstructor cn es) = (c, t, ExprConstructor cn (map (inline binds) es))
 inline binds (c, t, ExprCombinator cn es) = (c, t, ExprCombinator cn (map (inline binds) es))
@@ -95,7 +93,7 @@ inlineProgram prog = loop [] (sortInlines prog)
         loop procd (ep, cmb@(l, il, as, e):defs)
             | (appears l ep + appearsDefs l (procd ++ defs)) == 0
                 = loop procd (ep, defs)
-            | appears l e == 0 && (inlineHeuristic e (appears l ep + appearsDefs l (procd++defs)))
+            | appears l e == 0 && inlineHeuristic e (appears l ep + appearsDefs l (procd++defs))
                 = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
             | otherwise = loop (cmb:procd) (ep, defs)
 
@@ -143,29 +141,29 @@ sievePatterns v = reverse . loop []
                 Maybe -> loop ((p, e):pses') pses
                 Never -> loop pses' pses
 
-optimizeBI c t "_addInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (i0+i1)))
-optimizeBI c t "_subInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (i0-i1)))
-optimizeBI c t "_mulInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (i0*i1)))
-optimizeBI c t "_divInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (div i0 i1)))
-optimizeBI c t "_remInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprLiteral (LitInteger (rem i0 i1)))
-optimizeBI c t "_equInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 == i1 then "True" else "False") [])
-optimizeBI c t "_neqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 /= i1 then "True" else "False") [])
-optimizeBI c t "_leqInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 <= i1 then "True" else "False") [])
-optimizeBI c t "_greInt" ((_, _, ExprLiteral (LitInteger i0)):(_, _, ExprLiteral (LitInteger i1)):[]) = (c, t, ExprConstructor (if i0 > i1 then "True" else "False") [])
+optimizeBI c t "_addInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0+i1)))
+optimizeBI c t "_subInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0-i1)))
+optimizeBI c t "_mulInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0*i1)))
+optimizeBI c t "_divInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (div i0 i1)))
+optimizeBI c t "_remInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (rem i0 i1)))
+optimizeBI c t "_equInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 == i1 then "True" else "False") [])
+optimizeBI c t "_neqInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 /= i1 then "True" else "False") [])
+optimizeBI c t "_leqInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 <= i1 then "True" else "False") [])
+optimizeBI c t "_greInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 > i1 then "True" else "False") [])
 
-optimizeBI c t "_addFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0+f1)))
-optimizeBI c t "_subFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0-f1)))
-optimizeBI c t "_mulFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0*f1)))
-optimizeBI c t "_divFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprLiteral (LitFloating (f0/f1)))
-optimizeBI c t "_equFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 == f1 then "True" else "False") [] )
-optimizeBI c t "_neqFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 /= f1 then "True" else "False") [] )
-optimizeBI c t "_leqFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 <= f1 then "True" else "False") [] )
-optimizeBI c t "_greFlt" ((_, _, ExprLiteral (LitFloating f0)):(_, _, ExprLiteral (LitFloating f1)):[]) = (c, t, ExprConstructor (if f0 > f1 then "True" else "False") [] )
-optimizeBI c t "_convItoF" ((_, _, ExprLiteral (LitInteger i)):[]) = (c, t, ExprLiteral (LitFloating (fromIntegral i)))
-optimizeBI c t "_floorFlt" ((_, _, ExprLiteral (LitFloating f)):[]) = (c, t, ExprLiteral (LitInteger (floor f)))
+optimizeBI c t "_addFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprLiteral (LitFloating (f0+f1)))
+optimizeBI c t "_subFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprLiteral (LitFloating (f0-f1)))
+optimizeBI c t "_mulFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprLiteral (LitFloating (f0*f1)))
+optimizeBI c t "_divFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprLiteral (LitFloating (f0/f1)))
+optimizeBI c t "_equFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprConstructor (if f0 == f1 then "True" else "False") [] )
+optimizeBI c t "_neqFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprConstructor (if f0 /= f1 then "True" else "False") [] )
+optimizeBI c t "_leqFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprConstructor (if f0 <= f1 then "True" else "False") [] )
+optimizeBI c t "_greFlt" [(_, _, ExprLiteral (LitFloating f0)),(_, _, ExprLiteral (LitFloating f1))] = (c, t, ExprConstructor (if f0 > f1 then "True" else "False") [] )
+optimizeBI c t "_convItoF" [(_, _, ExprLiteral (LitInteger i))] = (c, t, ExprLiteral (LitFloating (fromIntegral i)))
+optimizeBI c t "_floorFlt" [(_, _, ExprLiteral (LitFloating f))] = (c, t, ExprLiteral (LitInteger (floor f)))
 
-optimizeBI c t "_convItoC" ((_, _, ExprLiteral (LitInteger i)):[]) = (c, t, ExprLiteral (LitCharacter (chr i)))
-optimizeBI c t "_convCtoI" ((_, _, ExprLiteral (LitCharacter ch)):[]) = (c, t, ExprLiteral (LitInteger (ord ch)))
+optimizeBI c t "_convItoC" [(_, _, ExprLiteral (LitInteger i))] = (c, t, ExprLiteral (LitCharacter (chr i)))
+optimizeBI c t "_convCtoI" [(_, _, ExprLiteral (LitCharacter ch))] = (c, t, ExprLiteral (LitInteger (ord ch)))
 optimizeBI c t l es = (c, t, ExprCombinator l es)
 
 optimizeExpr :: HLExpr -> HLExpr
@@ -184,7 +182,7 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
         pses' = sievePatterns vals' pses
         pses'' = map (\(p,e)->(p,optimizeExpr e)) pses'
     in case pses'' of
-        (p, e):[] -> case sievePatternList p vals' of
+        [(p, e)] -> case sievePatternList p vals' of
             Always bs -> 
                 if all (\(ml,me)->inlineHeuristic me (appears ml e)) bs
                 then optimizeExpr $
