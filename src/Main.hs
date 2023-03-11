@@ -65,7 +65,12 @@ compile = do
 
     backend <- fmap (forceGetArg "backend") getArgOptions
     case backend of
-        "js" -> lift $ writeFile "out.js" $ tojsProgram (typeddatasummary ++ defundatasummary) mlopti
+        "js" -> do
+            let jsprog = tojsProgram (typeddatasummary ++ defundatasummary) mlopti
+            rootpath <- getDataDir
+            runtimehandle <- lift $ openFile (rootpath ++ "/runtime/js/spinnaker.js") ReadMode
+            runtimecode <- lift $ hGetContents runtimehandle
+            lift $ writeFile "out.js" $ runtimecode ++ jsprog
         "vm" -> do
             let vmprog = progToVm mlopti
             compLog $ "VM Bytecode: " ++ show vmprog

@@ -21,7 +21,7 @@ maintainer:         caiusiuliuscaesar84@gmail.com
 -- category:
 -- extra-source-files: CHANGELOG.md
 
-data-files: stdlib/
+data-files: runtime/ stdlib/
 
 executable spinnaker
     main-is:          Main.hs

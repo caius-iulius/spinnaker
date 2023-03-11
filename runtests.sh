@@ -4,11 +4,10 @@ for file in examples/*.spk
 do
     echo "########### Running test: $file"
     cabal run spinnaker -- --file $file --verbose | awk '/Unoptimized program size:/,0'
-    cat spinnaker.js out.js > out_stitched.js
     echo "----"
-    time bun run out_stitched.js
+    time bun run out.js
     echo "###########"
     echo ""
 done
-rm out.js out_stitched.js
+rm out.js
 echo "Tests complete"
