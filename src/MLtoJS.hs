@@ -1,4 +1,5 @@
 module MLtoJS where
+import GHC.Unicode(isPrint, isSpace)
 import Control.Monad.State
 import Data.Maybe(isNothing, fromJust, fromMaybe)
 import HLDefs
@@ -62,7 +63,10 @@ toCommaList (x:xs) = x ++ ", " ++ toCommaList xs
 
 tojsLit (LitInteger i) = show i
 tojsLit (LitFloating f) = show f
-tojsLit (LitCharacter c) = show c
+tojsLit (LitCharacter c)
+    | isSpace c || elem c "\\\"\'" = show c
+    | isPrint c = ['\"', c, '\"']
+    | otherwise = show c
 
 emitTest l (MLPLiteral lit) = emit $ "if(" ++ l ++ " === " ++ tojsLit lit ++ "){\n"
 emitTest l (MLPVariant "True" []) = emit $ "if(" ++ l ++ "){\n"

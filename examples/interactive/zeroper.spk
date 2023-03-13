@@ -60,8 +60,10 @@ def loop : Segno -> [[Segno]] -> IO ()
     if vuoto brd x y then
         let brd' = updateAt y (updateAt x (const p)) brd ->
         if wins p brd'
-            then putStrLn ("Player " ++ show p ++ " won:") >> putStrLn (showBoard brd')
-            else loop (alternate p) brd'
+            then putStrLn (showBoard brd') >> putStrLn ("Player " ++ show p ++ " won!")
+        else if any (any (Vuoto==)) brd'
+            then loop (alternate p) brd'
+        else putStrLn (showBoard brd') >> putStrLn "Draw!"
     else putStrLn "This square is already occupied" >> loop p brd
 
 

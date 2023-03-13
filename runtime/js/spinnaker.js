@@ -91,16 +91,35 @@ function _convCtoI(a) {
 
 let chrbuffer = ""
 function _putChr(c,rw) {
+    chrbuffer = chrbuffer + c;
     if (c === '\n') {
-        console.log(chrbuffer);
+        process.stdout.write(chrbuffer);
         chrbuffer = "";
-    } else {
-        chrbuffer = chrbuffer + c;
     }
     return rw;
 }
 
-//TODO _putChr serio, _getChr, _isEOF
+let fs = require("fs");
+function _getChr(rw) {
+    process.stdout.write(chrbuffer);
+    chrbuffer = "";
+    let buffer = Buffer.alloc(4);
+    fs.readSync(0,buffer,0,1,null);
+    let fst = buffer[0];
+    if (fst < 0xe0) {
+        if(fst > 0x7F) {
+            fs.readSync(0,buffer,1,1,null);
+        }
+    } else if (fst < 0xf0) {
+        fs.readSync(0,buffer,1,2,null);
+    } else {
+        fs.readSync(0,buffer,1,3,null);
+    }
+    let string = buffer.toString('utf8');
+    return new Tup2(string.substr(0,string.indexOf('\0')), rw);
+}
+
+//TODO _putChr serio, _getChr serio, _isEOF
 function _exit(a) {
     process.exit(0);
     return a;
