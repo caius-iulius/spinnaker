@@ -1,7 +1,7 @@
 module ArgParser where
 import Control.Monad(join)
 import Data.List(intercalate, transpose, partition)
-import Data.Maybe(fromJust, isJust, catMaybes)
+import Data.Maybe(isNothing, fromJust, isJust, catMaybes)
 import System.Environment
 
 data Arg =
@@ -48,12 +48,17 @@ parseArgs = inner []
             defaults <- checkRemaining defs
             return $ catMaybes defaults ++ parse
         inner parse defs (arg:args) = do
-            (def, defs') <- getDef arg defs
-            case argData def of
-                Nothing -> inner ((argID def, Nothing):parse) defs' args 
-                Just argdata -> case args of
-                    [] -> Left $ "expected some data after the argument: " ++ argID def
-                    a:args' -> checkData argdata a >> inner ((argID def, Just a):parse) defs' args'
+            let argname = takeWhile ('='/=) arg
+                eqargstring = dropWhile ('='/=) arg
+                margstring = if null eqargstring then Nothing else Just (tail eqargstring)
+            (def, defs') <- getDef argname defs
+            case (argData def, margstring) of
+                (Nothing, Nothing) -> inner ((argID def, Nothing):parse) defs' args
+                (Just argdata, Just argstring) -> checkData argdata argstring >> inner ((argID def, Just argstring):parse) defs' args
+                (Nothing, Just _) -> Left $ "unexpected data after the argument: " ++ argID def
+                (Just argdata, Nothing) -> case args of
+                                    [] -> Left $ "expected some data after the argument: " ++ argID def
+                                    a:args' -> checkData argdata a >> inner ((argID def, Just a):parse) defs' args'
         getDef arg defs =
             case partition (\def -> elem arg $ catMaybes [('-':).(:[]) <$> argShort def, ("--"++) <$> argLong def]) defs of
                 ([], _) -> Left $ "unrecognized argument: " ++ arg
