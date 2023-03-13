@@ -178,14 +178,21 @@ sepByWeak p sep = do {
 } <|| return []
 
 getPatternTerm = describeError "Expected pattern term" $ do {
+    (c, l) <- difference getLabelOrOp (thisUsefulChar '(' >> getLiteral);
+    (thisUsefulChar '@' >> do {
+        (_, ml, p) <- getPatternTermInner;
+        case ml of
+            Just _ -> pfail "Cannot assign two labels to the same pattern" --TODO: questo errore non viene considerato perché non c'è un require, ma se ci fosse si andrebbe in conflitto con la sintassi degli operatori... che fare?
+            _ -> return (c, Just l, p)
+    }) <|| return (c, Just l, SynPatWildcard)
+} <|| getPatternTermInner
+
+getPatternTermInner = do {
     (c, s) <- getString;
     return (c, Nothing, SynPatListConss (map (\char->(c, Nothing, SynPatLiteral $ LitCharacter char)) s) (c, Nothing, SynPatListNil))
 } <|| do {
     (c, l) <- getLiteral;
     return (c, Nothing, SynPatLiteral l)
-} <|| do {
-    (c, l) <- difference getLabelOrOp (thisUsefulChar '(' >> getLiteral);
-    return (c, Just l, SynPatWildcard)
 } <|| do {
     (c, l) <- getPathCapitalLabel;
     return (c, Nothing, SynPatVariant l [])
