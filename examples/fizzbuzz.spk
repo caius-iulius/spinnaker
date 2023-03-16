@@ -6,4 +6,4 @@ def fizzbuzz = \n -> put rem n 3, rem n 5
     | _, 0 -> "Buzz"
     | _, _ -> show n
 
-def main = putStr $ List.Text.unlines $ map fizzbuzz $ 1..=15
+def main = putStr $ Text.unlines $ map fizzbuzz $ 1..=15

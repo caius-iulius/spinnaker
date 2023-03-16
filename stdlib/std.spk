@@ -6,15 +6,16 @@ mod pub List "list.spk"
 
 mod pub Maybe "maybe.spk"
 
+mod pub Text "text.spk"
+
 def pub max : forall a. {Ord a} => a -> a -> a
-    = \a, b -> put a > b
-    | True -> a
-    | False -> b
+    = \a, b -> if a > b then a else b
+def pub min : forall a. {Ord a} => a -> a -> a
+    = \a, b -> if a < b then a else b
 
 def innerdotdot = \from, to ->
-    put from >= to
-    | True -> []
-    | _ -> toEnum from :: innerdotdot (from+1) to
+    if from >= to then []
+    else toEnum from :: innerdotdot (from + 1) to
 def pub (..) : forall a. {Enum a} => a -> a -> [a]
     = \from, to ->
         innerdotdot (fromEnum from) (fromEnum to)

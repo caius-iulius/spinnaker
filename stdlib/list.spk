@@ -110,10 +110,21 @@ def pub find : forall a. (a -> Bool) -> [a] -> Maybe.Maybe a =
         then Maybe.Some x
         else find f xs
 
+def findIndexAux =
+    \ _, _, [] -> Maybe.None
+    | n, f, [x | xs] -> if f x
+        then Maybe.Some n
+        else findIndexAux (n+1) f xs
+and pub findIndex : forall a. (a -> Bool) -> [a] -> Maybe.Maybe Int
+    = findIndexAux 0
+
+def pub elemIndex : forall a. {Eq a} => a -> [a] -> Maybe.Maybe Int
+    = \a -> findIndex (a ==)
+
 def pub lookup : forall a b. {Eq a} => a -> [(a, b)] -> Maybe.Maybe b
     = \a -> fmap snd <| find (fst |> (a ==))
 
-# TODO: partition, elemIndex, elemIndices, findIndex, findIndices
+# TODO: partition, elemIndices, findIndex serio, findIndices
 
 # TODO: forse conviene utilizzare una funzione passata come argomento come trasformazione di c e l, oppure reimplementare take e drop autonomamente
 def splitAtAux = \c, i, l -> put i, l
@@ -161,15 +172,4 @@ def transposeAux =
 and pub transpose : forall a. [[a]] -> [[a]] =
     \ [] -> []
     | ls -> transposeAux ls
-
-mod pub Text {
-    def pub unwords : [String] -> String =
-        \ [] -> []
-        | ws -> foldl1 (\t, w -> t ++ ' ':: w) ws
-
-    def pub unlines : [String] -> String =
-        \ [] -> []
-        | [l | ls] -> l ++ '\n'::unlines ls
-}
-
-# TODO: words, lines, intercalate, subsequences, permutations, enumerate
+# TODO: intercalate, subsequences, permutations, enumerate

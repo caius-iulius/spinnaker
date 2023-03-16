@@ -1,0 +1,76 @@
+use Core
+
+mod Maybe "maybe.spk"
+use Maybe
+mod List "list.spk"
+use List
+
+def pub unwords : [String] -> String =
+    \ [] -> []
+    | ws -> foldl1 (\t, w -> t ++ ' ':: w) ws
+
+def pub unlines : [String] -> String =
+    \ [] -> []
+    | [l | ls] -> l ++ '\n'::unlines ls
+
+# TODO: words, lines
+
+rel pub Read a = readRest : String -> Maybe (a, String)
+
+def pub readMaybe : forall a. {Read a} => String -> Maybe a
+    = \s ->
+        (p, r) <- readRest s;
+        if null r then return p
+        else None
+
+def pub read : forall a. {Read a} => String -> a
+    = \s -> put readMaybe s
+    | None -> error "read: no parse"
+    | Some p -> p
+
+# TODO: whitespace e paren-insensitive ? Ammetti underscore?
+
+def readDigits = \s ->
+    let (ds, r) = splitWhile (\d -> any (d ==) "0123456789") s ->
+    (map (fromEnum |> (- fromEnum '0')) ds, r)
+
+def readInt =
+    let aux = \s ->
+        let (ds, r) = readDigits s ->
+        if (length ds != 0)
+            then Some (foldl (\st, d -> (10 * st) + d) 0 ds, r)
+            else None
+    ->
+    \ ['-' | s] -> fmap (\(n, r) -> (0 - n, r)) (aux s)
+    | s -> aux s
+
+#TODO TEST
+def readFlt =
+    let aux = \s ->
+        let (intds, r) = readDigits s ->
+        if null intds then None
+        else let (fltds, r') =
+            put r
+            | ['.' | chrs] -> readDigits chrs #TODO None se è vuoto
+            | _ -> ([], r)
+        -> Some (fst $ foldl (\(n, p), d -> (n + fromInt d * p, p * 0.1)) (0.0, 10.0 ^ (length intds - 1)) (intds ++ fltds), r')
+    ->
+    \ ['-' | s] -> fmap (\(n, r) -> (0.0 - n, r)) (aux s)
+    | s -> aux s
+
+def readBool =
+    \ ['T','r','u','e' | xs] -> Some (True, xs)
+    | ['F','a','l','s','e' | xs] -> Some (False, xs)
+    | _ -> None
+
+inst Read Int {
+    def readRest = readInt
+}
+
+inst Read Flt {
+    def readRest = readFlt
+}
+
+inst Read Bool {
+    def readRest = readBool
+}
