@@ -14,15 +14,15 @@ syn match spinnakerOperator "\v[:!$%&\*\+/\-<=>\?@\\^|~.]+"
 syn match spinnakerNumber "\v[0-9][0-9_]*"
 syn match spinnakerFloat "\v[0-9][0-9_]*\.[0-9_]+"
 syn keyword spinnakerTodo TODO FIXME NOTE contained
-syn match spinnakerLineComment "#.*$" contains=mylangTodo
+syn match spinnakerLineComment "#.*$" contains=spinnakerTodo
 syn match spinnakerIdentifier "[_a-z][a-zA-Z0-9_']*"
 syn match spinnakerChar "'[^'\\]'\|'\\.'\|'\\u[0-9a-fA-F]\{4}'"
 syn region spinnakerString start=+"+ skip=+\\\\\|\\"+ end=+"+
   \ contains=@Spell
 syn match spinnakerType "[A-Z][a-zA-Z0-9_']*"
-syn region spinnakerParens matchgroup=mylangDelimiter start="(" end=")" contains=TOP,@Spell
-syn region spinnakerBrackets matchgroup=mylangDelimiter start="\[" end="]" contains=TOP,@Spell
-syn region spinnakerBlock matchgroup=mylangDelimiter start="{" end="}" contains=TOP,@Spell
+syn region spinnakerParens matchgroup=spinnakerDelimiter start="(" end=")" contains=TOP,@Spell
+syn region spinnakerBrackets matchgroup=spinnakerDelimiter start="\[" end="]" contains=TOP,@Spell
+syn region spinnakerBlock matchgroup=spinnakerDelimiter start="{" end="}" contains=TOP,@Spell
 syn match spinnakerSeparator  "[,;]"
 
 highlight def link spinnakerIdentifier Normal

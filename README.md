@@ -46,7 +46,7 @@ def sub3 = (- 3)
 ```
 Keep in mind that the space between the minus sign and the three is significant. If it weren't there the parser would read an integer literal of value `-3`. This doesn't apply to the plus sign.
 
-Type relations (analogous to Haskell's MVTCs) provide a mechanism for terse ad-hoc polymorphism:
+Type relations (analogous to Haskell's MultiParamTypeClasses) provide a mechanism for terse ad-hoc polymorphism:
 ```
 def string_true_5 = show True ++ show 5
 ```
