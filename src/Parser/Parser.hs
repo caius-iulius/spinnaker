@@ -163,26 +163,19 @@ getPathCapitalLabel = do {
 
 -- Parser vari per pattern
 --TODO: assicurarsi che non avere il require non causi backtracking indesiderato
-getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> {-require $-} (thisUsefulChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
+getListPat = skipUseless >> (thisChar '[' >>= \(c, _) -> require $ (thisUsefulChar ']' >> return (c, Nothing, SynPatListNil)) <|| do {
     es <- sepBy1 getPatternExpr (thisUsefulChar ',');
     final <- option (c, Nothing, SynPatListNil) (thisSyntaxElem "|" >> require getPatternExpr);
     thisUsefulChar ']';
     return (c, Nothing, SynPatListConss es final)
 })
 
-
-sepByWeak p sep = do {
-    e <- p;
-    es <- munch (sep >> p);
-    return (e:es)
-} <|| return []
-
 getPatternTerm = describeError "Expected pattern term" $ do {
     (c, l) <- difference getLabelOrOp (thisUsefulChar '(' >> getLiteral);
     (thisUsefulChar '@' >> do {
         (_, ml, p) <- getPatternTermInner;
         case ml of
-            Just _ -> pfail "Cannot assign two labels to the same pattern" --TODO: questo errore non viene considerato perché non c'è un require, ma se ci fosse si andrebbe in conflitto con la sintassi degli operatori... che fare?
+            Just _ -> pfatal "Cannot assign two labels to the same pattern"
             _ -> return (c, Just l, p)
     }) <|| return (c, Just l, SynPatWildcard)
 } <|| getPatternTermInner
@@ -202,9 +195,8 @@ getPatternTermInner = do {
 } <|| getListPat
   <|| do {
     (c, _) <- thisUsefulChar '(';
-    --TODO: il sepByWeak è giusto?
-    m <- sepByWeak getPatternExpr (thisUsefulChar ',');
-    thisUsefulChar ')'; --TODO: il require mancante fa casini?
+    m <- sepBy getPatternExpr (thisUsefulChar ',');
+    require $ thisUsefulChar ')';
 
     if length m == 1
     then return $ head m
@@ -285,7 +277,7 @@ getMeta = getBindSyn <|| getLambda <|| getIfThenElse <|| getLet <|| getPut <|| d
 } <|| getExpr
 
 getBindSyn = do {
-    p@(c, _, _) <- getPatternExpr;
+    p@(c, _, _) <- recover getPatternExpr;
     thisSyntaxElem "<-";
     require $ do {
         me <- getMeta;

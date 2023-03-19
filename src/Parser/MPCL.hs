@@ -60,6 +60,12 @@ require p = PParse(\cs ->
         PFail c e -> PFatal c e
         resp -> resp
     )
+--Restituisce un parser che converte i fallimenti catastrofici in fallimenti normali
+recover p = PParse(\cs ->
+    case parse p cs of
+        PFatal c e -> PFail c e
+        resp -> resp
+    )
 
 discard :: Parser c a -> Parser c ()
 discard = fmap (const ())
