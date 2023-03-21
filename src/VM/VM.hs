@@ -53,80 +53,80 @@ type VMState = (VMCode, VMStack, VMEnv)
 type VMMonad = ReaderT [(Name, VMCode)] IO
 
 execComb :: Name -> VMStack -> VMEnv -> VMMonad VMVal
-execComb "_addInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_addInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (i0+i1))
     in execVM ([IRet], v:s, [])
-execComb "_subInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_subInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (i0-i1))
     in execVM ([IRet], v:s, [])
-execComb "_mulInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_mulInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (i0*i1))
     in execVM ([IRet], v:s, [])
-execComb "_divInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_divInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (div i0 i1))
     in execVM ([IRet], v:s, [])
-execComb "_remInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_remInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (rem i0 i1))
     in execVM ([IRet], v:s, [])
-execComb "_equInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_equInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VVariant (if i0 == i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_neqInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_neqInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VVariant (if i0 /= i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_leqInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_leqInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VVariant (if i0 <= i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_greInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
+execComb "spinnaker_greInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VVariant (if i0 > i1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
 
-execComb "_addFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_addFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VConst (LitFloating (f0+f1))
     in execVM ([IRet], v:s, [])
-execComb "_subFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_subFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VConst (LitFloating (f0-f1))
     in execVM ([IRet], v:s, [])
-execComb "_mulFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_mulFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VConst (LitFloating (f0*f1))
     in execVM ([IRet], v:s, [])
-execComb "_divFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_divFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VConst (LitFloating (f0/f1))
     in execVM ([IRet], v:s, [])
-execComb "_equFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_equFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VVariant (if f0 == f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_neqFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_neqFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VVariant (if f0 /= f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_leqFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_leqFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VVariant (if f0 <= f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_greFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
+execComb "spinnaker_greFlt" s [VConst(LitFloating f1),VConst(LitFloating f0)] =
     let v = VVariant (if f0 > f1 then "True" else "False") []
     in execVM ([IRet], v:s, [])
-execComb "_convItoF" s [VConst(LitInteger i)] =
+execComb "spinnaker_convItoF" s [VConst(LitInteger i)] =
     execVM ([IRet], VConst(LitFloating(fromIntegral i)):s, [])
-execComb "_floorFlt" s [VConst(LitFloating f)] =
+execComb "spinnaker_floorFlt" s [VConst(LitFloating f)] =
     execVM ([IRet], VConst(LitInteger(floor f)):s, [])
 
-execComb "_convItoC" s [VConst(LitInteger i)] =
+execComb "spinnaker_convItoC" s [VConst(LitInteger i)] =
     execVM ([IRet], VConst(LitCharacter(chr i)):s, [])
-execComb "_convCtoI" s [VConst(LitCharacter c)] =
+execComb "spinnaker_convCtoI" s [VConst(LitCharacter c)] =
     execVM ([IRet], VConst(LitInteger(ord c)):s, [])
-execComb "_putChr" s [rw,VConst(LitCharacter ch)] = do
+execComb "spinnaker_putChr" s [rw,VConst(LitCharacter ch)] = do
     lift $ putChar ch
     execVM ([IRet], rw:s, [])
-execComb "_getChr" s [rw] = do
+execComb "spinnaker_getChr" s [rw] = do
     lift $ hFlush stdout
     c <- lift getChar
     execVM ([IRet], VVariant "(,)" [VConst(LitCharacter c), rw]:s, [])
-execComb "_isEOF" s [rw] = do
+execComb "spinnaker_isEOF" s [rw] = do
     cond <- lift isEOF
     let v = VVariant (if cond then "True" else "False") []
     execVM ([IRet], VVariant "(,)" [v, rw]:s, [])
 
-execComb "_exit" s [rw] = lift exitSuccess
+execComb "spinnaker_exit" s [rw] = lift exitSuccess
 
 execComb n s e = do
     g <- ask

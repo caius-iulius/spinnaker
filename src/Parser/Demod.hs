@@ -406,7 +406,7 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModTypeSyn c visib l 
         (qmap, qlist) <- buildQmapQlist c qls
         te <- demodTypeExpr env qmap ste
         return (DemodEnv ms vs (envmapInsert l (visibtoenv visib, Right (map snd qlist, te)) ts) cs rs, fs, BlockProgram [] [] [] [] [])
-demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModExt c visib l tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
+demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModExt c visib l lext tas tr) --TODO: Controlla se in moduli diversi vengono definiti due combinatori con lo stesso nome. FORSE BASTA USARE SEMPRE LO STESSO SUFFISSO (extSuffix)
     | envmapDefd l vs = fail $ show c ++ " Val: " ++ show l ++ " already defined"
     | otherwise = do
         tas' <- mapM (demodTypeExpr env Map.empty) tas
@@ -415,8 +415,8 @@ demodModDef core env@(DemodEnv ms vs ts cs rs) fs workdir (ModExt c visib l tas 
         suffixes <- mapM (const newUniqueSuffix) [0..length tas-1]
         let vnames = map ("_v"++) suffixes
             ves = map (\myl->(c,DataNOTHING,ExprLabel myl)) vnames
-            finale = foldr (\myl e->(c,DataNOTHING, ExprLambda myl e)) (c, DataNOTHING, ExprCombinator l ves) vnames
-        return (DemodEnv ms (envmapInsert l (visibtoenv visib, l++defsuffix) vs) ts cs rs, fs, BlockProgram [] [] [ExtDef c l tas' tr'] [[ValDef c (l++defsuffix) Nothing [] finale]] [])
+            finale = foldr (\myl e->(c,DataNOTHING, ExprLambda myl e)) (c, DataNOTHING, ExprCombinator lext ves) vnames
+        return (DemodEnv ms (envmapInsert l (visibtoenv visib, l++defsuffix) vs) ts cs rs, fs, BlockProgram [] [] [ExtDef c l lext tas' tr'] [[ValDef c (l++defsuffix) Nothing [] finale]] [])
 
 concatBlockPrograms (BlockProgram datagroups reldefs extdefs valgroups instdefs) (BlockProgram datagroups' reldefs' extdefs' valgroups' instdefs') = BlockProgram (datagroups++datagroups') (reldefs++reldefs') (extdefs++extdefs') (valgroups++valgroups') (instdefs++instdefs')
 

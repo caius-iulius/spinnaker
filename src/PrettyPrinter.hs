@@ -18,7 +18,7 @@ toTreeHLExpr (c, dt, ExprHint hint e) = Node (show c ++ " DT:" ++ show dt ++ " H
 
 toTreeHLValDef (ValDef c s t ps e) = Node (show c ++ " Defining val: " ++ show s ++ " typehint: " ++ show t ++ " qualifiers: " ++ show ps) [toTreeHLExpr e]
 
-toTreeHLExtDef (ExtDef c l tas tr) = Node (show c ++ " External combinator: " ++ show l) [Node "with arg " $ map (\ta->Node (show ta)[]) tas, Node "and return type" [Node (show tr) []]]
+toTreeHLExtDef (ExtDef c l lext tas tr) = Node (show c ++ " External combinator: " ++ show l ++ " which imports: " ++ show lext) [Node "with arg " $ map (\ta->Node (show ta)[]) tas, Node "and return type" [Node (show tr) []]]
 toTreeHLDataVariant (DataVariant c labl args) = Node (show c ++ " DataVariant: " ++ show labl) (map (\t->Node ("Arg: " ++ show t) []) args)
 toTreeHLDataDef (DataDef c labl quants variants) = Node (show c ++ " Defining data: " ++ show labl ++ " with quantifiers: " ++ show quants)
     (map toTreeHLDataVariant variants)
@@ -92,5 +92,5 @@ toTreeSynModDef (ModValGroup vvdefs) = Node "Group of vals" (map toTreeSynValDef
 toTreeSynModDef (ModDataGroup group) = Node "Group of datas" (map toTreeSynDataDef group)
 toTreeSynModDef (ModRel c v preds l qs defs) = Node (show c ++ " " ++ show v ++ " rel definition: " ++ show l ++ " tyargs: " ++ show qs ++ " with preds: {" ++ show preds ++ "}") (map toTreeSynRelValDecl defs)
 toTreeSynModDef (ModInst c qs preds head instdefs) = Node (show c ++ " Instance definition of: " ++ show head ++ " quantified with forall." ++ show qs ++ "{" ++ show preds ++ "}" ++ " with inst_val_defs") (map (\(c', l, e)->Node ("Defining: " ++ show l) [toTreeSynExpr e]) instdefs)
-toTreeSynModDef (ModExt c v l tas tr) = Node (show c ++ " Declaring " ++ show v ++ " combinator") [Node "with argument type" (map toTreeSynTypeExpr tas), Node "and return type" [toTreeSynTypeExpr tr]]
+toTreeSynModDef (ModExt c v l lext tas tr) = Node (show c ++ " Declaring " ++ show v ++ " combinator: " ++ show l ++ " which imports: " ++ show lext) [Node "with argument type" (map toTreeSynTypeExpr tas), Node "and return type" [toTreeSynTypeExpr tr]]
 toTreeSynMod (Module defs) = Node "Module" (map toTreeSynModDef defs)

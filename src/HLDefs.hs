@@ -31,7 +31,7 @@ data HLValDef
     = ValDef StdCoord String (Maybe (Qual DataType)) [Pred] HLExpr -- Cordinate della definizione, nome del valore, type hint, espressione
     deriving Show
 
-data HLExtDef = ExtDef StdCoord String [DataType] DataType
+data HLExtDef = ExtDef StdCoord String String [DataType] DataType
     deriving Show
 
 data HLDataVariant

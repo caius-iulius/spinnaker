@@ -183,13 +183,13 @@ def main = answer_to_everything + Nums.five
 ### FFI (sort of) <a name="ffi"></a>
 As of now, you can only use functions defined in the host language (which, at the moment, is just the `js` backend). They can be declared in Spinnaker as follows (note that they must be monomorphic):
 ```
-ext someExternalFunction : Int, Flt -> Bool
+ext someExternalFunction "functionName" : Int, Flt -> Bool
 
 def getABool = someExternalFunction 3 1.2
 ```
 This compiles to the following `js` call:
 ```
-someExternalFunction(3, 1.2)
+functionName(3, 1.2)
 ```
 Such approach fails when considering user-defined or polymorphic types, but it's sufficient to define a basic runtime.
 

@@ -22,75 +22,75 @@ class Tup4 {
     }
 }
 
-function _addInt(a, b) {
+function spinnaker_addInt(a, b) {
     return a + b;
 }
-function _subInt(a, b) {
+function spinnaker_subInt(a, b) {
     return a - b;
 }
-function _mulInt(a, b) {
+function spinnaker_mulInt(a, b) {
     return a * b;
 }
-function _divInt(a, b) {
+function spinnaker_divInt(a, b) {
     return Math.floor(a / b); //TODO euclidean division
 }
-function _remInt(a, b) {
+function spinnaker_remInt(a, b) {
     return a % b;
 }
-function _equInt (a, b) {
+function spinnaker_equInt (a, b) {
     return a === b;
 }
-function _neqInt (a, b) {
+function spinnaker_neqInt (a, b) {
     return a !== b;
 }
-function _leqInt (a, b) {
+function spinnaker_leqInt (a, b) {
     return a <= b;
 }
-function _greInt (a, b) {
+function spinnaker_greInt (a, b) {
     return a > b;
 }
 
-function _addFlt(a, b) {
+function spinnaker_addFlt(a, b) {
     return a + b;
 }
-function _subFlt(a, b) {
+function spinnaker_subFlt(a, b) {
     return a - b;
 }
-function _mulFlt(a, b) {
+function spinnaker_mulFlt(a, b) {
     return a * b;
 }
-function _divFlt(a, b) {
+function spinnaker_divFlt(a, b) {
     return a / b;
 }
-function _equFlt (a, b) {
+function spinnaker_equFlt (a, b) {
     return a === b;
 }
-function _neqFlt (a, b) {
+function spinnaker_neqFlt (a, b) {
     return a !== b;
 }
-function _leqFlt (a, b) {
+function spinnaker_leqFlt (a, b) {
     return a <= b;
 }
-function _greFlt (a, b) {
+function spinnaker_greFlt (a, b) {
     return a > b;
 }
 
-function _floorFlt(a) {
+function spinnaker_floorFlt(a) {
     return Math.floor(a);
 }
-function _convItoF(a) {
+function spinnaker_convItoF(a) {
     return a;
 }
 
-function _convItoC(a) {
+function spinnaker_convItoC(a) {
     return String.fromCharCode(a);
 }
-function _convCtoI(a) {
+function spinnaker_convCtoI(a) {
     return a.charCodeAt();
 }
 
 let chrbuffer = ""
-function _putChr(c,rw) {
+function spinnaker_putChr(c,rw) {
     chrbuffer = chrbuffer + c;
     if (c === '\n') {
         process.stdout.write(chrbuffer);
@@ -100,7 +100,7 @@ function _putChr(c,rw) {
 }
 
 let fs = require("fs");
-function _getChr(rw) {
+function spinnaker_getChr(rw) {
     process.stdout.write(chrbuffer);
     chrbuffer = "";
     let buffer = Buffer.alloc(4);
@@ -119,8 +119,8 @@ function _getChr(rw) {
     return new Tup2(string.substr(0,string.indexOf('\0')), rw);
 }
 
-//TODO _putChr serio, _getChr serio, _isEOF
-function _exit(a) {
+//TODO spinnaker_putChr serio, spinnaker_getChr serio, spinnaker_isEOF
+function spinnaker_exit(a) {
     process.exit(0);
     return a;
 }

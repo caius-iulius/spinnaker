@@ -2,33 +2,33 @@
 
 mod Builtins {
     # Combinatori primitivi
-    ext pub _addInt : Int, Int -> Int
-    ext pub _subInt : Int, Int -> Int
-    ext pub _mulInt : Int, Int -> Int
-    ext pub _divInt : Int, Int -> Int
-    ext pub _remInt : Int, Int -> Int
-    ext pub _equInt : Int, Int -> Bool
-    ext pub _neqInt : Int, Int -> Bool
-    ext pub _leqInt : Int, Int -> Bool
-    ext pub _greInt : Int, Int -> Bool
+    ext pub _addInt "spinnaker_addInt" : Int, Int -> Int
+    ext pub _subInt "spinnaker_subInt" : Int, Int -> Int
+    ext pub _mulInt "spinnaker_mulInt" : Int, Int -> Int
+    ext pub _divInt "spinnaker_divInt" : Int, Int -> Int
+    ext pub _remInt "spinnaker_remInt" : Int, Int -> Int
+    ext pub _equInt "spinnaker_equInt" : Int, Int -> Bool
+    ext pub _neqInt "spinnaker_neqInt" : Int, Int -> Bool
+    ext pub _leqInt "spinnaker_leqInt" : Int, Int -> Bool
+    ext pub _greInt "spinnaker_greInt" : Int, Int -> Bool
 
-    ext pub _addFlt : Flt, Flt -> Flt
-    ext pub _subFlt : Flt, Flt -> Flt
-    ext pub _mulFlt : Flt, Flt -> Flt
-    ext pub _divFlt : Flt, Flt -> Flt
-    ext pub _equFlt : Flt, Flt -> Bool
-    ext pub _neqFlt : Flt, Flt -> Bool
-    ext pub _leqFlt : Flt, Flt -> Bool
-    ext pub _greFlt : Flt, Flt -> Bool
-    ext pub _floorFlt : Flt -> Int
-    ext pub _convItoF : Int -> Flt
+    ext pub _addFlt "spinnaker_addFlt" : Flt, Flt -> Flt
+    ext pub _subFlt "spinnaker_subFlt" : Flt, Flt -> Flt
+    ext pub _mulFlt "spinnaker_mulFlt" : Flt, Flt -> Flt
+    ext pub _divFlt "spinnaker_divFlt" : Flt, Flt -> Flt
+    ext pub _equFlt "spinnaker_equFlt" : Flt, Flt -> Bool
+    ext pub _neqFlt "spinnaker_neqFlt" : Flt, Flt -> Bool
+    ext pub _leqFlt "spinnaker_leqFlt" : Flt, Flt -> Bool
+    ext pub _greFlt "spinnaker_greFlt" : Flt, Flt -> Bool
+    ext pub _floorFlt "spinnaker_floorFlt" : Flt -> Int
+    ext pub _convItoF "spinnaker_convItoF" : Int -> Flt
 
-    ext pub _convItoC : Int -> Chr
-    ext pub _convCtoI : Chr -> Int
-    ext pub _putChr : Chr, RealWorld_ -> RealWorld_
-    ext pub _getChr : RealWorld_ -> (Chr, RealWorld_)
-    ext pub _isEOF : RealWorld_ -> (Bool, RealWorld_)
-    ext pub _exit : Int, RealWorld_ -> RealWorld_
+    ext pub _convItoC "spinnaker_convItoC" : Int -> Chr
+    ext pub _convCtoI "spinnaker_convCtoI" : Chr -> Int
+    ext pub _putChr "spinnaker_putChr" : Chr, RealWorld_ -> RealWorld_
+    ext pub _getChr "spinnker_getChr" : RealWorld_ -> (Chr, RealWorld_)
+    ext pub _isEOF "spinnker_isEOF" : RealWorld_ -> (Bool, RealWorld_)
+    ext pub _exit "spinnker_exit" : Int, RealWorld_ -> RealWorld_
 }
 
 def pub (|>) : forall a b c. (a -> b) -> (b -> c) -> (a -> c)

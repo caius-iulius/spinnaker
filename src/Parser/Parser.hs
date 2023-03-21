@@ -454,10 +454,11 @@ getValDefinitions = do {
 getExternalDef = thisSyntaxElem "ext" >> require (do {
     v <- getVisibility;
     (c, label) <- getLabel;
+    lext <- snd <$> getString;
     thisSyntaxElem ":";
     tas <- sepBy getTypeExpr (thisUsefulChar ',');
     thisSyntaxElem "->";
-    ModExt c v label tas <$> getTypeExpr
+    ModExt c v label lext tas <$> getTypeExpr
 })
 -- Parser vari per datatype
 getVariant = do {
