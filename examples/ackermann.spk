@@ -1,10 +1,8 @@
 use Std
 
-def ackermann = \m,n ->
-    put m
-    | 0 -> n + 1
-    | _ -> put n
-        | 0 -> ackermann (m - 1) 1
-        | _ -> ackermann (m - 1) (ackermann m (n - 1))
+def ackermann =
+    \ 0, n -> n + 1
+    | m, 0 -> ackermann (m - 1) 1
+    | m, n -> ackermann (m - 1) (ackermann m (n - 1))
 
 def main = map (ackermann 3) (0..=5)

@@ -1,7 +1,0 @@
-data Prod3 a b c = Prod3 a b c
-
-inst forall a b c. Core.Show (Prod3 a b c) {
-    def show = \_ -> "Showing Prod3"
-}
-
-def main = Prod3 1 1.5 ()

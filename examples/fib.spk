@@ -1,9 +1,9 @@
 use Core
 
-def fibInternal =
+def fibAux =
     \ seed0, _, 0 -> seed0
-    | seed0, seed1, n -> fibInternal seed1 (seed0+seed1) (n - 1)
+    | seed0, seed1, n -> fibAux seed1 (seed0+seed1) (n - 1)
 
-def fib = fibInternal 0 1
+def fib = fibAux 0 1
 
 def main = fib 10

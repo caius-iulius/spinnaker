@@ -4,7 +4,8 @@ def collatz = \l, n ->
     if n == 1 then 1 :: l else
     collatz (n :: l) (
         put rem n 2
-        | 0 -> (n / 2)
-        | 1 -> (1 + 3*n))
+        | 0 -> n / 2
+        | 1 -> 1 + 3*n
+    )
 
 def main = reverse $ collatz [] 42

@@ -1,10 +1,6 @@
 use Std
 use List use Monad
 
-# def is_safe = \ps, n ->
-#     let safe_f = \(i, p) -> (p != n) && (abs (n - p) != (i + 1))
-#     -> all safe_f (enumerate ps)
-
 def is_safe_aux = \i, ps, n -> put ps
     | [] -> True
     | [p | ps'] ->

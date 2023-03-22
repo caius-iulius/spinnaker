@@ -27,9 +27,9 @@ This document is not intended to sell you on the language, but showcase it to pe
 
 ## Features <a name="features"></a>
 ### Basics <a name="basics"></a>
-Spinnaker enables brevity. Here is the simplest possible Hello World:
+Spinnaker enables brevity. Here is a very simple Hello World:
 ```
-def main = "Hello, World!"
+def main = Core.putStrLn "Hello, World!"
 ```
 Lambdas are the heart of the language, hence they require minimal syntax.
 Spinnaker features polymorphic type inference at the top-level:
@@ -198,6 +198,8 @@ Such approach fails when considering user-defined or polymorphic types, but it's
 - Tuple sections
 - Compilation to a C subset
 - Decent error messages
+- Support for defining libraries
+- Automatic generation of documentation from sources
 - The compiler is painfully slow, this needs fixing
 - Tail-call optimization
 - Redefine an FFI (in particular, value exports)
