@@ -1,0 +1,31 @@
+use Std
+use List
+
+mod Corners {
+    def pub v  = '│'
+    def pub h  = '─'
+    def pub ur = '┐'
+    def pub ul = '┌'
+    def pub dl = '└'
+    def pub dr = '┘'
+}
+
+def complete_line = \len, str -> str ++ replicate (len - length str) ' '
+def max_len = map length |> foldl max 0
+
+def complete = \lines ->
+    let maxlen = max_len lines ->
+    map (complete_line maxlen) lines
+
+def make_box_lines = \lines ->
+    let lines' = complete lines ->
+    let len = length $ head lines' ->
+    let lines'' = map ((++ [' ', Corners.v]) |> ([Corners.v, ' '] ++)) lines' ->
+    let edge = replicate (len + 2) Corners.h ->
+    let upper_edge = Corners.ul :: edge ++ [Corners.ur] ->
+    let lower_edge = Corners.dl :: edge ++ [Corners.dr] ->
+    upper_edge :: lines'' ++ [lower_edge]
+
+def make_box = Text.lines |> make_box_lines |> Text.unlines
+
+def main = putStr $ make_box $ "Hi\nline1\nline_2"

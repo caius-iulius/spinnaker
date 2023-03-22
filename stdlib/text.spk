@@ -13,7 +13,15 @@ def pub unlines : [String] -> String =
     \ [] -> []
     | [l | ls] -> l ++ '\n'::unlines ls
 
-# TODO: words, lines
+def linesAux =
+    \ ls, [], "" -> reverse ls
+    | ls, w, "" -> reverse (reverse w :: ls)
+    | ls, w, ['\n' | s] -> linesAux (reverse w :: ls) [] s
+    | ls, w, [c | s] -> linesAux ls (c :: w) s
+and pub lines : String -> [String]
+    = linesAux [] []
+
+# TODO: words
 
 rel pub Read a = readRest : String -> Maybe (a, String)
 
