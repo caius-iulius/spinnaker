@@ -63,7 +63,7 @@ execComb "spinnaker_mulInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (i0*i1))
     in execVM ([IRet], v:s, [])
 execComb "spinnaker_divInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
-    let v = VConst (LitInteger (div i0 i1))
+    let v = VConst (LitInteger (quot i0 i1))
     in execVM ([IRet], v:s, [])
 execComb "spinnaker_remInt" s [VConst(LitInteger i1),VConst(LitInteger i0)] =
     let v = VConst (LitInteger (rem i0 i1))

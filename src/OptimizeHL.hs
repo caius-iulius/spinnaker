@@ -144,7 +144,7 @@ sievePatterns v = reverse . loop []
 optimizeBI c t "spinnaker_addInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0+i1)))
 optimizeBI c t "spinnaker_subInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0-i1)))
 optimizeBI c t "spinnaker_mulInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0*i1)))
-optimizeBI c t "spinnaker_divInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (div i0 i1)))
+optimizeBI c t "spinnaker_divInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (quot i0 i1)))
 optimizeBI c t "spinnaker_remInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (rem i0 i1)))
 optimizeBI c t "spinnaker_equInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 == i1 then "True" else "False") [])
 optimizeBI c t "spinnaker_neqInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprConstructor (if i0 /= i1 then "True" else "False") [])

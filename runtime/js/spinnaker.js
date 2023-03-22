@@ -32,7 +32,7 @@ function spinnaker_mulInt(a, b) {
     return a * b;
 }
 function spinnaker_divInt(a, b) {
-    return Math.floor(a / b); //TODO euclidean division
+    return Math.trunc(a / b); //TODO euclidean division
 }
 function spinnaker_remInt(a, b) {
     return a % b;
