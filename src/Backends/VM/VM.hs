@@ -1,4 +1,4 @@
-module VM.VM where
+module Backends.VM.VM where
 
 import System.IO(hFlush,stdout,isEOF)
 import System.Exit(exitSuccess)

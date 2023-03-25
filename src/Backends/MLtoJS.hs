@@ -1,4 +1,4 @@
-module MLtoJS where
+module Backends.MLtoJS where
 import GHC.Unicode(isPrint, isSpace)
 import Control.Monad.State
 import Data.Maybe(isNothing, fromJust, fromMaybe)

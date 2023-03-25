@@ -1,9 +1,9 @@
-module VM.MLtoVM (progToVm) where
+module Backends.VM.MLtoVM (progToVm) where
 import Data.List(elemIndex)
 import Data.Maybe(fromMaybe)
 
 import MLDefs
-import VM.VM
+import Backends.VM.VM
 
 patToVm (MLPLiteral lit) = ([], PConst lit)
 patToVm (MLPVariant v ls) = (ls, PVariant v)

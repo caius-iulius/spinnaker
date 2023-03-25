@@ -20,9 +20,10 @@ import MLDefs
 import MLOps
 import MLOptimize
 import HLtoML
-import VM.MLtoVM
-import qualified VM.VM as VM
-import MLtoJS
+import Backends.VM.MLtoVM
+import qualified Backends.VM.VM as VM
+import Backends.MLtoJS
+import Backends.MLtoSCM
 
 timeTyper :: TyperState t -> TyperState (t, Double)
 timeTyper a = do
@@ -71,6 +72,12 @@ compile = do
             runtimehandle <- lift $ openFile (rootpath ++ "/runtime/js/spinnaker.js") ReadMode
             runtimecode <- lift $ hGetContents runtimehandle
             lift $ writeFile "out.js" $ runtimecode ++ jsprog
+        "scm" -> do
+            let scmprog = toscmProgram (typeddatasummary ++ defundatasummary) mlopti
+            rootpath <- getDataDir
+            runtimehandle <- lift $ openFile (rootpath ++ "/runtime/scm/spinnaker.scm") ReadMode
+            runtimecode <- lift $ hGetContents runtimehandle
+            lift $ writeFile "out.scm" $ runtimecode ++ scmprog
         "vm" -> do
             let vmprog = progToVm mlopti
             compLog $ "VM Bytecode: " ++ show vmprog
@@ -82,7 +89,7 @@ argdefs =
     [ Arg {argID="help", argShort=Just 'h', argLong=Just "help", argIsOpt=True, argData=Nothing, argDesc="Display this message"}
     , Arg {argID="verbose", argShort=Just 'v', argLong=Just "verbose", argIsOpt=True, argData=Nothing, argDesc="Verbose compiler output"}
     , Arg {argID="source_file", argShort=Just 'f', argLong=Just "file", argIsOpt=False, argData=Just $ ArgDataStr Nothing, argDesc="Specify source code file"}
-    , Arg {argID="backend", argShort=Nothing, argLong=Just "backend", argIsOpt=True, argData=Just $ ArgDataOpt ["js", "vm"] (Just "js"), argDesc="Specify the compiler backend"}
+    , Arg {argID="backend", argShort=Nothing, argLong=Just "backend", argIsOpt=True, argData=Just $ ArgDataOpt ["js", "vm", "scm"] (Just "js"), argDesc="Specify the compiler backend"}
     ]
 
 main = getArgs >>= \args ->

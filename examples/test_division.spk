@@ -1,0 +1,5 @@
+use Std
+
+def dividend_divisor_pairs = [(8, 3), (8, -3), (-8, 3), (-8, -3), (1, 2), (1, -2), (-1, 2), (-1, -2)]
+
+def main = map (\(a, b) -> (a / b, rem a b)) dividend_divisor_pairs
