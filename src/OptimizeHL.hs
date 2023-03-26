@@ -164,6 +164,27 @@ optimizeBI c t "spinnaker_floorFlt" [(_, _, ExprLiteral (LitFloating f))] = (c, 
 
 optimizeBI c t "spinnaker_convItoC" [(_, _, ExprLiteral (LitInteger i))] = (c, t, ExprLiteral (LitCharacter (chr i)))
 optimizeBI c t "spinnaker_convCtoI" [(_, _, ExprLiteral (LitCharacter ch))] = (c, t, ExprLiteral (LitInteger (ord ch)))
+
+optimizeBI c t "spinnaker_andBool" [(_, _, ExprConstructor b0 []),(_, _, ExprConstructor b1 [])] =
+    let b = case (b0, b1) of
+            ("True", "True") -> "True"
+            ("True", "False") -> "False"
+            ("False", "True") -> "False"
+            ("False", "False") -> "False"
+    in (c, t, ExprConstructor b [])
+optimizeBI c t "spinnaker_orBool" [(_, _, ExprConstructor b0 []),(_, _, ExprConstructor b1 [])] =
+    let b = case (b0, b1) of
+            ("True", "True") -> "True"
+            ("True", "False") -> "True"
+            ("False", "True") -> "True"
+            ("False", "False") -> "False"
+    in (c, t, ExprConstructor b [])
+optimizeBI c t "spinnaker_notBool" [(_, _, ExprConstructor b0 [])] =
+    let b = case b0 of
+            "True" -> "False"
+            "False" -> "True"
+    in (c, t, ExprConstructor b [])
+
 optimizeBI c t l es = (c, t, ExprCombinator l es)
 
 optimizeExpr :: HLExpr -> HLExpr

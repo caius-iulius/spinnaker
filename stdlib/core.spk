@@ -23,6 +23,10 @@ mod Builtins {
     ext pub _floorFlt "spinnaker_floorFlt" : Flt -> Int
     ext pub _convItoF "spinnaker_convItoF" : Int -> Flt
 
+    ext pub _andBool "spinnaker_andBool" : Bool, Bool -> Bool
+    ext pub _orBool "spinnaker_orBool" : Bool, Bool -> Bool
+    ext pub _notBool "spinnaker_notBool" : Bool -> Bool
+
     ext pub _convItoC "spinnaker_convItoC" : Int -> Chr
     ext pub _convCtoI "spinnaker_convCtoI" : Chr -> Int
     ext pub _putChr "spinnaker_putChr" : Chr, RealWorld_ -> RealWorld_
@@ -55,17 +59,11 @@ def pub snd : forall a b. (a, b) -> b
     = \(_,b)->b
 
 mod BoolCore {
-    def pub (&&) : Bool -> Bool -> Bool =
-        \ True, True -> True
-        | _, _ -> False
+    use Builtins
 
-    def pub (||) : Bool -> Bool -> Bool =
-        \ False, False -> False
-        | _, _ -> True
-
-    def pub not : Bool -> Bool =
-        \ True -> False
-        | False -> True
+    def pub (&&) : Bool -> Bool -> Bool = _andBool
+    def pub (||) : Bool -> Bool -> Bool = _orBool
+    def pub not : Bool -> Bool = _notBool
 } use pub BoolCore
 
 mod NumCore {

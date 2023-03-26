@@ -75,6 +75,16 @@ function spinnaker_greFlt (a, b) {
     return a > b;
 }
 
+function spinnaker_andBool (a, b) {
+    return a && b;
+}
+function spinnaker_orBool (a, b) {
+    return a || b;
+}
+function spinnaker_notBool (a) {
+    return !a;
+}
+
 function spinnaker_floorFlt(a) {
     return Math.floor(a);
 }
@@ -120,7 +130,7 @@ function spinnaker_getChr(rw) {
 }
 
 //TODO spinnaker_putChr serio, spinnaker_getChr serio, spinnaker_isEOF
-function spinnaker_exit(a) {
-    process.exit(0);
-    return a;
+function spinnaker_exit(i, rw) {
+    process.exit(i);
+    return rw;
 }

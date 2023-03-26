@@ -36,6 +36,13 @@
 (define-syntax spinnaker_greFlt (syntax-rules () ((_ a b)
     (> a b))))
 
+(define-syntax spinnaker_andBool (syntax-rules () ((_ a b)
+    (and a b))))
+(define-syntax spinnaker_orBool (syntax-rules () ((_ a b)
+    (or a b))))
+(define-syntax spinnaker_notBool (syntax-rules () ((_ a)
+    (not a))))
+
 (define-syntax spinnaker_floorFlt (syntax-rules () ((_ a)
     (inexact->exact (floor a)))))
 (define-syntax spinnaker_convItoF (syntax-rules () ((_ a)
@@ -52,5 +59,6 @@
 (define (spinnaker_getChr rw)
     (list "(,)" (read-char) rw))
 
-(define (spinnaker_exit a)
-    (exit))
+(define (spinnaker_exit i rw)
+    (exit i)
+    rw)

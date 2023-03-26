@@ -1,7 +1,7 @@
 module Backends.VM.VM where
 
 import System.IO(hFlush,stdout,isEOF)
-import System.Exit(exitSuccess)
+import System.Exit(exitWith, ExitCode(..))
 import Control.Monad.Reader
 import Data.Char(ord,chr)
 
@@ -110,6 +110,25 @@ execComb "spinnaker_convItoF" s [VConst(LitInteger i)] =
 execComb "spinnaker_floorFlt" s [VConst(LitFloating f)] =
     execVM ([IRet], VConst(LitInteger(floor f)):s, [])
 
+execComb "spinnaker_andBool" s [VVariant b1 [],VVariant b0 []] =
+    let b = case (b0, b1) of
+            ("True", "True") -> "True"
+            ("True", "False") -> "False"
+            ("False", "True") -> "False"
+            ("False", "False") -> "False"
+    in execVM ([IRet], VVariant b []:s, [])
+execComb "spinnaker_orBool" s [VVariant b1 [],VVariant b0 []] =
+    let b = case (b0, b1) of
+            ("True", "True") -> "True"
+            ("True", "False") -> "True"
+            ("False", "True") -> "True"
+            ("False", "False") -> "False"
+    in execVM ([IRet], VVariant b []:s, [])
+execComb "spinnaker_notBool" s [VVariant b0 []] =
+    let b = case b0 of
+            "True" -> "False"
+            "False" -> "True"
+    in execVM ([IRet], VVariant b []:s, [])
 execComb "spinnaker_convItoC" s [VConst(LitInteger i)] =
     execVM ([IRet], VConst(LitCharacter(chr i)):s, [])
 execComb "spinnaker_convCtoI" s [VConst(LitCharacter c)] =
@@ -126,13 +145,13 @@ execComb "spinnaker_isEOF" s [rw] = do
     let v = VVariant (if cond then "True" else "False") []
     execVM ([IRet], VVariant "(,)" [v, rw]:s, [])
 
-execComb "spinnaker_exit" s [rw] = lift exitSuccess
+execComb "spinnaker_exit" s [rw, VConst(LitInteger i)] = lift (exitWith (if i == 0 then ExitSuccess else ExitFailure i))
 
 execComb n s e = do
     g <- ask
     let c = case lookup n g of
                 Just c -> c
-                Nothing -> error $ "LOOKUP:" ++ show n
+                Nothing -> error $ "LOOKUP:" ++ show n ++ show e
     execVM (c,s,e)
 
 chooseBranch (VConst vlit) (PConst plit) c0 c1

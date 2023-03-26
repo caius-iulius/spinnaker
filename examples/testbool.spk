@@ -1,0 +1,11 @@
+use Std
+
+def test = \f ->
+    b <- [False, True];
+    a <- [False, True];
+    [f a b]
+
+def main =
+    putStr "and " >> print (test (&&)) >>
+    putStr "or  " >> print (test (||)) >>
+    putStr "not " >> print (map not [False, True])

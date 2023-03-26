@@ -195,10 +195,12 @@ functionName(3, 1.2)
 Such an approach fails when considering user-defined or polymorphic types, but it's sufficient to define a basic runtime.
 
 ## Roadmap <a name="roadmap"></a>
+Entries are in rough order of priority
 - Expand the standard library
 - Tuple sections
 - Compilation to a C subset
 - Decent error messages
+- Document compiler behavior and restrictions
 - Support for defining libraries
 - Automatic generation of documentation from sources
 - The compiler is painfully slow, this needs fixing
