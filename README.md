@@ -68,6 +68,14 @@ def head =
     \ [] -> error "Error message here"
     | [x | _] -> x
 ```
+Tuple sections are supported:
+```
+def need_fst = (, 1)
+def need_snd = (0, )
+def need_middles = (0,,,3)
+
+def zip = List.map2 (,)
+```
 Spinnaker supports monadic IO, which can be nicely perfomed with the `bind` syntax:
 ```
 use Std
@@ -197,7 +205,6 @@ Such an approach fails when considering user-defined or polymorphic types, but i
 ## Roadmap <a name="roadmap"></a>
 Entries are in rough order of priority
 - Expand the standard library
-- Tuple sections
 - Compilation to a C subset
 - Decent error messages
 - Document compiler behavior and restrictions

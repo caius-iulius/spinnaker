@@ -5,6 +5,7 @@ import System.Environment
 
 import Control.Monad.Trans
 import qualified Data.Map as Map
+import Data.Either(lefts)
 
 import HLDefs
 import SyntaxDefs
@@ -161,9 +162,11 @@ demodExpr env _ (c, SynExprConstructor pathlabl@(Path path labl)) = do
     (DemodEnv _ _ _ cs _) <- getPathEnv c env path
     (_, nlabl) <- envmapLookup (show c ++ " Unbound constructor: " ++ show pathlabl) labl cs
     return (c, DataNOTHING, ExprConstructor nlabl [])
-demodExpr env qmap (c, SynExprTuple es) = do
-    es' <- mapM (demodExpr env qmap) es
-    return (c, DataNOTHING, ExprConstructor (makeTupLabl $ length es') es')
+demodExpr env qmap (c, SynExprTuple mes) = do
+    mes' <- mapM (mapM (demodExpr env qmap)) mes
+    lsores <- mapM (maybe ((Left . ("_v" ++)) <$> newUniqueSuffix) (return . Right)) mes'
+    let es = map (either (\l -> (c, DataNOTHING, ExprLabel l)) id) lsores
+    return $ foldr (\l e -> (c, DataNOTHING, ExprLambda l e)) (c, DataNOTHING, ExprConstructor (makeTupLabl $ length es) es) (lefts lsores)
 demodExpr env qmap (c, SynExprLambda pses) = do
     pses' <- demodBranches env qmap pses
     suffixes <- mapM (const newUniqueSuffix) [1..length $ fst $ head $ pses]

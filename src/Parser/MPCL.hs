@@ -120,6 +120,13 @@ sepBy1 p sep = do {
 --Elabora zero o più p separati da sep
 sepBy p sep = sepBy1 p sep <|| return []
 
+--Elabora due o più p separati da sep
+sepBy2 p sep = do {
+    e <- p;
+    es <- munch1 (sep >> require p);
+    return (e:es)
+}
+
 --Se e ha successo il parser fallisce, altrimenti fai p
 difference p e = PParse(\cs ->
     case parse e cs of
@@ -129,6 +136,9 @@ difference p e = PParse(\cs ->
 
 --Se p è ha successo lo restituisce, altrimenti val
 option val p = p <|| return val
+
+--Se p è ha successo restituisce Just p, altrimenti Nothing
+optional p = fmap Just p <|| return Nothing
 
 --come ReadP.satisfy, ma newc è una funzione da una coordinata alla successiva, questo dà la possibilità di cambiare sistema di riferimento
 satisfy_internal newc cond emsg = PParse(\(coord, str) ->

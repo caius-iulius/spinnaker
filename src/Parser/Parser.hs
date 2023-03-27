@@ -249,13 +249,16 @@ getTerm = describeError "Expected term" $ do { --String
     return (c, SynExprConstructor l)
 } <|| getListExpr
   <|| getInlineUse
-  <|| do { -- '(' META ',' ... ',' META ')' o '(' META ')'
+  <|| do { -- '(' META ')'
     (c, _) <- thisUsefulChar '(';
-    m <- sepBy getMeta (thisUsefulChar ',');
+    m <- getMeta;
+    thisUsefulChar ')';
+    return m
+} <|| do { -- '(' META ',' ... ',' META ')' o '(' ')'
+    (c, _) <- thisUsefulChar '(';
+    m <- sepBy2 (optional getMeta) (thisUsefulChar ',') <|| return [];
     require $ thisUsefulChar ')';
-    if length m == 1
-    then return $ head m
-    else return (c, SynExprTuple m)
+    return (c, SynExprTuple m)
 }
 
 getExpr = do { --FCall e Label nel caso che ce ne sia una
@@ -440,7 +443,7 @@ getTyScheme = do {
 getValDefinition = require $ do {
     visib <- getVisibility;
     (c, label) <- getLabelOrOp;
-    typehint <- option Nothing (thisSyntaxElem ":" >> require (fmap Just getTyScheme));
+    typehint <- optional (thisSyntaxElem ":" >> require getTyScheme);
     thisSyntaxElem "=";
     SynValDef c visib label typehint <$> getMeta
 }

@@ -22,7 +22,7 @@ data SyntaxExprData
     | SynExprLabel Path --Riferimento a label
     | SynExprConstructor Path -- Riferimento a una variante
     | SynExprSndSection Path SyntaxExpr -- Sezioni di tipo (OP META)
-    | SynExprTuple [SyntaxExpr] --Elementi della n-tupla
+    | SynExprTuple [Maybe SyntaxExpr] --Elementi della n-tupla
     | SynExprLambda [SyntaxBranch] --Argomenti(anche "smontati" e con match) e valore interno
     | SynExprPut [SyntaxExpr] [SyntaxBranch] --Valore da controllare, lista di pattern e i branch corrispondenti
     | SynExprString String -- Costante stringa
