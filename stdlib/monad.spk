@@ -43,6 +43,7 @@ rel pub MonadTrans t = lift : forall m a. {Monad m, Monad (t m)} => m a -> t m a
     # 2) lift (m >>= f) = lift m >>= (lift <| f)
 
 mod pub State {
+    # qui la mancanza delle FunctionalDependencies è un problema, in diversi casi l'inferenza è indecidibile
     rel pub {Monad m} => MonadState m s =
         gets : m s,
         puts : s -> m ()

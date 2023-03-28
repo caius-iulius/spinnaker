@@ -4,14 +4,14 @@ use List
 mod pub Sort {
     def split = \l -> splitAt (length l / 2) l
 
-    def merge = \cmp, lists ->
-        put lists
-        | (l, []) -> l
-        | ([], l) -> l
-        | ([xa | xsa], [xb | xsb]) -> (
+    def merge = \cmp, ll, lr ->
+        put ll, lr
+        | l, [] -> l
+        | [], l -> l
+        | [xa | xsa], [xb | xsb] -> (
             put cmp xa xb
-            | True -> xa :: merge cmp (xsa, (xb::xsb))
-            | False -> xb :: merge cmp ((xa::xsa), xsb)
+            | True -> xa :: merge cmp xsa (xb::xsb)
+            | False -> xb :: merge cmp (xa::xsa) xsb
         )
 
     def pub sortBy = \cmp, list ->
@@ -19,7 +19,7 @@ mod pub Sort {
         | [] -> []
         | [x] -> list
         | _ -> let (left, right) = split list ->
-            merge cmp (sortBy cmp left, sortBy cmp right)
+            merge cmp (sortBy cmp left) (sortBy cmp right)
 
     def pub sort = sortBy (<=)
 }

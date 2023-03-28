@@ -212,6 +212,7 @@ Entries are in rough order of priority
 - Automatic generation of documentation from sources
 - The compiler is painfully slow, this needs fixing
 - Tail-call optimization
+- REPL
 - Redefine an FFI (in particular, function exports)
 - Add a `comptime` directive for certain types of expressions
 - Maybe implement the Perceus technique

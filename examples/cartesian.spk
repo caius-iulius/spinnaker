@@ -1,0 +1,16 @@
+use Std
+use List
+
+def cartesian = \l, l' ->
+    x <- l;
+    map (x,) l'
+
+def powerset =
+    \ [] -> [[]]
+    | [x | xs] ->
+        s <- powerset xs;
+        [s, x::s]
+
+def main =
+    _ <- print $ cartesian ('a'..='d') (1..=3);
+    print $ powerset (0..3)
