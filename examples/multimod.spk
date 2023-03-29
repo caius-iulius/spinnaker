@@ -1,5 +1,3 @@
-use Std
-
 mod M {
     mod A {
         def pub a = 10

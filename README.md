@@ -188,6 +188,10 @@ use A
 
 def main = answer_to_everything + Nums.five
 ```
+You can also bring a module in scope for a select expression with the inline use syntax. Note that parentheses aren't optional.
+```
+def main = Std.( 0..10 )
+```
 
 ### FFI (sort of) <a name="ffi"></a>
 As of now, you can only use functions defined in the host language (which, at the moment, is just the `js` backend). They can be declared in Spinnaker as follows (note that they must be monomorphic):

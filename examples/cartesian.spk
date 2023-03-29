@@ -1,5 +1,4 @@
 use Std
-use List
 
 def cartesian = \l, l' ->
     x <- l;

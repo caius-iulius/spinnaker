@@ -1,2 +1,1 @@
-def main =
-    Core.putStrLn "Ciao Mondo!"
+def main = Core.putStrLn "Ciao Mondo!"

@@ -1,9 +1,7 @@
-use Core
-
 def strtonum =
     \ "uno" -> 1
     | "due" -> 2
     | "tre" -> 3
     | _     -> -1
 
-def main = map strtonum ["uno", "due", "tre", "nonvalido", "un", "ue"]
+def main = Core.map strtonum ["uno", "due", "tre", "nonvalido", "un", "ue"]

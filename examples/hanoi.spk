@@ -1,4 +1,4 @@
-use Std
+use Core
 
 def hanoiAux =
     \ _, _, 0 -> []
