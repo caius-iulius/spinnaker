@@ -9,6 +9,7 @@ def pub unwords : [String] -> String =
     \ [] -> []
     | ws -> foldl1 (\t, w -> t ++ ' ':: w) ws
 
+# TODO: Tailcall
 def pub unlines : [String] -> String =
     \ [] -> []
     | [l | ls] -> l ++ '\n'::unlines ls

@@ -1,0 +1,15 @@
+use Std
+use List
+
+# TODO: metti nella stdlib
+def findIndicesAux =
+    \ _, acc, _, [] -> reverse acc
+    | n, acc, f, [x | xs] ->
+        findIndicesAux (n + 1) (if f x then n :: acc else acc) f xs
+and findIndices : forall a. (a -> Bool) -> [a] -> [Int]
+    = findIndicesAux 0 []
+
+def s0 = "gtcgattaca"
+def s1 = "atctcatcca"
+
+def main = putStrLn $ "DNA mismatches: " ++ show $ findIndices id $ map2 (!=) s0 s1

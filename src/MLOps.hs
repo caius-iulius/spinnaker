@@ -1,6 +1,17 @@
 module MLOps where
 import Data.List(union)
+import Control.Monad.State
+import CompDefs
 import MLDefs
+
+type MLState t = StateT Int CompMon t
+runMLState = runStateT
+
+newlab :: MLState String
+newlab = do
+    uid <- get
+    put (uid + 1)
+    return ("_ml#" ++ show uid)
 
 mlexprSize :: MLExpr -> Int
 mlexprSize (_, _, MLLiteral _) = 1
@@ -38,4 +49,3 @@ variantsUsed (_, _, MLError _ _) = []
 variantsUsedProg (ep, defs) =
     unions $ variantsUsed ep : map variantsUsedDef defs
     where variantsUsedDef (_, _, e) = variantsUsed e
-

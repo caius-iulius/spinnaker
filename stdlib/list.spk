@@ -52,14 +52,15 @@ def replicateAux =
 and pub replicate : forall a. Int -> a -> [a]
     = replicateAux []
 
-
+# TODO: Tailcall
 def pub map2 : forall a b c. (a -> b -> c) -> [a] -> [b] -> [c]
     = \f, l, l' -> put l, l'
     | [], _ -> []
     | _, [] -> []
     | [x | xs], [x' | xs'] -> f x x' :: map2 f xs xs'
 
-# zip = map2 (\a, b -> (a, b))
+# TODO: Tailcall
+# zip = map2 (,)
 def pub zip : forall a b. [a] -> [b] -> [(a, b)] =
     \ [], _ -> []
     | _, [] -> []
@@ -157,6 +158,7 @@ def pub (\\) : forall a. {Eq a} => [a] -> [a] -> [a]
 
 # TODO?: inits, tails
 
+# TODO: Tailcall
 def pub nub : forall a. {Eq a} => [a] -> [a] =
     \ [] -> []
     | [x | xs] -> x :: nub (filter (x !=) xs)

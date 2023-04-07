@@ -12,4 +12,4 @@ def verse = \n ->
         ++ " of beer on the wall, " ++ bottles n ++ " of beer.\nTake one down, pass it around, "
         ++ bottles (n - 1) ++ " of beer on the wall.\n"
 
-def main = Monad.mapM (putStrLn <| verse) (reverse $ 0..100) >> return ()
+def main = Monad.mapM_ (putStrLn <| verse) (reverse $ 0..100)

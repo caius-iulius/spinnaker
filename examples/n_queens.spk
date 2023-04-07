@@ -21,6 +21,6 @@ def n_queens = \n -> partial n n
 
 def print_sol =
     let print_row = \n, p -> putStrLn $ concat $ map (\x -> if x == p then "Q " else ". ") (0..n) ->
-    \s -> fmap (const ()) $ mapM (print_row (length s)) s
+    \s -> mapM_ (print_row (length s)) s
 
-def main = fmap (const ()) $ mapM (print_sol |> (>> putChr '\n')) $ n_queens 6
+def main = mapM_ (print_sol |> (>> putChr '\n')) $ n_queens 6

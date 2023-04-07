@@ -7,14 +7,6 @@ import MLDefs
 import MLOps
 import Control.Monad.State
 
-type MLState t = StateT Int CompMon t
-
-newlab :: MLState String
-newlab = do
-    uid <- get
-    put (uid + 1)
-    return ("_ml#" ++ show uid)
-
 pushvalassigns = map (uncurry $ pushvals [])
     where pushvals ps [] e = (ps, e)
           pushvals ps ((l,(c, ml, pd)):lps) e =

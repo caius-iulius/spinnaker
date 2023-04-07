@@ -8,6 +8,9 @@ def mapMAux = \procd, f, l -> put l
 def pub mapM : forall m a b. {Monad m} => (a -> m b) -> [a] -> m [b]
     = mapMAux []
 
+def pub mapM_ : forall m a b. {Monad m} => (a -> m b) -> [a] -> m () =
+    \ _, [] -> return ()
+    | f, [x | xs] -> f x >> mapM_ f xs
 
 rel pub {Monad m} => MonadPlus m =
     # LAWS
