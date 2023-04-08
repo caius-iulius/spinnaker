@@ -76,6 +76,10 @@ inlineComb cmb e@(c, t, ExprLambda l' le) = (c, t, ExprLambda l' (inlineComb cmb
 inlineComb cmb (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inlineComb cmb) vs)
     (map (\(p, e)-> (p, inlineComb cmb e)) pses))
 
+inlineDefs :: Combinator -> [Combinator] -> [Combinator]
+inlineDefs cmb [] = []
+inlineDefs cmb ((ld, il, as, e):defs') = (ld, il, as, inlineComb cmb e):inlineDefs cmb defs'
+
 sortInlines :: MonoProgram -> MonoProgram
 sortInlines (ep, defs) =
     let weighted = map (\c@(_,il,_,e)->((il,exprSize e), c)) defs
@@ -96,9 +100,6 @@ inlineProgram prog = loop [] (sortInlines prog)
             | appears l e == 0 && inlineHeuristic e (appears l ep + appearsDefs l (procd++defs))
                 = loop (inlineDefs cmb procd) (inlineComb cmb ep, inlineDefs cmb defs)
             | otherwise = loop (cmb:procd) (ep, defs)
-
-        inlineDefs cmb [] = []
-        inlineDefs cmb ((ld, il, as, e):defs') = (ld, il, as, inlineComb cmb e):inlineDefs cmb defs'
 
 data SieveRes
     = Always [(String, HLExpr)]
@@ -216,11 +217,27 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
 optimizeExpr (c, t, ExprLambda pat e) = (c, t, ExprLambda pat (optimizeExpr e))
 optimizeExpr (_, _, ExprHint _ e) = optimizeExpr e
 
+liftComb :: Combinator -> (Combinator, Combinator) --lambda e lifted
+liftComb (l, il, as, e) =
+    let (clts, e'@(innerc, innert, _)) = liftLambda e
+        newlab = l ++ "lifted"
+        newas = map (\(myl, myat) -> (myl ++ "lifted", myat)) as
+        newclts = map (\(myc, (myl, myat)) -> (myc, (myl ++ "lifted", myat))) clts
+        newinner = (innerc, innert, ExprCombinator newlab (map (\(al, at) -> (innerc, at, ExprLabel al)) $ newas ++ map snd newclts))
+        newlam = foldr (\(myc, (myl, myat)) mye@(_, myrt, _) -> (myc, buildFunType myat myrt, ExprLambda myl mye)) newinner newclts
+    in ((l, True, newas, newlam), (newlab, il, as ++ map snd clts, e'))
+    where --liftLambda :: HLExpr -> ([(StdCoord, (String, DataType))], HLExpr)
+          liftLambda (c, DataTypeApp (DataTypeApp _ a) _, ExprLambda l le) =
+            let (clts, le') = liftLambda le in ((c, (l, a)):clts, le')
+          liftLambda e = ([], e)
+liftCombs :: MonoProgram -> MonoProgram
+liftCombs (ep, defs) =
+    let (lams, lifts) = unzip $ map liftComb defs
+    in (foldr inlineComb ep lams, foldr inlineDefs lifts lams)
+
 optimizeProgram :: MonoProgram -> MonoProgram
 optimizeProgram p =
-    let p' = optimizeDefExprs p
-        p'' = inlineProgram p'
-        p''' = optimizeDefExprs p''
-    in p''' -- inlineProgram p'''
+    let passes = [optimizeDefExprs, inlineProgram, liftCombs, optimizeDefExprs]
+    in foldr ($) p passes
     where optimizeDefExprs (ep, defs) = (optimizeExpr ep,
             map (\(l,il,as,e)->(l,il,as,optimizeExpr e)) defs)
