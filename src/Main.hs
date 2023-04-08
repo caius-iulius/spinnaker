@@ -9,12 +9,13 @@ import qualified Paths_spinnaker as Paths
 import CompDefs
 import ArgParser
 import HLDefs
+import HLOps
 import PrettyPrinter
 import Parser.Demod
 import Typer.TypingDefs
 import Typer.Typer
 import Monomorphizer
-import OptimizeHL
+import HLOptimize
 import Defunctionalize
 import MLDefs
 import MLOps
@@ -42,6 +43,10 @@ frontendCompile fname = fmap (\(either, (uid, _, _)) -> (either, uid)) $ runType
     typerLog $ "Typed Program:\n" ++ drawTree (toTreeBlockProgram tyblock)
     return (env, entry, tyblock, (t_demod, t_typer))
 
+monoOptiPasses = [optimizeDefExprs, liftCombs, inlineProgram, optimizeDefExprs]
+                 --[liftCombs, optimizeDefExprs, inlineProgram, optimizeDefExprs]
+defunOptiPasses = [optimizeDefExprs, inlineProgram, optimizeDefExprs]
+
 compile = do
     source <- fmap (forceGetArg "source_file") getArgOptions
     ((either, uid),t_frontend) <- time $ frontendCompile source
@@ -50,11 +55,11 @@ compile = do
             Right (env, ep, block, ts) -> (ep, block, ts)
     let typeddatasummary = blockProgramToDataSummary block --TODO sposta questa operazione in qualche altro file
     (prog, t_mono) <- time $ monomorphizeProgram (ep, block)
-    (mono, t_opti) <- time $ return $ optimizeProgram prog
+    (mono, t_opti) <- time $ return $ optimizeProgram monoOptiPasses prog
     compLog $ "Mono " ++ showMonoProg mono
     ((defundatasummary, defraw, uid'), t_defun) <- time $ defunProgram mono uid
     compLog $ "Final data summary: " ++ show (typeddatasummary ++ defundatasummary)
-    (defopti, t_opti2) <- time $ return $ optimizeProgram defraw
+    (defopti, t_opti2) <- time $ return $ optimizeProgram defunOptiPasses defraw
     compLog $ "Defun " ++ showMonoProg defopti
 
     ((mlprog, uid''), t_toml) <- time $ hltoml defopti uid'

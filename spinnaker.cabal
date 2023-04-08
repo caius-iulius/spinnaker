@@ -28,29 +28,35 @@ executable spinnaker
 
     -- Modules included in this executable, other than Main.
     other-modules:
+        Paths_spinnaker
         CompDefs
         ArgParser
-        Defunctionalize
-        HLDefs
-        Monomorphizer
-        OptimizeHL
-        Parser.Demod
-        Parser.MPCL
-        Parser.Parser
-        Paths_spinnaker
-        PrettyPrinter
         ResultT
+        PrettyPrinter
+
+        Parser.MPCL
         SyntaxDefs
-        Typer.KindTyper
+        Parser.Parser
+        Parser.Demod
+
+        HLDefs
+        HLOps
+        Typer.TypingDefs
         Typer.MGUs
+        Typer.KindTyper
+        Typer.VariantComplete
         Typer.TypeTyper
         Typer.Typer
-        Typer.TypingDefs
-        Typer.VariantComplete
+
+        Monomorphizer
+        HLOptimize
+        Defunctionalize
+
         MLDefs
         MLOps
-        MLOptimize
         HLtoML
+        MLOptimize
+
         Backends.VM.MLtoVM
         Backends.VM.VM
         Backends.MLtoJS

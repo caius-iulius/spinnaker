@@ -5,9 +5,9 @@ import Data.Maybe(fromJust)
 
 import CompDefs
 import HLDefs
+import HLOps
 import Typer.TypingDefs
 import Parser.MPCL(dummyStdCoord)
-import OptimizeHL(inline, appearsPat)
 
 type ApplysEnv = [(DataType, (String, [(String, [(String, DataType)], String)]))]
 type DefunEnv = (Int, [Combinator], ApplysEnv)
