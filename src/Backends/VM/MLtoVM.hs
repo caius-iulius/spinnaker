@@ -6,7 +6,7 @@ import MLDefs
 import Backends.VM.VM
 
 patToVm (MLPLiteral lit) = ([], PConst lit)
-patToVm (MLPVariant v ls) = (ls, PVariant v)
+patToVm (MLPVariant v ls) = (map fst ls, PVariant v)
 
 exprToVm :: [String] -> MLExpr -> VMCode
 exprToVm _ (_, _, MLLiteral lit) = [IConst lit]
@@ -17,7 +17,7 @@ exprToVm vs (_, _, MLConstructor v es) =
     (es >>= exprToVm vs) ++ [IVariant v (length es)]
 exprToVm vs (_, _, MLCombinator l es) =
     (es >>= exprToVm vs) ++ [ICombApp l (length es)]
-exprToVm vs (_, _, MLTest l p epos eneg) =
+exprToVm vs (_, _, MLTest l _ p epos eneg) =
     let v = case elemIndex l vs of
                 Just i -> IAccess i
                 Nothing -> error $ "WHAT " ++ show l ++ show vs

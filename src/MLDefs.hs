@@ -5,7 +5,7 @@ import HLDefs (Literal)
 
 data MLPattern
     = MLPLiteral Literal
-    | MLPVariant String [String]
+    | MLPVariant String [(String, DataType)]
     deriving Show
 
 data MLExprData
@@ -13,7 +13,7 @@ data MLExprData
     | MLLabel String
     | MLConstructor String [MLExpr]
     | MLCombinator String [MLExpr]
-    | MLTest String MLPattern MLExpr MLExpr
+    | MLTest String DataType MLPattern MLExpr MLExpr
     | MLLet String MLExpr MLExpr
     | MLError StdCoord String --TODO: la coordinata si può prendere dall'esterno, sostituisci la stringa con una reference al tipo di errore, oppure specializza solo al pattern matching, o ancora utilizza un'espressione esterna
     deriving Show

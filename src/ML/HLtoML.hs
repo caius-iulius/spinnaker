@@ -7,51 +7,55 @@ import MLDefs
 import ML.MLOps
 import Control.Monad.State
 
+--TODO posso usare una hlexpr subst, questo potrebbe aiutarmi nel ristrutturare il tutto per compilare più test sulla stessa cosa insieme
 pushvalassigns = map (uncurry $ pushvals [])
     where pushvals ps [] e = (ps, e)
-          pushvals ps ((l,(c, ml, pd)):lps) e =
+          pushvals ps ((l,(c, pt, ml, pd)):lps) e =
               let ps' = case pd of
                     PatWildcard -> ps
-                    _ -> (l, (c, Nothing, pd)) : ps
+                    _ -> (l, (c, pt, Nothing, pd)) : ps
               in let e' = case ml of
                       Nothing -> e
                       Just patlab -> mllabsubst patlab l e
               in pushvals ps' lps e'
 
+chooseTestHeuristic :: [([(String, HLPattern)], MLExpr)] -> MLState (StdCoord, String, DataType, MLPattern)
 chooseTestHeuristic ((lps,_):lpsses) = 
     let occurences = map (\(l, p) -> ((l,p), length $ filter (any ((l ==) . fst) . fst) lpsses)) lps in
     case fst $ maximumOn snd occurences of
-    (lab, (c, _, PatLiteral lit)) -> return (c, (lab, MLPLiteral lit))
-    (lab, (c, _, PatVariant var subps)) -> do
-        newlabs <- mapM (const newlab) [1..length subps]
-        return (c, (lab, MLPVariant var newlabs))
+    (lab, (c, pt, _, PatLiteral lit)) -> return (c, lab, pt, MLPLiteral lit)
+    (lab, (c, pt, _, PatVariant var subps)) -> do
+        newlabs <- mapM (\(_,pt,_,_)-> (\pl -> (pl, pt)) <$> newlab) subps
+        return (c, lab, pt, MLPVariant var newlabs)
     where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
-patCompatibility (MLPLiteral l) (_,_, PatLiteral l') = if l == l' then Just [] else Nothing
-patCompatibility (MLPVariant v ls) (_,_, PatVariant v' ps) = if v == v' then Just $ zip ls ps else Nothing
+patCompatibility :: MLPattern -> HLPattern -> Maybe [(String, HLPattern)]
+patCompatibility (MLPLiteral l) (_,_,_, PatLiteral l') = if l == l' then Just [] else Nothing
+patCompatibility (MLPVariant v ls) (_,_,_, PatVariant v' ps) = if v == v' then Just $ zipWith (\myl myp -> (fst myl, myp)) ls ps else Nothing
 
-splitTests (lab, pat) = inner [] []
+splitTests :: String -> MLPattern -> [([(String, HLPattern)], MLExpr)] -> ([([(String, HLPattern)], MLExpr)], [([(String, HLPattern)], MLExpr)])
+splitTests lab pat = inner [] []
   where inner pos neg [] = (pos, neg)
-        inner pos neg (plse@(pls, e):plsses) =
-            case lookup lab pls of
-                Nothing -> inner (pos++[plse]) (neg++[plse]) plsses
+        inner pos neg (lpse@(lps, e):lpsses) =
+            case lookup lab lps of
+                Nothing -> inner (pos++[lpse]) (neg++[lpse]) lpsses
                 Just hlpat -> case patCompatibility pat hlpat of
-                    Nothing -> inner pos (neg++[plse]) plsses
-                    Just subtests -> inner (pos ++ [(subtests ++ filter ((lab /=) . fst) pls, e)]) neg plsses
+                    Nothing -> inner pos (neg++[lpse]) lpsses
+                    Just subtests -> inner (pos ++ [(subtests ++ filter ((lab /=) . fst) lps, e)]) neg lpsses
 
 treatput :: StdCoord -> DataType -> [([(String, HLPattern)], MLExpr)] -> MLState MLExpr
 treatput c t [] = return (c, t, MLError c "Pattern matching failure")
-treatput c t plsses = do
-    let plsses' = pushvalassigns plsses
-    if null $ fst $ head plsses' then return $ snd $ head plsses'
+treatput c t lpsses = do
+    let lpsses' = pushvalassigns lpsses
+    if null $ fst $ head lpsses' then return $ snd $ head lpsses'
     else do
-        (patc, testpat) <- chooseTestHeuristic plsses'
-        lift $ compLog $ show patc ++ " TEST PATTERN:" ++ show testpat
-        let (positive, negative) = splitTests testpat plsses'
+        (testc, testlab, testty, testpat) <- chooseTestHeuristic lpsses'
+        lift $ compLog $ show testc ++ " TEST PATTERN:" ++ show testpat
+        let (positive, negative) = splitTests testlab testpat lpsses'
         lift $ compLog $ show c ++ " COMPILING TESTS:" ++ show positive ++ show negative
-        mlpos <- treatput patc t positive
-        mlneg <- treatput patc t negative
-        return (c, t, uncurry MLTest testpat mlpos mlneg)
+        mlpos <- treatput testc t positive
+        mlneg <- treatput testc t negative
+        return (c, t, MLTest testlab testty testpat mlpos mlneg)
 
 exprtomlexpr :: HLExpr -> MLState MLExpr
 exprtomlexpr (c, t, ExprLiteral l) = return (c, t,MLLiteral l)

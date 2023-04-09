@@ -100,9 +100,9 @@ monomorphizePatInner s (PatVariant c ps) = do
     --TODO: In futuro trova i data giusti
 
 monomorphizePat :: String -> HLPattern -> MonoState HLPattern
-monomorphizePat s (c, ml, i) = do
+monomorphizePat s (c, t, ml, i) = do
     i' <- monomorphizePatInner s i
-    return (c, fmap (++s) ml, i')
+    return (c, t, fmap (++s) ml, i')
 
 monomorphizeInner :: DataType -> String -> HLExprData -> MonoState HLExprData
 monomorphizeInner _ _ e@(ExprLiteral _) = return e

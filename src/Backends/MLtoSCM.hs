@@ -71,10 +71,10 @@ genTest l (MLPVariant v ls) = do
     let a = "(if (string=? (car " ++ l ++ ") " ++ v' ++ ")\n (let ("
     ls <- mapM (\(n, innerl) -> do
             innerl' <- newMapLabel innerl
-            return $ "(" ++ innerl' ++ " " ++ variantAccess n l ++ ")") $ zip [0..] ls
+            return $ "(" ++ innerl' ++ " " ++ variantAccess n l ++ ")") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
     return $ a ++ unwords ls ++ ")"
 
-toscmExpr (_, _, MLTest l p pos neg) = do
+toscmExpr (_, _, MLTest l _ p pos neg) = do
     l' <- getLabel l
     test <- genTest l' p
     pos' <- toscmExpr pos

@@ -76,9 +76,9 @@ emitTest l (MLPVariant v ls) = do
     emit $ "if(" ++ l ++ " instanceof " ++ v' ++ "){\n"
     mapM_ (\(n, innerl) -> do
             innerl' <- newMapLabel innerl
-            emit $ "let " ++ innerl' ++ " = " ++ l ++ "[" ++ show n ++ "];\n") $ zip [0..] ls
+            emit $ "let " ++ innerl' ++ " = " ++ l ++ "[" ++ show n ++ "];\n") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
 
-tojsBlock final (_, _, MLTest l p pos neg) = do
+tojsBlock final (_, _, MLTest l _ p pos neg) = do
     l' <- getLabel l
     emitTest l' p
     tojsBlock final pos

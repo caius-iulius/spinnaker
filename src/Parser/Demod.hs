@@ -123,16 +123,17 @@ patValsInEnvInner c env (SynPatListConss ps final) = do
     (_, nlabl) <- envmapLookup (show c ++ " The Core module does not provide a definition for Cons") "Cons" cs
     (env', ps') <- patsValsInEnv env ps
     (env'', final') <- patValsInEnv env' final
-    return $ (\(_,_,r)->(env'', r)) $ foldr (\head tail -> (c, Nothing, PatVariant nlabl [head, tail])) final' ps'
+    return $ (\(_,_,_,r)->(env'', r)) $ foldr (\head tail -> (c, DataNOTHING, Nothing, PatVariant nlabl [head, tail])) final' ps'
+
 patValsInEnv env (c, Nothing, inner) = do
     (env', inner') <- patValsInEnvInner c env inner
-    return (env', (c, Nothing, inner'))
+    return (env', (c, DataNOTHING, Nothing, inner'))
 patValsInEnv (DemodEnv ms vs ts cs rs) (c, Just l, inner)
     | envmapDefd l vs = fail $ show c ++ " Label: " ++ show l ++ " is already bound"
     | otherwise = do
         suffix <- newUniqueSuffix
         (env', inner') <- patValsInEnvInner c (DemodEnv ms (envmapInsert l (visibtoenv Private, l++suffix) vs) ts cs rs) inner
-        return (env', (c, Just $ l++suffix, inner'))
+        return (env', (c, DataNOTHING, Just $ l++suffix, inner'))
 
 patsValsInEnv :: DemodEnv -> [SyntaxPattern] -> TyperState (DemodEnv, [HLPattern])
 patsValsInEnv env [] = return (env, [])

@@ -107,7 +107,9 @@ applyToComb (t@(DataTypeApp (DataTypeApp _ at) rt), (combl, vars)) = do
     s <- getUid
     let funl = "_fun" ++ s
         argl = "_arg" ++ s
-        vartobranch (vname, ls, cmb) = ([(dummyStdCoord, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, Just l, PatWildcard)) ls))], (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
+        vartobranch (vname, ls, cmb) =
+            ([(dummyStdCoord, t, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, lt, Just l, PatWildcard)) ls))],
+                (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
     return (combl, True, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
 
 applysToComb = do

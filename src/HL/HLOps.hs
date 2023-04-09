@@ -7,7 +7,7 @@ appearsPatInner l (PatLiteral _) = False
 appearsPatInner l (PatVariant c ps) = any (appearsPat l) ps
 
 appearsPat :: String -> HLPattern -> Bool
-appearsPat l (_, ml, ip) = Just l == ml || appearsPatInner l ip
+appearsPat l (_, _, ml, ip) = Just l == ml || appearsPatInner l ip
 
 appears :: String -> HLExpr -> Int
 appears _ (_, _, ExprLiteral _) = 0

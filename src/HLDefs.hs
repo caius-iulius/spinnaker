@@ -13,7 +13,7 @@ data HLPatternData
     | PatLiteral Literal --Il literal rappresentato
     | PatVariant String [HLPattern] --Nome della variante, lista di argomenti di questo
     deriving Show
-type HLPattern = (StdCoord, Maybe String, HLPatternData) -- coordinate, eventuale assegnazione del valore (tipo haskell labl@pat) e pattern vero e proprio
+type HLPattern = (StdCoord, DataType, Maybe String, HLPatternData) -- coordinate, eventuale assegnazione del valore (tipo haskell labl@pat) e pattern vero e proprio
 
 data HLExprData
     = ExprLiteral Literal --Valore letterale

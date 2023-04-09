@@ -79,8 +79,8 @@ sievePatternInner (PatVariant pvar ps) (_, _, ExprConstructor evar es) =
 sievePatternInner p e = Maybe
 
 sievePattern :: HLPattern -> HLExpr -> SieveRes
-sievePattern (_, Nothing, patdata) e = sievePatternInner patdata e
-sievePattern (_, Just l, patdata) e =
+sievePattern (_, _, Nothing, patdata) e = sievePatternInner patdata e
+sievePattern (_, _, Just l, patdata) e =
     let inner = sievePatternInner patdata e
         in concatRess [Always[(l, e)],inner]
 
@@ -144,11 +144,11 @@ optimizeBI c t l es = (c, t, ExprCombinator l es)
 
 optimizeExpr :: HLExpr -> HLExpr
 optimizeExpr e@(_, _, ExprLiteral _) = e
-optimizeExpr (c, t, ExprApp f a) =
+optimizeExpr (c, t, ExprApp f a@(_, at, _)) =
     let f' = optimizeExpr f
         a' = optimizeExpr a
     in case f' of
-        (_, _, ExprLambda l inner) -> optimizeExpr (c, t, ExprPut [a'] [([(c, Just l, PatWildcard)], inner)])
+        (_, _, ExprLambda l inner) -> optimizeExpr (c, t, ExprPut [a'] [([(c, at, Just l, PatWildcard)], inner)])
         _ -> (c, t, ExprApp f' a')
 optimizeExpr e@(_, _, ExprLabel _) = e
 optimizeExpr (c, t, ExprConstructor l es) = (c, t, ExprConstructor l (map optimizeExpr es))
