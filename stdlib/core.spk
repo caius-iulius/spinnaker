@@ -86,10 +86,13 @@ mod NumCore {
     }
 
     rel pub {Eq a} => Ord a =
-        (<) : a -> a -> Bool,
         (>) : a -> a -> Bool,
-        (>=) : a -> a -> Bool,
         (<=) : a -> a -> Bool
+    def pub (<) : forall a. {Ord a} => a -> a -> Bool
+        = \a, b -> b > a
+    def pub (>=) : forall a. {Ord a} => a -> a -> Bool
+        = \a, b -> b <= a
+
 
     rel pub Enum a =
         fromEnum : a -> Int,
@@ -156,17 +159,13 @@ mod NumCore {
     }
 
     inst Ord Int {
-        def (<) = \a,b->_greInt b a #TODO semplifica argomenti
         def (>) = _greInt
         def (<=)= _leqInt
-        def (>=)= \a,b->_leqInt b a
     }
 
     inst Ord Flt {
-        def (<) = \a,b->_greFlt b a
         def (>) = _greFlt
         def (<=)= _leqFlt
-        def (>=)= \a,b->_leqFlt b a
     }
 } use pub NumCore
 
