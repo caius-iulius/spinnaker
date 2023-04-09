@@ -1,10 +1,10 @@
-module HLOptimize where
+module HL.HLOptimize where
 import Data.Char (ord, chr)
 import Data.List (sortBy)
 import Data.Maybe(fromMaybe)
 
 import HLDefs
-import HLOps
+import HL.HLOps
 import Typer.TypingDefs
 
 inlineHeuristic :: HLExpr -> Int -> Bool

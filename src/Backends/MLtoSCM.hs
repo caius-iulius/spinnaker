@@ -4,7 +4,7 @@ import Data.Maybe(isNothing, fromJust, fromMaybe)
 import Data.Char(ord)
 import HLDefs
 import MLDefs
-import MLOps
+import ML.MLOps
 
 type IdentMap = [(String, String)]
 type CodeGen a = State (Int, IdentMap, IdentMap, IdentMap, [String]) a

@@ -1,10 +1,10 @@
-module HLtoML(hltoml) where
+module ML.HLtoML(hltoml) where
 import Parser.MPCL(StdCoord)
 import CompDefs
 import Typer.TypingDefs
 import HLDefs
 import MLDefs
-import MLOps
+import ML.MLOps
 import Control.Monad.State
 
 pushvalassigns = map (uncurry $ pushvals [])

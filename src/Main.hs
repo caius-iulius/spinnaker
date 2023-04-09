@@ -9,18 +9,18 @@ import qualified Paths_spinnaker as Paths
 import CompDefs
 import ArgParser
 import HLDefs
-import HLOps
+import HL.HLOps
 import PrettyPrinter
 import Parser.Demod
 import Typer.TypingDefs
 import Typer.Typer
-import Monomorphizer
-import HLOptimize
-import Defunctionalize
+import HL.Monomorphizer
+import HL.HLOptimize
+import HL.Defunctionalize
 import MLDefs
-import MLOps
-import MLOptimize
-import HLtoML
+import ML.MLOps
+import ML.MLOptimize
+import ML.HLtoML
 import Backends.VM.MLtoVM
 import qualified Backends.VM.VM as VM
 import Backends.MLtoJS

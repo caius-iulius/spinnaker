@@ -40,7 +40,7 @@ executable spinnaker
         Parser.Demod
 
         HLDefs
-        HLOps
+        HL.HLOps
         Typer.TypingDefs
         Typer.MGUs
         Typer.KindTyper
@@ -48,14 +48,14 @@ executable spinnaker
         Typer.TypeTyper
         Typer.Typer
 
-        Monomorphizer
-        HLOptimize
-        Defunctionalize
+        HL.Monomorphizer
+        HL.HLOptimize
+        HL.Defunctionalize
 
         MLDefs
-        MLOps
-        HLtoML
-        MLOptimize
+        ML.MLOps
+        ML.HLtoML
+        ML.MLOptimize
 
         Backends.VM.MLtoVM
         Backends.VM.VM

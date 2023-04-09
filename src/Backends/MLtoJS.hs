@@ -4,7 +4,7 @@ import Control.Monad.State
 import Data.Maybe(isNothing, fromJust, fromMaybe)
 import HLDefs
 import MLDefs
-import MLOps
+import ML.MLOps
 import Typer.TypingDefs(isTupLabl)
 
 type IdentMap = [(String, String)]

@@ -1,11 +1,11 @@
-module Defunctionalize (defunProgram) where
+module HL.Defunctionalize (defunProgram) where
 import Control.Monad.State
 import Data.List(nub, find)
 import Data.Maybe(fromJust)
 
 import CompDefs
 import HLDefs
-import HLOps
+import HL.HLOps
 import Typer.TypingDefs
 import Parser.MPCL(dummyStdCoord)
 

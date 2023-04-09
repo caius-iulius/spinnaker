@@ -1,4 +1,4 @@
-module HLOps where
+module HL.HLOps where
 import Data.Maybe (fromMaybe)
 import HLDefs
 

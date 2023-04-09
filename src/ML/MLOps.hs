@@ -1,4 +1,4 @@
-module MLOps where
+module ML.MLOps where
 import Data.List(union)
 import Control.Monad.State
 import CompDefs

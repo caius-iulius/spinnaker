@@ -1,6 +1,6 @@
-module MLOptimize where
+module ML.MLOptimize where
 import MLDefs
-import MLOps
+import ML.MLOps
 
 optimizeMLExpr (c, t, MLLiteral l) = (c, t, MLLiteral l)
 optimizeMLExpr (c, t, MLLabel l) = (c, t, MLLabel l)

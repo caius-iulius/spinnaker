@@ -1,4 +1,4 @@
-module Monomorphizer (monomorphizeProgram) where
+module HL.Monomorphizer (monomorphizeProgram) where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List(find, partition)
