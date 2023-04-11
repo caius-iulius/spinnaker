@@ -78,6 +78,11 @@ emitTest l (MLPVariant v ls) = do
             innerl' <- newMapLabel innerl
             emit $ "let " ++ innerl' ++ " = " ++ l ++ "[" ++ show n ++ "];\n") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
 
+tojsBlock final (_, _, MLLet l e0 e1) = do
+    l' <- newMapLabel l
+    e0' <- tojsExpr e0
+    emit $ "let " ++ l' ++ " = " ++ e0' ++ ";\n"
+    tojsBlock final e1
 tojsBlock final (_, _, MLTest l _ p pos neg) = do
     l' <- getLabel l
     emitTest l' p

@@ -8,20 +8,23 @@ mod pub Maybe "maybe.spk"
 
 mod pub Text "text.spk"
 
+mod pub Debug "debug.spk"
+
 def pub max : forall a. {Ord a} => a -> a -> a
     = \a, b -> if a > b then a else b
 def pub min : forall a. {Ord a} => a -> a -> a
     = \a, b -> if a < b then a else b
 
-def innerdotdot = \from, to ->
-    if from >= to then []
-    else toEnum from :: innerdotdot (from + 1) to
+def innerdotdot = \acc, from, to ->
+    if from > to then acc
+    else innerdotdot (toEnum to :: acc) from (to - 1)
 def pub (..) : forall a. {Enum a} => a -> a -> [a]
     = \from, to ->
-        innerdotdot (fromEnum from) (fromEnum to)
+        innerdotdot [] (fromEnum from) (fromEnum to - 1)
 def pub (..=) : forall a. {Enum a} => a -> a -> [a]
     = \from, to ->
-        innerdotdot (fromEnum from) (fromEnum to + 1)
+        innerdotdot [] (fromEnum from) (fromEnum to)
 
+#TODO sposta in debug
 def pub todo : forall a. a
     = error "TODO"

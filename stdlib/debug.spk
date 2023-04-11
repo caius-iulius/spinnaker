@@ -1,0 +1,14 @@
+use Core
+
+def carryPutStrLn : forall a. RealWorld_ -> String -> a -> (a, RealWorld_)
+    = \rw, s, a -> put s
+        | [] -> (a, UnsafeIO.putChr '\n' rw)
+        | [c | cs] ->
+            let rw' = UnsafeIO.putChr c rw ->
+            carryPutStrLn rw' cs a
+
+def pub trace : forall a. String -> a -> a
+    = \s, a -> fst (carryPutStrLn RealWorld_ s a)
+
+def pub traceit : forall a. {Show a} => a -> a
+    = \a -> trace (show a) a

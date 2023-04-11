@@ -414,6 +414,7 @@ mod IOCore {
     def pub print : forall a. {Show a} => a -> IO ()
         = show |> putStrLn
 
+    #TODO: sposta in Debug
     def errorAux : forall a. String -> RealWorld_ -> a
         = \s, rw -> errorAux s (UnsafeIO.exit 1 (UnsafeIO.putStrLn s rw))
     def pub error : forall a. String -> a
