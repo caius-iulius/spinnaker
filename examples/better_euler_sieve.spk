@@ -1,0 +1,18 @@
+use Std
+use List
+
+def filter_muls_aux =
+    \ acc, _, _, [] -> reverse acc
+    | acc, cur, n, l@[x | xs] ->
+        if cur > x then filter_muls_aux (x :: acc) cur n xs
+        else if cur == x then filter_muls_aux acc (cur+n) n xs
+        else filter_muls_aux acc (cur+n) n l
+def filter_muls = \x -> filter_muls_aux [] x x
+
+def sieve_iter =
+    \ lim, acc, l@[x | xs] ->
+        if lim < x*x then reverse acc ++ l
+        else sieve_iter lim (x :: acc) (filter_muls x xs)
+def sieve = \n -> sieve_iter n [] (2..=n)
+
+def main = putStrLn $ "There are " ++ show (length (sieve 10_000)) ++ " primes up to 10000"

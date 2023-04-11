@@ -139,6 +139,17 @@ mod NumCore {
         def (!=) = _neqInt
     }
 
+    inst Eq Bool {
+        def (==) =
+            \ True, True -> True
+            | False, False -> True
+            | _, _ -> False
+        def (!=) =
+            \ True, True -> False
+            | False, False -> False
+            | _, _ -> True
+    }
+
     inst Num Flt {
         def (+) = _addFlt
         def (-) = _subFlt

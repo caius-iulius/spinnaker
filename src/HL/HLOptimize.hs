@@ -164,7 +164,7 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
                 then optimizeExpr $
                     --TODO: questo effettua un inline forse troppo permissivo
                     foldl (\me (l,e')->inline [(l, e')] me) e bs
-                else (c, t, ExprPut vals' pses'')
+                else (c, t, ExprPut (map snd bs) [(map (\(ml, (mc, mt, _))-> (mc, mt, Just ml, PatWildcard)) bs, e)])
             _ -> (c, t, ExprPut vals' pses'')
         _ -> (c, t, ExprPut vals' pses'')
         --error $ "OPTIMIZED val " ++ show val' ++ "\npses " ++ show pses ++ "\npses'" ++ show pses'
