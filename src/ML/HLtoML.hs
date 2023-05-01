@@ -8,13 +8,14 @@ import ML.MLOps
 import Control.Monad.State
 
 --TODO posso usare una hlexpr subst, questo potrebbe aiutarmi nel ristrutturare il tutto per compilare più test sulla stessa cosa insieme
+pushvalassigns :: [([(String, HLPattern)], MLExpr)] -> [([(String, HLPattern)], MLExpr)]
 pushvalassigns = map (uncurry $ pushvals [])
     where pushvals ps [] e = (ps, e)
           pushvals ps ((l,(c, pt, ml, pd)):lps) e =
               let ps' = case pd of
                     PatWildcard -> ps
                     _ -> (l, (c, pt, Nothing, pd)) : ps
-              in let e' = case ml of
+                  e' = case ml of
                       Nothing -> e
                       Just patlab -> mllabsubst patlab l e
               in pushvals ps' lps e'
@@ -25,7 +26,7 @@ chooseTestHeuristic ((lps,_):lpsses) =
     case fst $ maximumOn snd occurences of
     (lab, (c, pt, _, PatLiteral lit)) -> return (c, lab, pt, MLPLiteral lit)
     (lab, (c, pt, _, PatVariant var subps)) -> do
-        newlabs <- mapM (\(_,pt,_,_)-> (\pl -> (pl, pt)) <$> newlab) subps
+        newlabs <- mapM (\(_,mypt,_,_)-> (\pl -> (pl, mypt)) <$> newlab) subps
         return (c, lab, pt, MLPVariant var newlabs)
     where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
@@ -80,6 +81,6 @@ hltoml (expr, combs) uid = flip runStateT uid $ do
     mlexpr <- exprtomlexpr expr
     defs <- mapM combtodef combs
     return (mlexpr, defs)
-        where combtodef (labl, il, args, expr) = do
-                mlexpr <- exprtomlexpr expr
-                return (labl, args, mlexpr)
+    where combtodef (labl, il, args, myexpr) = do
+            mlexpr <- exprtomlexpr myexpr
+            return (labl, args, mlexpr)

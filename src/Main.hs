@@ -17,7 +17,6 @@ import Typer.Typer
 import HL.Monomorphizer
 import HL.HLOptimize
 import HL.Defunctionalize
-import MLDefs
 import ML.MLOps
 import ML.MLOptimize
 import ML.HLtoML
@@ -34,25 +33,28 @@ timeTyper a = do
     let diff = fromIntegral (end - start) / (10^9)
     return (v, diff)
 
-frontendCompile fname = fmap (\(either, (uid, _, _)) -> (either, uid)) $ runTyperState (0,0,0) $ do
+frontendCompile :: String -> CompMon (Either String (TypingEnv, HLExpr, BlockProgram, (Double, Double)), Int)
+frontendCompile fname = fmap (\(eitherprog, (uid, _, _)) -> (eitherprog, uid)) $ runTyperState (0,0,0) $ do
     rootpath <- lift $ lift getDataDir
     typerLog $ "Current data dir: " ++ rootpath
-    ((denv, entry, block), t_demod) <- timeTyper $ demodProgram (rootpath ++ "/")  "stdlib/core.spk" "stdlib/std.spk" fname
+    ((_denv, entry, block), t_demod) <- timeTyper $ demodProgram (rootpath ++ "/")  "stdlib/core.spk" "stdlib/std.spk" fname
     typerLog $ "DemodProgram:\n" ++ drawTree (toTreeBlockProgram block)
     ((env, tyblock), t_typer) <- timeTyper $ typeBlockProgram block
     typerLog $ "Typed Program:\n" ++ drawTree (toTreeBlockProgram tyblock)
     return (env, entry, tyblock, (t_demod, t_typer))
 
+monoOptiPasses, defunOptiPasses :: [MonoProgram -> MonoProgram]
 monoOptiPasses = [optimizeDefExprs, liftCombs, inlineProgram, optimizeDefExprs]
                  --[liftCombs, optimizeDefExprs, inlineProgram, optimizeDefExprs]
 defunOptiPasses = [optimizeDefExprs, inlineProgram, optimizeDefExprs]
 
+compile :: CompMon ()
 compile = do
     source <- fmap (forceGetArg "source_file") getArgOptions
-    ((either, uid),t_frontend) <- time $ frontendCompile source
-    let (ep, block, ts) = case either of
+    ((eitherprog, uid),t_frontend) <- time $ frontendCompile source
+    let (ep, block, ts) = case eitherprog of
             Left e -> error $ "Frontend compilation error: " ++ e
-            Right (env, ep, block, ts) -> (ep, block, ts)
+            Right (_, myep, myblock, myts) -> (myep, myblock, myts)
     let typeddatasummary = blockProgramToDataSummary block --TODO sposta questa operazione in qualche altro file
     (prog, t_mono) <- time $ monomorphizeProgram (ep, block)
     (mono, t_opti) <- time $ return $ optimizeProgram monoOptiPasses prog
@@ -90,6 +92,7 @@ compile = do
             (_, t_eval) <- time $ lift $ VM.evalProg vmprog
             compLog $ "Program eval time:" ++ show t_eval ++ "ms"
 
+argdefs :: [Arg]
 argdefs =
     [ Arg {argID="help", argShort=Just 'h', argLong=Just "help", argIsOpt=True, argData=Nothing, argDesc="Display this message"}
     , Arg {argID="verbose", argShort=Just 'v', argLong=Just "verbose", argIsOpt=True, argData=Nothing, argDesc="Verbose compiler output"}
@@ -97,6 +100,7 @@ argdefs =
     , Arg {argID="backend", argShort=Nothing, argLong=Just "backend", argIsOpt=True, argData=Just $ ArgDataOpt ["js", "vm", "scm"] (Just "js"), argDesc="Specify the compiler backend"}
     ]
 
+main :: IO ()
 main = getArgs >>= \args ->
     case parseArgs argdefs args of
         Left _ -> putStr $ "The Spinnaker Compiler\n"++showHelp argdefs

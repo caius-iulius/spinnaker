@@ -2,12 +2,12 @@ module HL.HLOps where
 import Data.Maybe (fromMaybe)
 import HLDefs
 
-appearsPatInner l PatWildcard = False
-appearsPatInner l (PatLiteral _) = False
-appearsPatInner l (PatVariant c ps) = any (appearsPat l) ps
 
 appearsPat :: String -> HLPattern -> Bool
 appearsPat l (_, _, ml, ip) = Just l == ml || appearsPatInner l ip
+    where appearsPatInner myl PatWildcard = False
+          appearsPatInner myl (PatLiteral _) = False
+          appearsPatInner myl (PatVariant c ps) = any (appearsPat myl) ps
 
 appears :: String -> HLExpr -> Int
 appears _ (_, _, ExprLiteral _) = 0
@@ -46,6 +46,6 @@ inline binds (c, t, ExprLambda l' le) =
         in (c, t, ExprLambda l' (inline newbinds le))
 inline binds (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline binds) vs)
     (map (\(p, e)->
-        let newbinds = filter (\(sl, _) -> not $ any (appearsPat sl) p) binds
-            in (p, inline binds e)) pses))
+        --TODO: questo non fa l'inline dei shadowing, ma bisognerebbe ristrutturare il codice: let newbinds = filter (\(sl, _) -> not $ any (appearsPat sl) p) binds in
+            (p, inline binds e)) pses))
 

@@ -1,7 +1,6 @@
 module CompDefs where
 import Control.Monad.Reader
 import System.CPUTime
-import System.Environment
 import ArgParser
 
 data CompState = CompState {
@@ -10,6 +9,8 @@ data CompState = CompState {
     }
 
 type CompMon = ReaderT CompState IO
+
+runCompMon :: CompState -> CompMon a -> IO a
 runCompMon = flip runReaderT
 
 getDataDir :: CompMon String
@@ -32,4 +33,3 @@ time a = do
     end <- lift getCPUTime
     let diff = fromIntegral (end - start) / (10^9)
     return (v, diff)
-

@@ -2,18 +2,22 @@ module Typer.KindTyper where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Maybe(fromJust, isJust)
-import Control.Monad.Trans
 
 import HLDefs
 import Typer.TypingDefs
 import Typer.MGUs
 import Parser.MPCL(StdCoord)
 
+substApplyKindEnv :: KindSubst -> TypingEnv -> TypingEnv
 substApplyKindEnv s (TypingEnv ts ks vs cs rs) = TypingEnv ts (Map.map (kSubstApply s) ks) vs cs rs
 --TODO: il pattern \(a,b)->(a, f b) si può sostituire con un fmap f
-substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(c,t)->(c, kSubstApply s t)) ts)
+substApplyVariant :: KindSubst -> HLDataVariant -> HLDataVariant
+substApplyVariant s (DataVariant c l ts) = DataVariant c l (map (\(myc,t)->(myc, kSubstApply s t)) ts)
+substApplyQuants :: KindSubst -> [(String, TyQuant)] -> [(String, TyQuant)]
 substApplyQuants s qs = map (\(l,q)->(l, kSubstApply s q)) qs
+substApplyDataDef :: KindSubst -> HLDataDef -> HLDataDef
 substApplyDataDef s (DataDef c l qs vs) = DataDef c l (substApplyQuants s qs) (map (substApplyVariant s) vs)
+substApplyRelDecls :: KindSubst -> [(StdCoord, String, Qual DataType)] -> [(StdCoord, String, Qual DataType)]
 substApplyRelDecls s decls = map (\(c, l, t) -> (c, l, kSubstApply s t)) decls
 
 -- Funzioni di typing
@@ -53,19 +57,22 @@ typeAndUnifyList tye env ((c,e):es) (mk:ks) = do
     let s''' = composeKSubst s'' (composeKSubst s' s)
     return (s''', (c, kSubstApply s''' t):ts)
 
+typeTyExprsStar :: TypingEnv -> [(StdCoord, DataType)] -> TyperState (KindSubst, [(StdCoord, DataType)])
 typeTyExprsStar env ts = typeAndUnifyList typeTyExpr env ts (replicate (length ts) KType)
+typeQualTypeStar :: TypingEnv -> [(StdCoord, Qual DataType)] -> TyperState (KindSubst, [(StdCoord, Qual DataType)])
 typeQualTypeStar env ts = typeAndUnifyList typeQualType env ts (replicate (length ts) KType)
 
-typeDataVariant env (DataVariant c l es) = do
-    (s, ts) <- typeTyExprsStar env es
-    return (s, DataVariant c l ts)
-
+typeDataVariants :: TypingEnv -> [HLDataVariant] -> TyperState (KindSubst, [HLDataVariant])
 typeDataVariants env [] = return (nullKSubst, [])
 typeDataVariants env (v:vs) = do
-    (s, v') <- typeDataVariant env v
+    (s, v') <- typeDataVariant v
     (s', vs') <- typeDataVariants env vs
     return (composeKSubst s' s, substApplyVariant s' v' : vs')
+    where typeDataVariant (DataVariant c l es) = do
+            (s, ts) <- typeTyExprsStar env es
+            return (s, DataVariant c l ts)
 
+typeDataDef :: TypingEnv -> HLDataDef -> TyperState (KindSubst, HLDataDef)
 typeDataDef env (DataDef c l qs vs) = do
     (s, vs') <- typeDataVariants env vs
     return (s, DataDef c l qs vs')
@@ -90,11 +97,13 @@ addDataDefsEnv env ddefs =
             TypingEnv ts (Map.insert l (dataQsToKind qs) ks) (Map.union vs (getvariantdatas ddef)) cs rs
         ) env ddefs
 
+unionDataDefEnv :: TypingEnv -> HLDataDef -> TyperState KindSubst
 unionDataDefEnv (TypingEnv _ ks _ _ _) (DataDef c l qs _) = kindmgu c (dataQsToKind qs) $ fromJust (Map.lookup l ks)
 
 kindMonomorphize :: Kinds k => k -> KindSubst
 kindMonomorphize = Map.fromList . map (flip (,) KType) . Set.toList . freeKindQuants
 
+dataMonomorphize :: HLDataDef -> KindSubst
 dataMonomorphize (DataDef _ _ qs _) = Map.unions $ map (kindMonomorphize . kind . snd) qs
 
 typeDataDefGroup :: TypingEnv -> [HLDataDef] -> TyperState (KindSubst, TypingEnv, [HLDataDef])
@@ -140,6 +149,7 @@ addRel l qs preds decls (TypingEnv ts ks vs cs rs) =
         declpairs = map (\(_,d,Qual ps t)->(d, Qual (relpred:ps) t)) decls
         in TypingEnv ts ks vs cs (Map.insert l (RelData qs preds declpairs []) rs)
 
+typeRelDef :: TypingEnv -> HLRelDef -> TyperState (KindSubst, TypingEnv, HLRelDef)
 typeRelDef env (RelDef c l qs preds decls) = do
     (s, preds') <- typePreds c env preds
     (s', decls') <- typeRelDecls env (substApplyRelDecls s decls)
@@ -175,9 +185,9 @@ typePreds c env (p:ps) = do
     return (composeKSubst s' s, substApplyPred s' p' : ps')
 
 typeQualPred :: StdCoord -> TypingEnv -> Qual Pred -> TyperState (KindSubst, Qual Pred)
-typeQualPred c env (Qual preds pred) = do
-    (s, pred':preds') <- typePreds c env (pred:preds)
-    return (s, Qual preds' pred')
+typeQualPred c env (Qual preds p) = do
+    (s, p':preds') <- typePreds c env (p:preds)
+    return (s, Qual preds' p')
 
 typeQualType :: StdCoord -> TypingEnv -> Qual DataType -> TyperState (KindSubst, Kind, Qual DataType)
 typeQualType c env (Qual preds a) = do
@@ -185,7 +195,8 @@ typeQualType c env (Qual preds a) = do
     (s', k, a') <- typeTyExpr c env (kSubstApply s a)
     return (composeKSubst s' s, k, Qual (map (substApplyPred s') preds') a')
 
-addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs cs rs) = TypingEnv ts ks vs cs $ Map.adjust (\(RelData qs preds decls insts)->RelData qs preds decls (p:insts)) l rs
+addInst :: Qual Pred -> TypingEnv -> TypingEnv
+addInst p@(Qual _ (Pred l _)) (TypingEnv ts ks vs cs rs) = TypingEnv ts ks vs cs $ Map.adjust (\(RelData qs preds decls myinsts)->RelData qs preds decls (p:myinsts)) l rs
 
 --TODO: Sposta in altro file
 --TODO: Controlla qui che non ci siano qualificatori liberi nelle definizioni
@@ -235,9 +246,9 @@ typeKInstDef env (InstDef c qualhead defs) = do
             else return ()
         ) currInsts
     --TODO: monomorfizzazione del qualhead
-    defs' <- mapM (\(c,l,e)->do
+    defs' <- mapM (\(myc,myl,e)->do
         e' <- typeExprHints s env e
-        return (c, l, e')
+        return (myc, myl, e')
         ) defs
     return (s, addInst qualhead' env, InstDef c qualhead' defs')
     --TODO: controlli vari su defs (e.g. condizioni Paterson), applica la sostituzione su defs se aggiungo i cast nelle espressioni

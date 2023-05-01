@@ -1,10 +1,10 @@
 module Backends.VM.MLtoVM (progToVm) where
 import Data.List(elemIndex)
-import Data.Maybe(fromMaybe)
 
 import MLDefs
 import Backends.VM.VM
 
+patToVm :: MLPattern -> ([String], VMPat)
 patToVm (MLPLiteral lit) = ([], PConst lit)
 patToVm (MLPVariant v ls) = (map fst ls, PVariant v)
 

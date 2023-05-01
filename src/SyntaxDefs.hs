@@ -1,6 +1,5 @@
 module SyntaxDefs where
 import HLDefs(Literal(..))
-import Typer.TypingDefs
 import Parser.MPCL(StdCoord)
 
 data Path = Path [String] String

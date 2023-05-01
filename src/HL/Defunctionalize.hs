@@ -1,7 +1,6 @@
 module HL.Defunctionalize (defunProgram) where
 import Control.Monad.State
-import Data.List(nub, find)
-import Data.Maybe(fromJust)
+import Data.List(nub)
 
 import CompDefs
 import HLDefs
@@ -103,20 +102,21 @@ defunExpr (c, t, ExprPut vs pses) = do
     return (c, t, ExprPut vs' pses')
 defunExpr (_, _, ExprHint _ e) = defunExpr e
 
-applyToComb (t@(DataTypeApp (DataTypeApp _ at) rt), (combl, vars)) = do
-    s <- getUid
-    let funl = "_fun" ++ s
-        argl = "_arg" ++ s
-        vartobranch (vname, ls, cmb) =
-            ([(dummyStdCoord, t, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, lt, Just l, PatWildcard)) ls))],
-                (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
-    return (combl, True, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
-
+applysToComb :: DefunState ()
 applysToComb = do
     (_, _, aps) <- get
     acmbs <- mapM applyToComb aps
     (n, cmbs, _) <- get
     put (n, acmbs ++ cmbs, [])
+    where applyToComb (t@(DataTypeApp (DataTypeApp _ at) rt), (combl, vars)) = do
+            s <- getUid
+            let funl = "_fun" ++ s
+                argl = "_arg" ++ s
+                vartobranch (vname, ls, cmb) =
+                    ([(dummyStdCoord, t, Nothing, PatVariant vname (map (\(l,lt) -> (dummyStdCoord, lt, Just l, PatWildcard)) ls))],
+                        (dummyStdCoord, rt, ExprCombinator cmb (map (\(l, lt) -> (dummyStdCoord, lt, ExprLabel l)) (ls ++ [(argl, at)]))))
+            return (combl, True, [(funl, t), (argl, at)], (dummyStdCoord, rt, ExprPut [(dummyStdCoord, t, ExprLabel funl)] (map vartobranch vars)))
+
 
 applysToDataSummary :: ApplysEnv -> [DataSummary]
 applysToDataSummary = map summarizeApply

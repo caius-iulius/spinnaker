@@ -1,7 +1,7 @@
 module ArgParser where
 import Control.Monad(join)
 import Data.List(intercalate, transpose, partition)
-import Data.Maybe(isNothing, fromJust, isJust, catMaybes)
+import Data.Maybe(fromJust, isJust, catMaybes)
 import System.Environment
 
 data Arg =
@@ -24,6 +24,7 @@ showDefault :: (a -> String) -> Maybe a -> String
 showDefault _ Nothing = ""
 showDefault f (Just d) = " (default=" ++ f d ++ ")"
 
+showArgData :: ArgData -> String
 showArgData (ArgDataStr s) = "<string>" ++ showDefault id s
 showArgData (ArgDataOpt opts s) = intercalate "|" opts ++ showDefault id s
 --showArgData (ArgDataInt s) = "<int>" ++ showDefault show s
@@ -83,4 +84,5 @@ gotArg :: String -> Parse -> Bool
 gotArg = (isJust .) . lookup
 getArg :: String -> Parse -> Maybe String
 getArg = (join .) . lookup
+forceGetArg :: String -> Parse -> String
 forceGetArg = (fromJust .) . getArg

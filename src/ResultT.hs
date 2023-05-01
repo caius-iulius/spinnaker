@@ -4,6 +4,8 @@ import Control.Monad.Trans
 import Control.Monad.State
 
 newtype ResultT m a = ResultT (m (Either String a))
+
+runResultT :: ResultT m a -> m (Either String a)
 runResultT (ResultT m) = m
 
 instance Functor m => Functor (ResultT m) where
@@ -13,8 +15,8 @@ instance Applicative m => Applicative (ResultT m) where
     (<*>) (ResultT mf) (ResultT ma) = ResultT (fmap (<*>) mf <*> ma)
 instance Monad m => Monad (ResultT m) where
     (>>=) (ResultT m) mf = ResultT (
-        do  either <- m
-            case either of
+        do  eitherval <- m
+            case eitherval of
                 Left s -> return $ Left s
                 Right a -> let ResultT m' = mf a in m'
         )

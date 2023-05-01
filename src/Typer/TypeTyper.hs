@@ -1,8 +1,5 @@
 module Typer.TypeTyper where
-import System.IO
-import Control.Monad.Trans
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 
 import HLDefs
 import Typer.TypingDefs
@@ -47,8 +44,10 @@ typePats :: TypingEnv -> [HLPattern] -> TyperState ([DataType], [HLPattern])
 typePats env pats = unzip <$> mapM (typePat env) pats
 
 --TODO Da testare
+patListPatVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> [HLPattern] -> [DataType] -> TyperState TypingEnv
 patListPatVarsInEnv gf env ps ts = foldl (\me (p, t)->do{e<-me; patVarsInEnv gf e p t}) (return env) (zip ps ts)
 
+innerPatVarsInEnv :: (DataType -> TyScheme) -> StdCoord -> TypingEnv -> HLPatternData -> DataType -> TyperState TypingEnv
 innerPatVarsInEnv _ _ env PatWildcard dt = return env
 innerPatVarsInEnv _ _ env (PatLiteral _) dt = return env
 innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
@@ -60,15 +59,17 @@ innerPatVarsInEnv gf c env (PatVariant v ps) dt = do
 patVarsInEnv :: (DataType -> TyScheme) -> TypingEnv -> HLPattern -> DataType -> TyperState TypingEnv
 patVarsInEnv gf env (c, _, Nothing, pdata) dt = innerPatVarsInEnv gf c env pdata dt
 patVarsInEnv gf env (c, _, Just labl, pdata) dt =
-    let env' = tyBindAdd c env labl (gf dt)
+    let env' = tyBindAdd env labl (gf dt)
     in innerPatVarsInEnv gf c env' pdata dt
 
 -- Funzioni per le espressioni
+typeExprs :: TypingEnv -> [HLExpr] -> TyperState (Subst, [Pred], [DataType], [HLExpr])
 typeExprs env [] = return (nullSubst, [], [], [])
 typeExprs env (e:es) = do
     (s, ps, t, e') <- typeExpr env e
     (s', ps', ts, es') <- typeExprs (substApply s env) es
     return (composeSubst s' s, ps ++ ps', t:ts, e':es')
+typeConsAbstraction :: StdCoord -> TypingEnv -> [DataType] -> [HLExpr] -> TyperState (Subst, [Pred], [HLExpr])
 typeConsAbstraction c env argts es = --NOTE: Funziona solo se i combinatori sono monomorfici
     if length argts /= length es then
         fail $ show c ++ " Constructor is applied to wrong number of arguments" --TODO: generalizza messaggio di errore?
@@ -115,7 +116,7 @@ typeExprInternal env (c, _, ExprApp f a) = do
 -- TODO: Da qui in poi controllare bene, non so se è giusto
 typeExprInternal env (c, _, ExprLambda labl expr) = do
     argt <- freshType KType
-    let env' = tyBindAdd c env labl (TyScheme [] $ Qual [] argt)
+    let env' = tyBindAdd env labl (TyScheme [] $ Qual [] argt)
     (s, ps, t, e) <- typeExpr env' expr
     let finaldt = buildFunType (substApply s argt) t
         in return (s, ps, finaldt, (c, finaldt, ExprLambda labl e))
@@ -175,6 +176,8 @@ substApplyPat :: Subst -> HLPattern -> HLPattern
 substApplyPat s (c, dt, ml, PatWildcard) = (c, substApply s dt, ml, PatWildcard)
 substApplyPat s (c, dt, ml, PatLiteral lit) = (c, substApply s dt, ml, PatLiteral lit)
 substApplyPat s (c, dt, ml, PatVariant v ps) = (c, substApply s dt, ml, PatVariant v (substApplyPats s ps))
+
+substApplyPats :: Subst -> [HLPattern] -> [HLPattern]
 substApplyPats = map . substApplyPat
 
 substApplyExpr :: Subst -> HLExpr -> HLExpr
@@ -187,54 +190,61 @@ substApplyExpr s (c, dt, ExprLambda p e) = (c, substApply s dt, ExprLambda p (su
 substApplyExpr s (c, dt, ExprPut vs psandes) = (c, substApply s dt, ExprPut (map (substApplyExpr s) vs) (map (\(p, e) -> (substApplyPats s p, substApplyExpr s e)) psandes))
 substApplyExpr s (c, dt, ExprHint hint e) = (c, substApply s dt, ExprHint hint (substApplyExpr s e))
 
+substApplyValDef :: Subst -> HLValDef -> HLValDef
 substApplyValDef s (ValDef c l t ps e) = ValDef c l t (map (substApply s) ps) (substApplyExpr s e)
 
 --Funzioni per le definizioni globali
-typeValDef env (ValDef c l t _ e) = do --TODO: Qui dimentico i predicati già presenti, dovrebbero essere spazzatura dalle tipizzazioni precedenti
-    (s, ps, dt, e') <- typeExpr env e
-    typerLog $ "typed valdef: " ++ l ++ " with type: " ++ show (Qual ps dt) ++ " and subst: " ++ show s
-    return (s, ValDef c l t ps e')
 
+quantifiedValDefEnv :: TypingEnv -> [HLValDef] -> TyperState TypingEnv
 quantifiedValDefEnv init_env [] = return init_env
 quantifiedValDefEnv env (ValDef c l mhint _ _:vdefs) = do
     t <- case mhint of
         Nothing -> fmap (Qual []) (freshType KType)
         Just hint -> return hint
     typerLog $ show c ++ " Binding label: " ++ show l ++ " to temporary type: " ++ show t
-    let env' = tyBindAdd c env l (TyScheme [] t)
+    let env' = tyBindAdd env l (TyScheme [] t)
     quantifiedValDefEnv env' vdefs
 
+typeValDefsLoop :: TypingEnv -> [HLValDef] -> TyperState (Subst, [HLValDef])
 typeValDefsLoop _ [] = return (nullSubst, [])
 typeValDefsLoop env (vdef:vdefs) = do
-    (s, vdef') <- typeValDef env vdef
+    (s, vdef') <- typeValDef vdef
     (s', vdefs') <- typeValDefsLoop (substApply s env) (map (substApplyValDef s) vdefs)
     return (composeSubst s' s, substApplyValDef s' vdef':vdefs')
+    where typeValDef (ValDef c l t _ e) = do --TODO: Qui dimentico i predicati già presenti, dovrebbero essere spazzatura dalle tipizzazioni precedenti
+            (s, ps, dt, e') <- typeExpr env e
+            typerLog $ "typed valdef: " ++ l ++ " with type: " ++ show (Qual ps dt) ++ " and subst: " ++ show s
+            return (s, ValDef c l t ps e')
 
+addValDefsEnv :: TypingEnv -> [HLValDef] -> TypingEnv
 addValDefsEnv env vdefs = foldl
-    (\e (ValDef c l _ ps (_, t, _))->
-            tyBindAdd c e l (generalize e (Qual ps t))
+    (\e (ValDef _ l _ ps (_, t, _))->
+            tyBindAdd e l (generalize e (Qual ps t))
         ) env vdefs
 
-unionValDefEnv (TypingEnv ts _ _ _ _) (ValDef c l _ ps (_, t, _)) = do
-    Qual ps' tFromEnv <- case Map.lookup l ts of --TODO: Sto dimenticando i predicati, è giusto?
-        Just scheme -> instantiate scheme
-    s <- mgu c t tFromEnv
-    typerLog $ "union of env and vdef "++ l ++": " ++ show s
-    return s
+unionValDefsEnv :: TypingEnv -> [HLValDef] -> TyperState Subst
 unionValDefsEnv env [] = return nullSubst
-unionValDefsEnv env (vdef:vdefs) = do
-    s <- unionValDefEnv env vdef
+unionValDefsEnv env@(TypingEnv ts _ _ _ _) (vdef:vdefs) = do
+    s <- unionValDefEnv vdef
     s' <- unionValDefsEnv (substApply s env) (map (substApplyValDef s) vdefs)
     return (composeSubst s' s)
+    where unionValDefEnv (ValDef c l _ ps (_, t, _)) = do
+            Qual ps' tFromEnv <- case Map.lookup l ts of --TODO: Sto dimenticando i predicati, è giusto?
+                Just scheme -> instantiate scheme
+            s <- mgu c t tFromEnv
+            typerLog $ "union of env and vdef "++ l ++": " ++ show s
+            return s
 
 checkHintType :: StdCoord -> TypingEnv -> DataType -> DataType -> TyperState Subst
 checkHintType c env typehint typet = match c typet typehint
 
-checkHintPreds c env pshint pst = mapM checkHintPred pst
+checkHintPreds :: StdCoord -> TypingEnv -> [Pred] -> [Pred] -> TyperState ()
+checkHintPreds c env pshint pst = mapM_ checkHintPred pst
     where checkHintPred pt = if entail env pshint pt
             then return ()
             else fail $ show c ++ " Type hint qualifiers: " ++ show pshint ++ " do not entail constraint: " ++ show pt
 
+checkValDefsHint :: TypingEnv -> [HLValDef] -> TyperState Subst
 checkValDefsHint _ [] = return nullSubst
 checkValDefsHint env (ValDef c l Nothing _ _:vdefs) = checkValDefsHint env vdefs
 checkValDefsHint env@(TypingEnv ts _ _ _ _) (ValDef c l (Just (Qual _ hint)) ps (_, t, _):vdefs) = do
@@ -244,13 +254,14 @@ checkValDefsHint env@(TypingEnv ts _ _ _ _) (ValDef c l (Just (Qual _ hint)) ps 
 
 checkValDefsHintPreds :: TypingEnv -> [HLValDef] -> TyperState [HLValDef]
 checkValDefsHintPreds env vdefs = mapM checkValDefHintPreds vdefs
-        where checkValDefHintPreds vdef@(ValDef _ _ Nothing _ _) = return vdef
-              checkValDefHintPreds (ValDef c l hint@(Just (Qual pshint thint)) pst e) = do
-                checkHintPreds c env pshint pst
-                return $ ValDef c l hint pshint e
+    where checkValDefHintPreds vdef@(ValDef _ _ Nothing _ _) = return vdef
+          checkValDefHintPreds (ValDef c l hint@(Just (Qual pshint thint)) pst e) = do
+            checkHintPreds c env pshint pst
+            return $ ValDef c l hint pshint e
 
 -- TODO: Quali di queste sostituzioni possono essere eliminate? (probabilmente quelle introdotte da typeValDefsLoop...)
 -- TODO: Mi sa che questa funzione non dovrebbe restituire una sostituzione
+typeValDefGroup :: TypingEnv -> [HLValDef] -> TyperState (Subst, TypingEnv, [HLValDef])
 typeValDefGroup env vdefs = do
     vars_env <- quantifiedValDefEnv env vdefs
     (s, vdefs') <- typeValDefsLoop vars_env vdefs
@@ -258,7 +269,7 @@ typeValDefGroup env vdefs = do
     s'' <- checkValDefsHint (substApply s' vars_env) (map (substApplyValDef s') vdefs') --TODO: La posizione è giusta?
     let sfinal = composeSubst s'' (composeSubst s' s)
         vdefs'' = map (substApplyValDef sfinal) vdefs'
-        ps = concatMap (\(ValDef _ _ _ ps _) -> ps) vdefs''
+        ps = concatMap (\(ValDef _ _ _ myps _) -> myps) vdefs''
         vdefs''' = map (\(ValDef c l h _ e)->ValDef c l h ps e) vdefs''
             --typerLog $ "Final ValDef Subst: " ++ show sfinal
     mapM_ (\(ValDef c _ _ ps' (_, t, _))->checkAmbiguousQual c env (Qual ps' t)) vdefs'''
@@ -267,12 +278,14 @@ typeValDefGroup env vdefs = do
     if null $ freetyvars env' then return (sfinal, env', vdefs'''')
     else fail $ show ((\(ValDef c _ _ _ _)->c) $ head vdefs''') ++ " Ci sono delle variabili di tipo libere dopo la tipizzazione di un gruppo di valdef"
 
+typeValDefGroups :: TypingEnv -> [[HLValDef]] -> TyperState (Subst, TypingEnv, [[HLValDef]])
 typeValDefGroups env [] = return (nullSubst, env, [])
 typeValDefGroups env (vdefs:vdefss) = do
     (s, env', vdefs') <- typeValDefGroup env vdefs --TODO: forse anche questa sostituzione dopo averla applicata al contesto può essere eliminata
     (s', env'', vdefss') <- typeValDefGroups env' vdefss
     return (composeSubst s' s, env'', map (substApplyValDef s') vdefs':vdefss')
 
+typeInstDef :: TypingEnv -> HLInstDef -> TyperState HLInstDef
 typeInstDef env@(TypingEnv _ _ _ _ rs) (InstDef c qh@(Qual ps h@(Pred l ts)) defs) =
     case Map.lookup l rs of
         Just (RelData qs preds decls _) -> do --TODO: controlla validità dei preds

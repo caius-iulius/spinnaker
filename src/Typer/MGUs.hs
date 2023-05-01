@@ -1,8 +1,7 @@
 module Typer.MGUs where
-import Control.Monad.Trans
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Maybe(isJust, isNothing, catMaybes)
+import Data.Maybe(fromJust, isJust, isNothing, catMaybes)
 
 import Typer.TypingDefs
 import Parser.MPCL(StdCoord, dummyStdCoord)
@@ -10,6 +9,7 @@ import Parser.MPCL(StdCoord, dummyStdCoord)
 nullKSubst :: KindSubst
 nullKSubst = Map.empty
 
+composeKSubst :: KindSubst -> KindSubst -> KindSubst
 composeKSubst s1 s2 = Map.union (Map.map (kSubstApply s1) s2) s1
 
 kindQBind :: StdCoord -> KindQuant -> Kind -> TyperState KindSubst
@@ -28,6 +28,7 @@ kindmgu c (KFun a r) (KFun a' r') = do
 kindmgu c k1 k2 = fail $ show c ++ " Cannot unify kinds: " ++ show k1 ++ " and " ++ show k2
 
 -- MGU per i tipi
+composeSubst :: Subst -> Subst -> Subst
 composeSubst sa sb = Map.union (Map.map (substApply sa) sb) sa
 
 nullSubst :: Subst
@@ -35,20 +36,15 @@ nullSubst = Map.empty
 
 --TODO: Sposta in altro file, sono funzioni per l'env
 --tyBindRemove (TypingEnv typeEnv kindEnv) labl = TypingEnv (Map.delete labl typeEnv) kindEnv
-tyBindAdd :: StdCoord -> TypingEnv -> String -> TyScheme -> TypingEnv
-tyBindAdd c (TypingEnv ts ks vs cs rs) labl scheme =
-    case Map.lookup labl ts of
-        --Just _ -> fail $ show c ++ " Variable already bound: " ++ labl
-        Nothing -> --do
-            --typerLog $ show c ++ " Binding variable: " ++ labl ++ ":" ++ show scheme
-            --return $
-            TypingEnv (Map.insert labl scheme ts) ks vs cs rs
+tyBindAdd :: TypingEnv -> String -> TyScheme -> TypingEnv
+tyBindAdd (TypingEnv ts ks vs cs rs) labl scheme = TypingEnv (Map.insert labl scheme ts) ks vs cs rs
 
 generalize :: TypingEnv -> Qual DataType -> TyScheme
 generalize env t =
     let quants = Set.toList $ Set.difference (freetyvars t) (freetyvars env)
     in TyScheme quants t
 
+getInstantiationSubst :: [TyQuant] -> TyperState Subst
 getInstantiationSubst qs = do
     nqs <- mapM (\(TyQuant _ k) -> freshType k) qs
     return $ Map.fromList (zip qs nqs)
@@ -101,6 +97,7 @@ match c src tgt = do
         in if null transformsInTgt then return s
         else fail $ show c ++ " Could not match type: " ++ show src ++ " into: " ++ show tgt
 
+liftUnionPred :: MonadFail m => (StdCoord -> DataType -> DataType -> m Subst) -> StdCoord -> Pred -> Pred -> m Subst
 liftUnionPred m c (Pred l ts) (Pred l' ts')
     | l == l' = liftUnionList m c (zip ts ts')
     | otherwise = fail $ show c ++ " Rel labels differ: " ++ l ++ " and " ++ l'
@@ -118,15 +115,13 @@ data ChooseInstRes --TODO: Questa interfaccia non è corretta
 
 insts :: TypingEnv -> String -> [InstData]
 insts (TypingEnv _ _ _ _ rels) l =
-    case Map.lookup l rels of
-        Just (RelData _ _ _ idatas) -> idatas
+    let (RelData _ _ _ idatas) = fromJust $ Map.lookup l rels in idatas
 
 supers :: TypingEnv -> Pred -> [Pred]
 supers (TypingEnv _ _ _ _ rels) (Pred l ts) =
-    case Map.lookup l rels of
-        Just (RelData qs ps _ _) ->
-            let s = Map.fromList (zip qs ts) in
-                map (substApply s) ps
+    let (RelData qs ps _ _) = fromJust $ Map.lookup l rels
+        s = Map.fromList (zip qs ts)
+    in map (substApply s) ps
 
 bySuper :: TypingEnv -> Pred -> [Pred]
 bySuper env p = p:concat [bySuper env p' | p' <- supers env p]
@@ -168,6 +163,7 @@ entail env ps p
         OneMatch qs -> all (entail env ps) qs
         _ -> False
 
+simplify :: TypingEnv -> [Pred] -> [Pred]
 simplify env = loop []
     where
         loop sps [] = sps

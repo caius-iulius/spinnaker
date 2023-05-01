@@ -1,6 +1,5 @@
 module Typer.Typer (typeBlockProgram) where
 import qualified Data.Map as Map
-import Control.Monad.Trans
 
 import HLDefs
 import Typer.TypingDefs
@@ -9,6 +8,7 @@ import Typer.TypeTyper
 import Typer.VariantComplete
 
 --Definizioni builtin per Typing
+builtinTypingTypes :: [(String, Kind)]
 builtinTypingTypes =
     [   ("->#BI", KFun KType (KFun KType KType))
     ,   ("Int#BI", KType)
@@ -17,14 +17,17 @@ builtinTypingTypes =
     ,   ("Bool#BI", KType)
     ,   ("RealWorld_#BI", KType)
     ]
+builtinTypingVars :: [VariantData]
 builtinTypingVars =
     [   VariantData "RealWorld_" [] [] realworldT
     ,   VariantData "True" [] [] boolT
     ,   VariantData "False" [] [] boolT
     ]
+initTypingEnv :: TypingEnv
 initTypingEnv = TypingEnv Map.empty (Map.fromList builtinTypingTypes) (Map.fromList $ map (\v@(VariantData l _ _ _)->(l,v)) builtinTypingVars) Map.empty Map.empty
 
 --Programma typer
+typeBlockProgram :: BlockProgram -> TyperState (TypingEnv, BlockProgram)
 typeBlockProgram (BlockProgram ddefgroups reldefs extdefs vdefgroups instdefs) = do
     (ks, e, ddefgroups') <- typeDataDefGroups initTypingEnv ddefgroups
     extdefs' <- typeExtDefs e extdefs

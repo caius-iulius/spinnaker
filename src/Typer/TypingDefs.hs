@@ -73,8 +73,12 @@ instance Kinds DataType where
     freeKindQuants (DataTypeApp f a) = Set.union (freeKindQuants f) (freeKindQuants a)
     freeKindQuants (DataCOORD _ t) = freeKindQuants t
 
+substApplyPred :: KindSubst -> Pred -> Pred
 substApplyPred s (Pred l ts) = Pred l $ map (kSubstApply s) ts
+
+freeKindQuantsPred :: Pred -> Set.Set KindQuant
 freeKindQuantsPred (Pred l ts) = Set.unions (map freeKindQuants ts)
+
 instance Kinds t => Kinds (Qual t) where
     kind (Qual _ t) = kind t
     kSubstApply s (Qual ps t) = Qual (map (substApplyPred s) ps) (kSubstApply s t)
@@ -178,18 +182,25 @@ isTupLabl "()" = (True, 0)
 isTupLabl ('(':rest) = (")" == dropWhile (','==) rest, length rest)
 isTupLabl _ = (False, 0)
 
+makeTupLabl :: Int -> String
 makeTupLabl 0 = "()"
 makeTupLabl 1 = error "Tuples of length 1 are forbidden"
 makeTupLabl len = '(':replicate (len - 1) ',' ++")"
 
+buildTupKind :: Int -> Kind
 buildTupKind len = foldr (\_ ret -> KFun KType ret) KType [1..len]
+
+buildTupType :: [DataType] -> DataType
 buildTupType ts =
     let len = length ts
         labl = makeTupLabl len
     in foldl DataTypeApp (DataTypeName labl $ buildTupKind len) ts
 
+buildFunType :: DataType -> DataType -> DataType
 buildFunType a r =
     DataTypeApp (DataTypeApp (DataTypeName "->#BI" (KFun KType (KFun KType KType))) a) r
+
+intT, fltT, boolT, chrT, realworldT :: DataType
 intT = DataTypeName "Int#BI" KType
 fltT = DataTypeName "Flt#BI" KType
 boolT = DataTypeName "Bool#BI" KType
@@ -217,6 +228,7 @@ newTyQuant k = do
     put (u, kq, tq+1)
     return $ TyQuant tq k
 
+freshType :: Kind -> TyperState DataType
 freshType k = do
     q <- newTyQuant k
     return $ DataQuant q
@@ -234,5 +246,5 @@ dataQsToKind :: [(String, TyQuant)] -> Kind
 dataQsToKind = foldr (KFun . kind . snd) KType
 
 runTyperState :: TyperStateData -> TyperState t -> CompMon (Either String t, TyperStateData)
-runTyperState state t =
-    runStateT (runResultT t) state
+runTyperState s t =
+    runStateT (runResultT t) s

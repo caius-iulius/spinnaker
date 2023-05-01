@@ -1,29 +1,35 @@
-cabal-version:      2.4
-name:               spinnaker
-version:            0.1.0.0
+cabal-version: 3.0
+name:          spinnaker
+version:       0.1.0.0
 
 -- A short (one-line) description of the package.
-synopsis: The Spinnaker Programming Language
+synopsis:      The Spinnaker Programming Language
 
 -- A longer description of the package.
-description: TODO
+description:   TODO
 
 -- A URL where users can report bugs.
 -- bug-reports:
 
 -- The license under which the package is released.
 -- license:
-author:             Caius Iulius Caesar
-maintainer:         caiusiuliuscaesar84@gmail.com
+author:        Caius Iulius Caesar
+maintainer:    caiusiuliuscaesar84@gmail.com
 
 -- A copyright notice.
 -- copyright:
--- category:
--- extra-source-files: CHANGELOG.md
+category:      Language
+build-type:    Simple
+-- extra-sources: CHANGELOG.md
 
-data-files: runtime/ stdlib/
+data-files:    runtime/ stdlib/
+
+common warnings
+    ghc-options: -Wall -Wno-incomplete-patterns -Wno-incomplete-uni-patterns -Wno-type-defaults -Wno-unused-do-bind -Wno-unused-matches
 
 executable spinnaker
+    import:           warnings
+
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.

@@ -61,6 +61,7 @@ toCommaList [] = ""
 toCommaList [x] = x
 toCommaList (x:xs) = x ++ ", " ++ toCommaList xs
 
+tojsLit :: Literal -> String
 tojsLit (LitInteger i) = show i
 tojsLit (LitFloating f) = show f
 tojsLit (LitCharacter c)
@@ -68,6 +69,7 @@ tojsLit (LitCharacter c)
     | isPrint c = ['\"', c, '\"']
     | otherwise = show c
 
+emitTest :: String -> MLPattern -> CodeGen ()
 emitTest l (MLPLiteral lit) = emit $ "if(" ++ l ++ " === " ++ tojsLit lit ++ "){\n"
 emitTest l (MLPVariant "True" []) = emit $ "if(" ++ l ++ "){\n"
 emitTest l (MLPVariant "False" []) = emit $ "if(!" ++ l ++ "){\n"
@@ -78,6 +80,7 @@ emitTest l (MLPVariant v ls) = do
             innerl' <- newMapLabel innerl
             emit $ "let " ++ innerl' ++ " = " ++ l ++ "[" ++ show n ++ "];\n") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
 
+tojsBlock :: (String -> String) -> MLExpr -> CodeGen ()
 tojsBlock final (_, _, MLLet l e0 e1) = do
     l' <- newMapLabel l
     e0' <- tojsExpr e0
@@ -95,6 +98,7 @@ tojsBlock final other = do
     expr <- tojsExpr other
     emit $ final expr
 
+tojsExpr :: MLExpr -> CodeGen String
 tojsExpr (_, _, MLLiteral lit) = return $ tojsLit lit
 tojsExpr (_, _, MLLabel l) = getLabel l
 tojsExpr (_, _, MLConstructor "True" []) = return "true"
@@ -118,6 +122,7 @@ tojsExpr other = do
     tojsBlock (\e -> l ++ " = " ++ e ++ ";\n") other
     return l
 
+tojsVariant :: [(String, Int)] -> String -> Int -> CodeGen ()
 tojsVariant vused vname numargs =
     if isNothing $ lookup vname vused then return ()
     else do
@@ -128,12 +133,14 @@ tojsVariant vused vname numargs =
                 ) $ zip [0..] args
         emit "}\n}\n\n"
 
+tojsDataSummaries :: [(String, Int)] -> [DataSummary] -> CodeGen ()
 tojsDataSummaries vused summaries =
     let stripped = do
             (_, variants) <- summaries
             map (\(vname, args) -> (vname, length args)) variants
     in mapM_ (uncurry $ tojsVariant vused) stripped
 
+tojsCombinators :: [MLDef] -> CodeGen ()
 tojsCombinators combs = do
     mapM_ (\(c, _, _) -> newMapCombinator c) combs
     mapM_ (\(c, asts, e) -> do
@@ -144,6 +151,7 @@ tojsCombinators combs = do
             emit "}\n\n"
             ) combs
 
+tojsProgram :: [DataSummary] -> MLProgram -> String
 tojsProgram datasummaries (ep, defs) = concat $ reverse $ (\(_,(_,_,_,_,code))->code) $ flip runState (0, [], [], [], []) $ do
     let vused = variantsUsedProg (ep, defs)
     tojsDataSummaries vused datasummaries

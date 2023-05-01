@@ -53,15 +53,18 @@ newMapLabel l = do
     put (uid+1, var, comb, (l,"label"++show uid):lab, code)
     return ("label"++show uid)
 
+toscmLit :: Literal -> String
 toscmLit (LitInteger i) = show i
 toscmLit (LitFloating f) = show f
 toscmLit (LitCharacter c) = "(spinnaker_comp_chrLit " ++ show (ord c) ++ ")"
 
+variantAccess :: Int -> String -> String
 variantAccess n l = "(cadr" ++ cdrs n l ++ ")"
     where
         cdrs 0 myl = ' ':myl
         cdrs myn myl = "(cdr" ++ cdrs (myn - 1) myl ++ ")"
 
+genTest :: String -> MLPattern -> CodeGen String
 genTest l (MLPLiteral lit@(LitCharacter _)) = return $ "(if (char=? " ++ l ++ " " ++ toscmLit lit ++ ") (let()\n"
 genTest l (MLPLiteral lit) = return $ "(if (= " ++ l ++ " " ++ toscmLit lit ++ ") (let()\n"
 genTest l (MLPVariant "True" []) = return $ "(if " ++ l ++ "(let()\n"
@@ -69,11 +72,12 @@ genTest l (MLPVariant "False" []) = return $ "(if (not " ++ l ++ ")(let()\n"
 genTest l (MLPVariant v ls) = do
     v' <- getVariant v
     let a = "(if (string=? (car " ++ l ++ ") " ++ v' ++ ")\n (let ("
-    ls <- mapM (\(n, innerl) -> do
+    ls' <- mapM (\(n, innerl) -> do
             innerl' <- newMapLabel innerl
             return $ "(" ++ innerl' ++ " " ++ variantAccess n l ++ ")") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
-    return $ a ++ unwords ls ++ ")"
+    return $ a ++ unwords ls' ++ ")"
 
+toscmExpr :: MLExpr -> CodeGen String
 toscmExpr (_, _, MLTest l _ p pos neg) = do
     l' <- getLabel l
     test <- genTest l' p
@@ -100,16 +104,19 @@ toscmExpr (_, _, MLLet l e0 e1) = do
     e1' <- toscmExpr e1
     return $ "(let ((" ++ l' ++ " " ++ e0' ++ "))\n" ++ e1' ++ ")"
 
+toscmVariant :: [(String, Int)] -> String -> Int -> CodeGen ()
 toscmVariant vused vname numargs =
     if isNothing $ lookup vname vused then return ()
     else const () <$> newMapVariant vname
 
+toscmDataSummaries :: [(String, Int)] -> [DataSummary] -> CodeGen ()
 toscmDataSummaries vused summaries =
     let stripped = do
             (_, variants) <- summaries
             map (\(vname, args) -> (vname, length args)) variants
     in mapM_ (uncurry $ toscmVariant vused) stripped
 
+toscmCombinators :: [MLDef] -> CodeGen ()
 toscmCombinators combs = do
     mapM_ (\(c, _, _) -> newMapCombinator c) combs
     mapM_ (\(c, asts, e) -> do
@@ -120,6 +127,7 @@ toscmCombinators combs = do
             emit $ define ++ body ++ ")\n\n"
             ) combs
 
+toscmProgram :: [DataSummary] -> MLProgram -> String
 toscmProgram datasummaries (ep, defs) = concat $ reverse $ (\(_,(_,_,_,_,code))->code) $ flip runState (0, [], [], [], []) $ do
     let vused = variantsUsedProg (ep, defs)
     toscmDataSummaries vused datasummaries

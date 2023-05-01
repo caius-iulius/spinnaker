@@ -1,16 +1,16 @@
 module HL.HLOptimize where
 import Data.Char (ord, chr)
 import Data.List (sortBy)
-import Data.Maybe(fromMaybe)
 
+import Parser.MPCL(StdCoord)
 import HLDefs
 import HL.HLOps
 import Typer.TypingDefs
 
 inlineHeuristic :: HLExpr -> Int -> Bool
-inlineHeuristic e appears =
+inlineHeuristic e timesappears =
     let size = exprSize e
-        addedSize = size*(appears - 1)
+        addedSize = size*(timesappears - 1)
     in size < 8 || addedSize < size
 
 inlineComb :: Combinator -> HLExpr -> HLExpr
@@ -59,6 +59,8 @@ data SieveRes
     = Always [(String, HLExpr)]
     | Maybe
     | Never
+
+concatRess :: [SieveRes] -> SieveRes
 concatRess [] = Always []
 concatRess (Never:_) = Never
 concatRess (Maybe:_) = Maybe
@@ -96,6 +98,7 @@ sievePatterns v = reverse . loop []
                 Maybe -> loop ((p, e):pses') pses
                 Never -> loop pses' pses
 
+optimizeBI :: StdCoord -> DataType -> String -> [HLExpr] -> HLExpr
 optimizeBI c t "spinnaker_addInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0+i1)))
 optimizeBI c t "spinnaker_subInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0-i1)))
 optimizeBI c t "spinnaker_mulInt" [(_, _, ExprLiteral (LitInteger i0)),(_, _, ExprLiteral (LitInteger i1))] = (c, t, ExprLiteral (LitInteger (i0*i1)))
@@ -181,10 +184,10 @@ liftComb (l, il, as, e) =
         newlam = foldr (\(myc, (myl, myat)) mye@(_, myrt, _) -> (myc, buildFunType myat myrt, ExprLambda myl mye)) newinner newclts
     in ((l, True, newas, newlam), (newlab, il, as ++ map snd clts, e'))
     where --liftLambda :: HLExpr -> ([(StdCoord, (String, DataType))], HLExpr)
-          liftLambda (c, DataTypeApp (DataTypeApp _ a) _, ExprLambda l le) =
-            let (clts, le') = liftLambda le in ((c, (l, a)):clts, le')
-          liftLambda (_, _, ExprHint _ e) = liftLambda e
-          liftLambda e = ([], e)
+          liftLambda (c, DataTypeApp (DataTypeApp _ a) _, ExprLambda myl le) =
+            let (clts, le') = liftLambda le in ((c, (myl, a)):clts, le')
+          liftLambda (_, _, ExprHint _ mye) = liftLambda mye
+          liftLambda mye = ([], mye)
 liftCombs :: MonoProgram -> MonoProgram
 liftCombs (ep, defs) =
     let (lams, lifts) = unzip $ map liftComb defs

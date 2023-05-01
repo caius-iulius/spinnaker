@@ -150,10 +150,11 @@ execComb "spinnaker_exit" s [rw, VConst(LitInteger i)] = lift (exitWith (if i ==
 execComb n s e = do
     g <- ask
     let c = case lookup n g of
-                Just c -> c
+                Just myc -> myc
                 Nothing -> error $ "LOOKUP:" ++ show n ++ show e
     execVM (c,s,e)
 
+chooseBranch :: VMVal -> VMPat -> [VMInstr] -> [VMInstr] -> ([VMVal], [VMInstr])
 chooseBranch (VConst vlit) (PConst plit) c0 c1
     | vlit == plit = ([], c0)
     | otherwise = ([], c1)
