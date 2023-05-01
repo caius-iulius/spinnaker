@@ -65,25 +65,27 @@ variantAccess n l = "(cadr" ++ cdrs n l ++ ")"
         cdrs myn myl = "(cdr" ++ cdrs (myn - 1) myl ++ ")"
 
 genTest :: String -> MLPattern -> CodeGen String
-genTest l (MLPLiteral lit@(LitCharacter _)) = return $ "(if (char=? " ++ l ++ " " ++ toscmLit lit ++ ") (let()\n"
-genTest l (MLPLiteral lit) = return $ "(if (= " ++ l ++ " " ++ toscmLit lit ++ ") (let()\n"
-genTest l (MLPVariant "True" []) = return $ "(if " ++ l ++ "(let()\n"
-genTest l (MLPVariant "False" []) = return $ "(if (not " ++ l ++ ")(let()\n"
+genTest l (MLPLiteral lit@(LitCharacter _)) = return $ "((char=? " ++ l ++ " " ++ toscmLit lit ++ ") (let()"
+genTest l (MLPLiteral lit) = return $ "((= " ++ l ++ " " ++ toscmLit lit ++ ") (let()"
+genTest l (MLPVariant "True" []) = return $ "(" ++ l ++ "(let()"
+genTest l (MLPVariant "False" []) = return $ "((not " ++ l ++ ")(let()"
 genTest l (MLPVariant v ls) = do
     v' <- getVariant v
-    let a = "(if (string=? (car " ++ l ++ ") " ++ v' ++ ")\n (let ("
+    let a = "((string=? (car " ++ l ++ ") " ++ v' ++ ") (let ("
     ls' <- mapM (\(n, innerl) -> do
             innerl' <- newMapLabel innerl
             return $ "(" ++ innerl' ++ " " ++ variantAccess n l ++ ")") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
     return $ a ++ unwords ls' ++ ")"
 
 toscmExpr :: MLExpr -> CodeGen String
-toscmExpr (_, _, MLTest l _ p pos neg) = do
+toscmExpr (_, _, MLTest l _ pes def) = do
     l' <- getLabel l
-    test <- genTest l' p
-    pos' <- toscmExpr pos
-    neg' <- toscmExpr neg
-    return $ test ++ pos' ++ ")" ++ neg' ++ ")\n"
+    conds <- mapM (\(p, e) -> do
+        test <- genTest l' p
+        e' <- toscmExpr e
+        return $ test ++ e' ++ "))\n") pes
+    def' <- toscmExpr def
+    return $ "(cond " ++ concat conds ++ "(#t " ++ def' ++ "))"
 toscmExpr (_, _, MLError c s) = return $ "(error " ++ show(show c ++ s) ++ ")"
 
 toscmExpr (_, _, MLLiteral lit) = return $ toscmLit lit

@@ -7,8 +7,9 @@ import MLDefs
 import ML.MLOps
 import Control.Monad.State
 
+type Branches = [([(String, HLPattern)], MLExpr)]
 --TODO posso usare una hlexpr subst, questo potrebbe aiutarmi nel ristrutturare il tutto per compilare più test sulla stessa cosa insieme
-pushvalassigns :: [([(String, HLPattern)], MLExpr)] -> [([(String, HLPattern)], MLExpr)]
+pushvalassigns :: Branches -> Branches
 pushvalassigns = map (uncurry $ pushvals [])
     where pushvals ps [] e = (ps, e)
           pushvals ps ((l,(c, pt, ml, pd)):lps) e =
@@ -20,43 +21,58 @@ pushvalassigns = map (uncurry $ pushvals [])
                       Just patlab -> mllabsubst patlab l e
               in pushvals ps' lps e'
 
-chooseTestHeuristic :: [([(String, HLPattern)], MLExpr)] -> MLState (StdCoord, String, DataType, MLPattern)
+chooseTestHeuristic :: Branches -> (StdCoord, String, DataType)
 chooseTestHeuristic ((lps,_):lpsses) = 
-    let occurences = map (\(l, p) -> ((l,p), length $ filter (any ((l ==) . fst) . fst) lpsses)) lps in
-    case fst $ maximumOn snd occurences of
-    (lab, (c, pt, _, PatLiteral lit)) -> return (c, lab, pt, MLPLiteral lit)
-    (lab, (c, pt, _, PatVariant var subps)) -> do
-        newlabs <- mapM (\(_,mypt,_,_)-> (\pl -> (pl, mypt)) <$> newlab) subps
-        return (c, lab, pt, MLPVariant var newlabs)
+    let occurences = map (\(l, p) -> ((l,p), length $ filter (any ((l ==) . fst) . fst) lpsses)) lps
+        (lab, (c, pt, _, _)) = fst $ maximumOn snd occurences
+    in (c, lab, pt)
     where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
 patCompatibility :: MLPattern -> HLPattern -> Maybe [(String, HLPattern)]
 patCompatibility (MLPLiteral l) (_,_,_, PatLiteral l') = if l == l' then Just [] else Nothing
 patCompatibility (MLPVariant v ls) (_,_,_, PatVariant v' ps) = if v == v' then Just $ zipWith (\myl myp -> (fst myl, myp)) ls ps else Nothing
 
-splitTests :: String -> MLPattern -> [([(String, HLPattern)], MLExpr)] -> ([([(String, HLPattern)], MLExpr)], [([(String, HLPattern)], MLExpr)])
-splitTests lab pat = inner [] []
-  where inner pos neg [] = (pos, neg)
-        inner pos neg (lpse@(lps, e):lpsses) =
-            case lookup lab lps of
-                Nothing -> inner (pos++[lpse]) (neg++[lpse]) lpsses
-                Just hlpat -> case patCompatibility pat hlpat of
-                    Nothing -> inner pos (neg++[lpse]) lpsses
-                    Just subtests -> inner (pos ++ [(subtests ++ filter ((lab /=) . fst) lps, e)]) neg lpsses
+pattomlpat :: HLPattern -> MLState MLPattern
+pattomlpat (c, pt, _, PatLiteral lit) = return $ MLPLiteral lit
+pattomlpat (c, pt, _, PatVariant var subps) =
+    MLPVariant var <$> mapM (\(_,mypt,_,_)-> (\pl -> (pl, mypt)) <$> newlab) subps
 
-treatput :: StdCoord -> DataType -> [([(String, HLPattern)], MLExpr)] -> MLState MLExpr
+appendTest :: HLPattern -> ([(String, HLPattern)], MLExpr) -> [(MLPattern, Branches)] -> MLState [(MLPattern, Branches)]
+appendTest hlpat (lps, e) [] = do
+    pat <- pattomlpat hlpat
+    let Just subtests = patCompatibility pat hlpat
+        in return [(pat, [(subtests ++ lps, e)])]
+appendTest hlpat branch@(lps, e) ((p, bs) : pbs) =
+    case patCompatibility p hlpat of
+        Nothing -> fmap ((p, bs) :) $ appendTest hlpat branch pbs
+        Just subtests -> return $ (p, bs ++ [(subtests ++ lps, e)]) : pbs
+
+splitTests :: String -> Branches -> MLState ([(MLPattern, Branches)], Branches)
+splitTests lab = inner [] []
+  where inner pbs notest [] = return (pbs, notest)
+        inner pbs notest (lpse@(lps, e):lpsses) =
+            case lookup lab lps of
+                Nothing -> inner pbs (notest++[lpse]) lpsses
+                Just hlpat -> do
+                    let lps' = filter ((lab /=) . fst) lps
+                    pbs' <- appendTest hlpat (lps', e) pbs
+                    inner pbs' notest lpsses
+
+treatput :: StdCoord -> DataType -> Branches -> MLState MLExpr
 treatput c t [] = return (c, t, MLError c "Pattern matching failure")
 treatput c t lpsses = do
     let lpsses' = pushvalassigns lpsses
     if null $ fst $ head lpsses' then return $ snd $ head lpsses'
     else do
-        (testc, testlab, testty, testpat) <- chooseTestHeuristic lpsses'
-        lift $ compLog $ show testc ++ " TEST PATTERN:" ++ show testpat
-        let (positive, negative) = splitTests testlab testpat lpsses'
-        lift $ compLog $ show c ++ " COMPILING TESTS:" ++ show positive ++ show negative
-        mlpos <- treatput testc t positive
-        mlneg <- treatput testc t negative
-        return (c, t, MLTest testlab testty testpat mlpos mlneg)
+        let (testc, testlab, testty) = chooseTestHeuristic lpsses'
+        lift $ compLog $ show testc ++ " TESTING LABEL:" ++ show testlab
+        (test, notest) <- splitTests testlab lpsses'
+        mltest <- mapM (\(pat, branches) -> do
+                res <- treatput c t (branches ++ notest)
+                return (pat, res)
+            ) test
+        mlnotest <- treatput testc t notest
+        return (c, t, MLTest testlab testty mltest mlnotest)
 
 exprtomlexpr :: HLExpr -> MLState MLExpr
 exprtomlexpr (c, t, ExprLiteral l) = return (c, t,MLLiteral l)

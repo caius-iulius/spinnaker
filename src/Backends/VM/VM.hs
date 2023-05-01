@@ -19,7 +19,7 @@ data VMInstr
     | IRet
     | IVariant Name Int
     | ICombApp Name Int
-    | ITest VMPat VMCode VMCode
+    | ITest [(VMPat, VMCode)] VMCode
     | ILet
     | IUnlet
     | IError String
@@ -32,7 +32,7 @@ instance Show VMInstr where
     show IRet = "RET"
     show (IVariant n i) = "VAR"++show n++ '(':show i++")"
     show (ICombApp n i) = "COMB"++show n++ '(':show i++")"
-    show (ITest pat c0 c1) = "CASE("++show pat++")"++ "POS("++show c0 ++")NEG("++ show c1++")"
+    show (ITest pc def) = "CASE("++ (pc >>= show) ++")"++ "DEF("++show def ++")"
     show ILet = "LET"
     show IUnlet = "UNLET"
     show (IError s) = "ERROR(" ++ show s ++ ")"
@@ -154,13 +154,14 @@ execComb n s e = do
                 Nothing -> error $ "LOOKUP:" ++ show n ++ show e
     execVM (c,s,e)
 
-chooseBranch :: VMVal -> VMPat -> [VMInstr] -> [VMInstr] -> ([VMVal], [VMInstr])
-chooseBranch (VConst vlit) (PConst plit) c0 c1
-    | vlit == plit = ([], c0)
-    | otherwise = ([], c1)
-chooseBranch (VVariant vc args) (PVariant pc) c0 c1
-    | vc == pc = (args, c0)
-    | otherwise = ([], c1)
+chooseBranch :: VMVal -> [(VMPat, [VMInstr])] -> [VMInstr] -> ([VMVal], [VMInstr])
+chooseBranch _ [] def = ([], def)
+chooseBranch v@(VConst vlit) ((PConst plit, c):brs) def
+    | vlit == plit = ([], c)
+    | otherwise = chooseBranch v brs def
+chooseBranch v@(VVariant vc args) ((PVariant pc, c):brs) def
+    | vc == pc = (args, c)
+    | otherwise = chooseBranch v brs def
 
 execVM :: VMState -> VMMonad VMVal
 execVM (IRet:c, [v], e) = return v
@@ -179,11 +180,11 @@ execVM (ICombApp n i:IRet:_, s, e) = --TCO comb
 execVM (ICombApp n i:c, s, e) = 
     let (as,s') = splitAt i s
     in execComb n (VClos c e:s') as
-execVM (ITest pat c0 c1:IRet:_, v:s, e) = --TCO case
-    let (bs, c') = chooseBranch v pat c0 c1
+execVM (ITest pc def:IRet:_, v:s, e) = --TCO case
+    let (bs, c') = chooseBranch v pc def
     in execVM (c', s, reverse bs ++ e)
-execVM (ITest pat c0 c1:c, v:s, e) =
-    let (bs, c') = chooseBranch v pat c0 c1
+execVM (ITest pc def:c, v:s, e) =
+    let (bs, c') = chooseBranch v pc def
     in execVM (c', VClos c e:s, reverse bs ++ e)
 execVM (ILet:c, v:s, e) = execVM (c, s, v:e)
 execVM (IUnlet:c, s, _:e) = execVM (c, s, e)

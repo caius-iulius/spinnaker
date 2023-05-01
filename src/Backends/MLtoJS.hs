@@ -86,12 +86,14 @@ tojsBlock final (_, _, MLLet l e0 e1) = do
     e0' <- tojsExpr e0
     emit $ "let " ++ l' ++ " = " ++ e0' ++ ";\n"
     tojsBlock final e1
-tojsBlock final (_, _, MLTest l _ p pos neg) = do
+tojsBlock final (_, _, MLTest l _ pes def) = do
     l' <- getLabel l
-    emitTest l' p
-    tojsBlock final pos
-    emit "} else {\n"
-    tojsBlock final neg
+    mapM_ (\(p, e) -> do
+        emitTest l' p
+        tojsBlock final e
+        emit "} else ") pes
+    emit "{\n"
+    tojsBlock final def
     emit "}\n"
 tojsBlock final (_, _, MLError c s) = emit $ "throw new Error(" ++ show(show c ++ s) ++ ");\n"
 tojsBlock final other = do

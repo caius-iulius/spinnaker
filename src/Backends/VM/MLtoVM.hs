@@ -17,14 +17,15 @@ exprToVm vs (_, _, MLConstructor v es) =
     (es >>= exprToVm vs) ++ [IVariant v (length es)]
 exprToVm vs (_, _, MLCombinator l es) =
     (es >>= exprToVm vs) ++ [ICombApp l (length es)]
-exprToVm vs (_, _, MLTest l _ p epos eneg) =
+exprToVm vs (_, _, MLTest l _ pes def) =
     let v = case elemIndex l vs of
                 Just i -> IAccess i
                 Nothing -> error $ "WHAT " ++ show l ++ show vs
-        (ls, p') = patToVm p
-        cpos = exprToVm (reverse ls ++ vs) epos ++ [IRet]
-        cneg = exprToVm vs eneg ++ [IRet]
-    in [v, ITest p' cpos cneg]
+        pcs = map (\(p, e) ->
+            let (ls, p') = patToVm p
+                in (p', exprToVm (reverse ls ++ vs) e ++ [IRet])) pes
+        cdef = exprToVm vs def ++ [IRet]
+    in [v, ITest pcs cdef]
 exprToVm vs (_, _, MLLet l e0 e1) = exprToVm vs e0 ++ [ILet] ++ exprToVm (l:vs) e1 ++ [IUnlet]
 exprToVm vs (_, _, MLError c s) = [IError (show c ++ s)]
 

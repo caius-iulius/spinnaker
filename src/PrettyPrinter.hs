@@ -41,11 +41,13 @@ showMonoProg (ep, defs) = "EP: " ++ drawTree (toTreeHLExpr ep) ++ "\nDefs: " ++ 
 --Roba per ML
 toTreeMLPattern p = Node (show p) []
 
+toTreeMLBranch (pat, expr) = Node "branch" [toTreeMLPattern pat, toTreeMLExpr expr]
+
 toTreeMLExpr (c, dt, MLLiteral l) = Node (show c ++ " DT:" ++ show dt ++ " Literal: " ++ show l) []
 toTreeMLExpr (c, dt, MLLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: " ++ show l) []
 toTreeMLExpr (c, dt, MLConstructor l es) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) (map toTreeMLExpr es)
 toTreeMLExpr (c, dt, MLCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeMLExpr es)
-toTreeMLExpr (c, dt, MLTest l ty pat pos neg) = Node (show c ++ " DT:" ++ show dt ++ " TEST:" ++ show l ++ " DT:" ++ show ty) [Node "pat" [toTreeMLPattern pat], Node "pos" [toTreeMLExpr pos], Node "neg" [toTreeMLExpr neg]]
+toTreeMLExpr (c, dt, MLTest l ty pes def) = Node (show c ++ " DT:" ++ show dt ++ " TEST:" ++ show l ++ " DT:" ++ show ty) (map toTreeMLBranch pes ++ [Node "def" [toTreeMLExpr def]])
 toTreeMLExpr (c, dt, MLLet l e0 e1) = Node (show c ++ " DT:" ++ show dt ++ " LET:" ++ show l) [Node "val" [toTreeMLExpr e0], Node "expr" [toTreeMLExpr e1]]
 toTreeMLExpr (c, dt, MLError _ s) = Node (show c ++ " DT:" ++ show dt ++ " ERROR:" ++ show s) []
 
