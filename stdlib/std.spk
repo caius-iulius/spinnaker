@@ -6,6 +6,8 @@ mod pub List "list.spk"
 
 mod pub Maybe "maybe.spk"
 
+mod pub Either "either.spk"
+
 mod pub Text "text.spk"
 
 mod pub Debug "debug.spk"

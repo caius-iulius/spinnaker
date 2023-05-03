@@ -1,0 +1,34 @@
+use Core
+
+data pub Either a b = Left a | Right b
+
+def pub isLeft : forall a b. Either a b -> Bool =
+    \ Left _ -> True
+    | Right _ -> False
+
+def pub isRight : forall a b. Either a b -> Bool =
+    \ Left _ -> True
+    | Right _ -> False
+
+def pub either : forall a b c. (a -> c) -> (b -> c) -> Either a b -> c =
+    \ fa, _, Left a -> fa a
+    | _, fb, Right b -> fb b
+
+inst forall a b. {Show a, Show b} => Show (Either a b) {
+    def show =
+        \ Left a -> "Left (" ++ show a ++ ")"
+        | Right b -> "Right (" ++ show b ++ ")"
+}
+
+inst forall a. Functor (Either a) {
+    def fmap =
+        \ _, Left a -> Left a
+        | f, Right b -> Right (f b)
+}
+
+inst forall a. Monad (Either a) {
+    def return = Right
+    def bind =
+        \ Left a, _ -> Left a
+        | Right b, f -> f b
+}

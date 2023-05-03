@@ -337,17 +337,26 @@ mod ShowCore {
 
     def showList = \l -> '[' :: showListAux l
 
+    def showtup2 = \a, b -> show a ++ ','::' ':: show b
+    def showtup3 = \a, b, c -> show a ++ ','::' '::showtup2 b c
+    def showtup4 = \a, b, c, d -> showtup2 a b ++ ','::' ':: showtup2 c d
+
     inst forall a. {Show a} => Show (List a) {
         def show = showList
     }
 
     inst forall a b. {Show a, Show b} => Show (a, b) {
-        def show = \(a, b) -> '(' :: show a ++ (','::' '::Nil) ++ show b ++ (')'::Nil)
+        def show = \(a, b) -> '(' :: showtup2 a b ++ (')'::Nil)
     }
 
     inst forall a b c. {Show a, Show b, Show c} => Show (a, b, c) {
-        def show = \(a, b, c) -> '(' :: show a ++ (','::' '::Nil) ++ show b ++ (','::' '::Nil) ++ show c ++ (')'::Nil)
+        def show = \(a, b, c) -> '(' :: showtup3 a b c ++ (')'::Nil)
     }
+
+    inst forall a b c d. {Show a, Show b, Show c, Show d} => Show (a, b, c, d) {
+        def show = \(a, b, c, d) -> '(':: showtup4 a b c d ++ (')'::Nil)
+    }
+
 } use pub ShowCore
 
 mod IOCore {

@@ -1,0 +1,24 @@
+use Std
+
+def bsd_round = \n -> rem (12345 + n*1103515245) (2^31)
+
+data Random a = Random (Int -> a)
+
+inst Monad Random {
+    def return = \x -> Random (const x)
+    def bind =
+        \ Random sf, f -> Random (\s ->
+            let Random sf' = f (sf s)
+            -> sf' (bsd_round s))
+}
+def randInt : Random Int = Random id
+
+def runRandom : forall a. Int -> Random a -> a =
+    \ seed, Random f -> f seed
+
+def main = runRandom 0 $
+    x <- randInt;
+    y <- randInt;
+    z <- randInt;
+    w <- randInt;
+    return (x, y, z, w)
