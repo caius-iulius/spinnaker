@@ -13,7 +13,7 @@
 - [Roadmap](#roadmap)
 
 Compile any example with `cabal run spinnaker -- -f=example_source_path`  (if you don't want to install the compiler on your system), this will output an `out.js` , which you can run with `node` or `bun`.
-The compiler can emit Javascript, Scheme or execute a VM. To select a backend, simply supply the `--backend=` argument with one of the following: `js`, `scm` or `vm`.
+The compiler can emit Javascript or Scheme. To select a backend, simply supply the `--backend=` argument with one of the following: `js` or `scm`.
 It probably won't work on Windows, but I haven't tested it.
 
 ## The general idea <a name="idea"></a>

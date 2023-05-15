@@ -28,26 +28,27 @@ chooseTestHeuristic ((lps,_):lpsses) =
     in (c, lab, pt)
     where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
-patCompatibility :: MLPattern -> HLPattern -> Maybe [(String, HLPattern)]
-patCompatibility (MLPLiteral l) (_,_,_, PatLiteral l') = if l == l' then Just [] else Nothing
-patCompatibility (MLPVariant v ls) (_,_,_, PatVariant v' ps) = if v == v' then Just $ zipWith (\myl myp -> (fst myl, myp)) ls ps else Nothing
+patCompatibility :: (MLPattern, [(String, DataType)]) -> HLPattern -> Maybe [(String, HLPattern)]
+patCompatibility (MLPLiteral l, []) (_,_,_, PatLiteral l') = if l == l' then Just [] else Nothing
+patCompatibility (MLPVariant v, ls) (_,_,_, PatVariant v' ps) = if v == v' then Just $ zipWith (\myl myp -> (fst myl, myp)) ls ps else Nothing
 
-pattomlpat :: HLPattern -> MLState MLPattern
-pattomlpat (c, pt, _, PatLiteral lit) = return $ MLPLiteral lit
-pattomlpat (c, pt, _, PatVariant var subps) =
-    MLPVariant var <$> mapM (\(_,mypt,_,_)-> (\pl -> (pl, mypt)) <$> newlab) subps
+pattomlpat :: HLPattern -> MLState (MLPattern, [(String, DataType)])
+pattomlpat (c, pt, _, PatLiteral lit) = return (MLPLiteral lit, [])
+pattomlpat (c, pt, _, PatVariant var subps) = do
+    ls <- mapM (\(_,mypt,_,_)-> (\pl -> (pl, mypt)) <$> newlab) subps
+    return (MLPVariant var, ls)
 
-appendTest :: HLPattern -> ([(String, HLPattern)], MLExpr) -> [(MLPattern, Branches)] -> MLState [(MLPattern, Branches)]
+appendTest :: HLPattern -> ([(String, HLPattern)], MLExpr) -> [((MLPattern, [(String, DataType)]), Branches)] -> MLState [((MLPattern, [(String, DataType)]), Branches)]
 appendTest hlpat (lps, e) [] = do
     pat <- pattomlpat hlpat
     let Just subtests = patCompatibility pat hlpat
         in return [(pat, [(subtests ++ lps, e)])]
 appendTest hlpat branch@(lps, e) ((p, bs) : pbs) =
     case patCompatibility p hlpat of
-        Nothing -> fmap ((p, bs) :) $ appendTest hlpat branch pbs
+        Nothing -> ((p, bs) :) <$> appendTest hlpat branch pbs
         Just subtests -> return $ (p, bs ++ [(subtests ++ lps, e)]) : pbs
 
-splitTests :: String -> Branches -> MLState ([(MLPattern, Branches)], Branches)
+splitTests :: String -> Branches -> MLState ([((MLPattern, [(String, DataType)]), Branches)], Branches)
 splitTests lab = inner [] []
   where inner pbs notest [] = return (pbs, notest)
         inner pbs notest (lpse@(lps, e):lpsses) =
@@ -67,9 +68,12 @@ treatput c t lpsses = do
         let (testc, testlab, testty) = chooseTestHeuristic lpsses'
         lift $ compLog $ show testc ++ " TESTING LABEL:" ++ show testlab
         (test, notest) <- splitTests testlab lpsses'
-        mltest <- mapM (\(pat, branches) -> do
+        mltest <- mapM (\((pat, projs), branches) -> do
                 res <- treatput c t (branches ++ notest)
-                return (pat, res)
+                let res_projs = case pat of
+                        MLPLiteral _ -> res
+                        MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj testlab testty vname projn) e) ) res (zip [0..] projs)
+                return (pat, res_projs)
             ) test
         mlnotest <- treatput testc t notest
         return (c, t, MLTest testlab testty mltest mlnotest)

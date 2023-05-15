@@ -63,8 +63,8 @@ executable spinnaker
         ML.HLtoML
         ML.MLOptimize
 
-        Backends.VM.MLtoVM
-        Backends.VM.VM
+        --Backends.VM.MLtoVM
+        --Backends.VM.VM
         Backends.MLtoJS
         Backends.MLtoSCM
     -- LANGUAGE extensions used by modules in this package.

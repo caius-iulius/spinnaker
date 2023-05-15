@@ -13,6 +13,14 @@ inlineHeuristic e timesappears =
         addedSize = size*(timesappears - 1)
     in size < 8 || addedSize < size
 
+isSimple :: HLExpr -> Bool
+isSimple (_, _, ExprLiteral _) = True
+isSimple (_, _, ExprLabel _) = True
+isSimple (_, _, ExprConstructor _ es) = all isSimple es
+isSimple (_, _, ExprLambda _ _) = True
+isSimple (_, _, ExprHint _ e) = isSimple e
+isSimple _ = False
+
 inlineComb :: Combinator -> HLExpr -> HLExpr
 inlineComb cmb e@(_, _, ExprLiteral _) = e
 inlineComb cmb e@(_, _, ExprLabel l') = e
@@ -163,9 +171,10 @@ optimizeExpr (c, t, ExprPut vals pses) = --TODO: putofput
     in case pses'' of
         [(p, e)] -> case sievePatternList p vals' of
             Always bs -> 
-                if all (\(ml,me)->inlineHeuristic me (appears ml e)) bs
+                if all (\(ml,me)->let numappears = appears ml e
+                                    -- TODO: la condizione con isSimple potrebbe impedire alcune ottimizzazioni
+                                    in (isSimple me || numappears <= 1)  && inlineHeuristic me numappears) bs
                 then optimizeExpr $
-                    --TODO: questo effettua un inline forse troppo permissivo
                     foldl (\me (l,e')->inline [(l, e')] me) e bs
                 else (c, t, ExprPut (map snd bs) [(map (\(ml, (mc, mt, _))-> (mc, mt, Just ml, PatWildcard)) bs, e)])
             _ -> (c, t, ExprPut vals' pses'')

@@ -20,8 +20,8 @@ import HL.Defunctionalize
 import ML.MLOps
 import ML.MLOptimize
 import ML.HLtoML
-import Backends.VM.MLtoVM
-import qualified Backends.VM.VM as VM
+--import Backends.VM.MLtoVM
+--import qualified Backends.VM.VM as VM
 import Backends.MLtoJS
 import Backends.MLtoSCM
 
@@ -60,7 +60,8 @@ compile = do
     (mono, t_opti) <- time $ return $ optimizeProgram monoOptiPasses prog
     compLog $ "Mono " ++ showMonoProg mono
     ((defundatasummary, defraw, uid'), t_defun) <- time $ defunProgram mono uid
-    compLog $ "Final data summary: " ++ show (typeddatasummary ++ defundatasummary)
+    let datasummary = typeddatasummary ++ defundatasummary
+    compLog $ "Final data summary: " ++ show datasummary
     (defopti, t_opti2) <- time $ return $ optimizeProgram defunOptiPasses defraw
     compLog $ "Defun " ++ showMonoProg defopti
 
@@ -74,30 +75,30 @@ compile = do
     backend <- fmap (forceGetArg "backend") getArgOptions
     case backend of
         "js" -> do
-            let jsprog = tojsProgram (typeddatasummary ++ defundatasummary) mlopti
+            let jsprog = tojsProgram datasummary mlopti
             rootpath <- getDataDir
             runtimehandle <- lift $ openFile (rootpath ++ "/runtime/js/spinnaker.js") ReadMode
             runtimecode <- lift $ hGetContents runtimehandle
             lift $ writeFile "out.js" $ runtimecode ++ jsprog
         "scm" -> do
-            let scmprog = toscmProgram (typeddatasummary ++ defundatasummary) mlopti
+            let scmprog = toscmProgram datasummary mlopti
             rootpath <- getDataDir
             runtimehandle <- lift $ openFile (rootpath ++ "/runtime/scm/spinnaker.scm") ReadMode
             runtimecode <- lift $ hGetContents runtimehandle
             lift $ writeFile "out.scm" $ runtimecode ++ scmprog
-        "vm" -> do
-            let vmprog = progToVm mlopti
-            compLog $ "VM Bytecode: " ++ show vmprog
-            lift $ hFlush stdout
-            (_, t_eval) <- time $ lift $ VM.evalProg vmprog
-            compLog $ "Program eval time:" ++ show t_eval ++ "ms"
+        -- "vm" -> do
+        --     let vmprog = progToVm mlopti
+        --     compLog $ "VM Bytecode: " ++ show vmprog
+        --     lift $ hFlush stdout
+        --     (_, t_eval) <- time $ lift $ VM.evalProg vmprog
+        --     compLog $ "Program eval time:" ++ show t_eval ++ "ms"
 
 argdefs :: [Arg]
 argdefs =
     [ Arg {argID="help", argShort=Just 'h', argLong=Just "help", argIsOpt=True, argData=Nothing, argDesc="Display this message"}
     , Arg {argID="verbose", argShort=Just 'v', argLong=Just "verbose", argIsOpt=True, argData=Nothing, argDesc="Verbose compiler output"}
     , Arg {argID="source_file", argShort=Just 'f', argLong=Just "file", argIsOpt=False, argData=Just $ ArgDataStr Nothing, argDesc="Specify source code file"}
-    , Arg {argID="backend", argShort=Nothing, argLong=Just "backend", argIsOpt=True, argData=Just $ ArgDataOpt ["js", "vm", "scm"] (Just "js"), argDesc="Specify the compiler backend"}
+    , Arg {argID="backend", argShort=Nothing, argLong=Just "backend", argIsOpt=True, argData=Just $ ArgDataOpt ["js", "scm"] (Just "js"), argDesc="Specify the compiler backend"}
     ]
 
 main :: IO ()

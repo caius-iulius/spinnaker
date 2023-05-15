@@ -1,7 +1,7 @@
 module Backends.MLtoJS where
 import GHC.Unicode(isPrint, isSpace)
 import Control.Monad.State
-import Data.Maybe(isNothing, fromJust, fromMaybe)
+import Data.Maybe(fromJust, fromMaybe)
 import HLDefs
 import MLDefs
 import ML.MLOps
@@ -71,14 +71,11 @@ tojsLit (LitCharacter c)
 
 emitTest :: String -> MLPattern -> CodeGen ()
 emitTest l (MLPLiteral lit) = emit $ "if(" ++ l ++ " === " ++ tojsLit lit ++ "){\n"
-emitTest l (MLPVariant "True" []) = emit $ "if(" ++ l ++ "){\n"
-emitTest l (MLPVariant "False" []) = emit $ "if(!" ++ l ++ "){\n"
-emitTest l (MLPVariant v ls) = do
+emitTest l (MLPVariant "True") = emit $ "if(" ++ l ++ "){\n"
+emitTest l (MLPVariant "False") = emit $ "if(!" ++ l ++ "){\n"
+emitTest l (MLPVariant v) = do
     v' <- getVariant v
     emit $ "if(" ++ l ++ " instanceof " ++ v' ++ "){\n"
-    mapM_ (\(n, innerl) -> do
-            innerl' <- newMapLabel innerl
-            emit $ "let " ++ innerl' ++ " = " ++ l ++ "[" ++ show n ++ "];\n") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
 
 tojsBlock :: (String -> String) -> MLExpr -> CodeGen ()
 tojsBlock final (_, _, MLLet l e0 e1) = do
@@ -105,6 +102,9 @@ tojsExpr (_, _, MLLiteral lit) = return $ tojsLit lit
 tojsExpr (_, _, MLLabel l) = getLabel l
 tojsExpr (_, _, MLConstructor "True" []) = return "true"
 tojsExpr (_, _, MLConstructor "False" []) = return "false"
+tojsExpr (_, _, MLProj l _ _ n) = do
+    l' <- getLabel l
+    return $ l' ++ "[" ++ show n ++ "]"
 tojsExpr (_, _, MLConstructor v es) = do
     v' <- getVariant v
     es' <- mapM tojsExpr es
@@ -124,9 +124,9 @@ tojsExpr other = do
     tojsBlock (\e -> l ++ " = " ++ e ++ ";\n") other
     return l
 
-tojsVariant :: [(String, Int)] -> String -> Int -> CodeGen ()
+tojsVariant :: [String] -> String -> Int -> CodeGen ()
 tojsVariant vused vname numargs =
-    if isNothing $ lookup vname vused then return ()
+    if not (elem vname vused) then return ()
     else do
         vname' <- newMapVariant vname
         let args = map (("x"++) . show) [0..numargs-1]
@@ -135,7 +135,7 @@ tojsVariant vused vname numargs =
                 ) $ zip [0..] args
         emit "}\n}\n\n"
 
-tojsDataSummaries :: [(String, Int)] -> [DataSummary] -> CodeGen ()
+tojsDataSummaries :: [String] -> [DataSummary] -> CodeGen ()
 tojsDataSummaries vused summaries =
     let stripped = do
             (_, variants) <- summaries

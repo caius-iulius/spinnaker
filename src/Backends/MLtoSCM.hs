@@ -1,6 +1,6 @@
 module Backends.MLtoSCM where
 import Control.Monad.State
-import Data.Maybe(isNothing, fromJust, fromMaybe)
+import Data.Maybe(fromJust, fromMaybe)
 import Data.Char(ord)
 import HLDefs
 import MLDefs
@@ -65,17 +65,13 @@ variantAccess n l = "(cadr" ++ cdrs n l ++ ")"
         cdrs myn myl = "(cdr" ++ cdrs (myn - 1) myl ++ ")"
 
 genTest :: String -> MLPattern -> CodeGen String
-genTest l (MLPLiteral lit@(LitCharacter _)) = return $ "((char=? " ++ l ++ " " ++ toscmLit lit ++ ") (let()"
-genTest l (MLPLiteral lit) = return $ "((= " ++ l ++ " " ++ toscmLit lit ++ ") (let()"
-genTest l (MLPVariant "True" []) = return $ "(" ++ l ++ "(let()"
-genTest l (MLPVariant "False" []) = return $ "((not " ++ l ++ ")(let()"
-genTest l (MLPVariant v ls) = do
+genTest l (MLPLiteral lit@(LitCharacter _)) = return $ "((char=? " ++ l ++ " " ++ toscmLit lit ++ ")"
+genTest l (MLPLiteral lit) = return $ "((= " ++ l ++ " " ++ toscmLit lit ++ ")"
+genTest l (MLPVariant "True") = return $ "(" ++ l ++ " "
+genTest l (MLPVariant "False") = return $ "((not " ++ l ++ ") "
+genTest l (MLPVariant v) = do
     v' <- getVariant v
-    let a = "((string=? (car " ++ l ++ ") " ++ v' ++ ") (let ("
-    ls' <- mapM (\(n, innerl) -> do
-            innerl' <- newMapLabel innerl
-            return $ "(" ++ innerl' ++ " " ++ variantAccess n l ++ ")") $ zipWith (\myn myl -> (myn, fst myl)) [0..] ls
-    return $ a ++ unwords ls' ++ ")"
+    return $ "((string=? (car " ++ l ++ ") " ++ v' ++ ") "
 
 toscmExpr :: MLExpr -> CodeGen String
 toscmExpr (_, _, MLTest l _ pes def) = do
@@ -83,11 +79,13 @@ toscmExpr (_, _, MLTest l _ pes def) = do
     conds <- mapM (\(p, e) -> do
         test <- genTest l' p
         e' <- toscmExpr e
-        return $ test ++ e' ++ "))\n") pes
+        return $ test ++ e' ++ ")\n") pes
     def' <- toscmExpr def
     return $ "(cond " ++ concat conds ++ "(#t " ++ def' ++ "))"
 toscmExpr (_, _, MLError c s) = return $ "(error " ++ show(show c ++ s) ++ ")"
-
+toscmExpr (_, _, MLProj l _ _ n) = do
+    l' <- getLabel l
+    return (variantAccess n l')
 toscmExpr (_, _, MLLiteral lit) = return $ toscmLit lit
 toscmExpr (_, _, MLLabel l) = getLabel l
 toscmExpr (_, _, MLConstructor "True" []) = return "#t"
@@ -106,12 +104,12 @@ toscmExpr (_, _, MLLet l e0 e1) = do
     e1' <- toscmExpr e1
     return $ "(let ((" ++ l' ++ " " ++ e0' ++ "))\n" ++ e1' ++ ")"
 
-toscmVariant :: [(String, Int)] -> String -> Int -> CodeGen ()
+toscmVariant :: [String] -> String -> Int -> CodeGen ()
 toscmVariant vused vname numargs =
-    if isNothing $ lookup vname vused then return ()
-    else const () <$> newMapVariant vname
+    if elem vname vused then const () <$> newMapVariant vname
+    else return ()
 
-toscmDataSummaries :: [(String, Int)] -> [DataSummary] -> CodeGen ()
+toscmDataSummaries :: [String] -> [DataSummary] -> CodeGen ()
 toscmDataSummaries vused summaries =
     let stripped = do
             (_, variants) <- summaries

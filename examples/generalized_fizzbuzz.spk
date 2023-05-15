@@ -1,0 +1,9 @@
+use Std
+use List
+
+def fizzbuzz = \divs, words, n ->
+    let rems = map (rem n) divs ->
+    if all (0!=) rems then show n
+    else concat $ map2 (\0, w -> w | _, _ -> "") rems words
+
+def main = putStr $ Text.unlines $ map (fizzbuzz [2, 3, 5] ["Fizz", "Buzz", "Bazz"]) $ 1..=30

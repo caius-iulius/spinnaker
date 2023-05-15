@@ -48,6 +48,7 @@ toTreeMLExpr (c, dt, MLLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: 
 toTreeMLExpr (c, dt, MLConstructor l es) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) (map toTreeMLExpr es)
 toTreeMLExpr (c, dt, MLCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeMLExpr es)
 toTreeMLExpr (c, dt, MLTest l ty pes def) = Node (show c ++ " DT:" ++ show dt ++ " TEST:" ++ show l ++ " DT:" ++ show ty) (map toTreeMLBranch pes ++ [Node "def" [toTreeMLExpr def]])
+toTreeMLExpr (c, dt, MLProj l ty var n) = Node (show c ++ " DT: " ++ show dt ++ " PROJ " ++ show ty ++ show var ++ " FIELD " ++ show n) []
 toTreeMLExpr (c, dt, MLLet l e0 e1) = Node (show c ++ " DT:" ++ show dt ++ " LET:" ++ show l) [Node "val" [toTreeMLExpr e0], Node "expr" [toTreeMLExpr e1]]
 toTreeMLExpr (c, dt, MLError _ s) = Node (show c ++ " DT:" ++ show dt ++ " ERROR:" ++ show s) []
 
