@@ -10,5 +10,5 @@ def stepn = \n, rules, axiom ->
     foldl (\s, _ -> step rules s) axiom (0..n)
 
 def main =
-    putStrLn (stepn 6 [('A', "AB"), ('B', "A")] "A")
+    putStrLn (stepn 5 [('0', "01"), ('1', "10")] "0")
     >> putStrLn (stepn 2 [('F', "FF"), ('X', "F+[[X]-X]-F[-FX]+X")] "X")

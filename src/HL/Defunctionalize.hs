@@ -41,7 +41,7 @@ addApply t freets cmb = do
                 return ((combl, []), env)
     sv <- getUid
     frees <- mapM (\ft -> fmap (\s -> ("_v" ++ s, ft)) getUid) freets
-    let varl = "Lamvar_" ++ sv
+    let varl = "Closure_" ++ sv
         brs' = (varl, frees, cmb) : brs
     (u', _, _) <- get
     put (u', cs, (t, (combl, brs')) : aps)

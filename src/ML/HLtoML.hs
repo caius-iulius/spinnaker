@@ -72,7 +72,9 @@ treatput c t lpsses = do
                 res <- treatput c t (branches ++ notest)
                 let res_projs = case pat of
                         MLPLiteral _ -> res
-                        MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj testlab testty vname projn) e) ) res (zip [0..] projs)
+                        MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj testlab testty vname projn) e) ) res
+                            $ filter (\(_, (projl, _)) -> mlappears projl res /= 0)
+                            $ zip [0..] projs
                 return (pat, res_projs)
             ) test
         mlnotest <- treatput testc t notest
