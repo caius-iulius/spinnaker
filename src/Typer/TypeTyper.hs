@@ -163,8 +163,9 @@ typePutBranches env pspat tpats texpr ((pats, expr@(c, _, _)):branches) = do
     env' <- patListPatVarsInEnv (TyScheme [] . Qual pspat) env pats tpats
     (s, psexpr, texpr', expr') <- typeExpr env' expr
     typerLog $ " PUTBRANCH_TEX texpr: " ++ show texpr ++ " texpr':" ++ show texpr'
-    s' <- mgu c texpr' texpr --TODO: è giusto l'ordine (texpr' prima)?
+    s' <- mgu c (substApply s texpr') (substApply s texpr) --TODO: è giusto l'ordine (texpr' prima)?
     let mys = composeSubst s' s
+    typerLog $ " PUTBRANCH_MYS: " ++ show mys
     (s'', psbranches, tfinal, others) <- typePutBranches (substApply mys env) (map (substApply mys) pspat) (map (substApply mys) tpats) (substApply s' texpr) branches
     typerLog $ " PUTBRANCH_END tfinal:" ++ show tfinal ++ " s:" ++ show (composeSubst s'' mys)
     let finals = composeSubst s'' mys

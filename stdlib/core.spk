@@ -198,6 +198,8 @@ mod MonadCore {
         return : forall a. a -> m a,
         bind : forall a b. m a -> (a -> m b) -> m b
 
+    def pub (<$>) : forall f a b. {Functor f} => (a -> b) -> f a -> f b
+        = fmap
     def pub (>>=) : forall m a b. {Monad m} => m a -> (a -> m b) -> m b
         = bind
     def pub (>>) : forall m a b. {Monad m} => m a -> m b -> m b
