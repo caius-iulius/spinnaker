@@ -74,18 +74,19 @@ genTest l (MLPVariant v) = do
     return $ "((string=? (car " ++ l ++ ") " ++ v' ++ ") "
 
 toscmExpr :: MLExpr -> CodeGen String
-toscmExpr (_, _, MLTest l _ pes def) = do
-    l' <- getLabel l
+toscmExpr (_, _, MLTest tv pes def) = do
+    tv' <- toscmExpr tv
+    l' <- newLabel
     conds <- mapM (\(p, e) -> do
         test <- genTest l' p
         e' <- toscmExpr e
         return $ test ++ e' ++ ")\n") pes
     def' <- toscmExpr def
-    return $ "(cond " ++ concat conds ++ "(#t " ++ def' ++ "))"
+    return $ "(let ((" ++ l' ++ " " ++ tv' ++ "))" ++ "(cond " ++ concat conds ++ "(#t " ++ def' ++ "))" ++ ")"
 toscmExpr (_, _, MLError c s) = return $ "(error " ++ show(show c ++ s) ++ ")"
-toscmExpr (_, _, MLProj l _ _ n) = do
-    l' <- getLabel l
-    return (variantAccess n l')
+toscmExpr (_, _, MLProj e _ n) = do
+    e' <- toscmExpr e
+    return (variantAccess n e')
 toscmExpr (_, _, MLLiteral lit) = return $ toscmLit lit
 toscmExpr (_, _, MLLabel l) = getLabel l
 toscmExpr (_, _, MLConstructor "True" []) = return "#t"

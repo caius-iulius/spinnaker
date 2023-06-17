@@ -8,7 +8,6 @@ import ML.MLOps
 import Control.Monad.State
 
 type Branches = [([(String, HLPattern)], MLExpr)]
---TODO posso usare una hlexpr subst, questo potrebbe aiutarmi nel ristrutturare il tutto per compilare più test sulla stessa cosa insieme
 pushvalassigns :: Branches -> Branches
 pushvalassigns = map (uncurry $ pushvals [])
     where pushvals ps [] e = (ps, e)
@@ -18,14 +17,14 @@ pushvalassigns = map (uncurry $ pushvals [])
                     _ -> (l, (c, pt, Nothing, pd)) : ps
                   e' = case ml of
                       Nothing -> e
-                      Just patlab -> mllabsubst patlab l e
+                      Just patlab -> mlsubst patlab (c, pt, MLLabel l) e
               in pushvals ps' lps e'
 
-chooseTestHeuristic :: Branches -> (StdCoord, String, DataType)
+chooseTestHeuristic :: Branches -> (StdCoord, DataType, String)
 chooseTestHeuristic ((lps,_):lpsses) = 
     let occurences = map (\(l, p) -> ((l,p), length $ filter (any ((l ==) . fst) . fst) lpsses)) lps
         (lab, (c, pt, _, _)) = fst $ maximumOn snd occurences
-    in (c, lab, pt)
+    in (c, pt, lab)
     where maximumOn f = foldr1 (\a b -> if f a < f b then b else a)
 
 patCompatibility :: (MLPattern, [(String, DataType)]) -> HLPattern -> Maybe [(String, HLPattern)]
@@ -65,20 +64,20 @@ treatput c t lpsses = do
     let lpsses' = pushvalassigns lpsses
     if null $ fst $ head lpsses' then return $ snd $ head lpsses'
     else do
-        let (testc, testlab, testty) = chooseTestHeuristic lpsses'
+        let (testc, testty, testlab) = chooseTestHeuristic lpsses'
         lift $ compLog $ show testc ++ " TESTING LABEL:" ++ show testlab
         (test, notest) <- splitTests testlab lpsses'
         mltest <- mapM (\((pat, projs), branches) -> do
                 res <- treatput c t (branches ++ notest)
                 let res_projs = case pat of
                         MLPLiteral _ -> res
-                        MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj testlab testty vname projn) e) ) res
+                        MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj (c, testty, MLLabel testlab) vname projn) e) ) res
                             $ filter (\(_, (projl, _)) -> mlappears projl res /= 0)
                             $ zip [0..] projs
                 return (pat, res_projs)
             ) test
         mlnotest <- treatput testc t notest
-        return (c, t, MLTest testlab testty mltest mlnotest)
+        return (c, t, MLTest (testc, testty, MLLabel testlab)  mltest mlnotest)
 
 exprtomlexpr :: HLExpr -> MLState MLExpr
 exprtomlexpr (c, t, ExprLiteral l) = return (c, t,MLLiteral l)

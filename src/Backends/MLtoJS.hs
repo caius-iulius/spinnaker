@@ -83,8 +83,10 @@ tojsBlock final (_, _, MLLet l e0 e1) = do
     e0' <- tojsExpr e0
     emit $ "let " ++ l' ++ " = " ++ e0' ++ ";\n"
     tojsBlock final e1
-tojsBlock final (_, _, MLTest l _ pes def) = do
-    l' <- getLabel l
+tojsBlock final (_, _, MLTest tv pes def) = do
+    tv' <- tojsExpr tv
+    l' <- newLabel
+    emit $ "let " ++ l' ++ " = " ++ tv' ++ ";\n"
     mapM_ (\(p, e) -> do
         emitTest l' p
         tojsBlock final e
@@ -102,9 +104,9 @@ tojsExpr (_, _, MLLiteral lit) = return $ tojsLit lit
 tojsExpr (_, _, MLLabel l) = getLabel l
 tojsExpr (_, _, MLConstructor "True" []) = return "true"
 tojsExpr (_, _, MLConstructor "False" []) = return "false"
-tojsExpr (_, _, MLProj l _ _ n) = do
-    l' <- getLabel l
-    return $ l' ++ "[" ++ show n ++ "]"
+tojsExpr (_, _, MLProj e _ n) = do
+    e' <- tojsExpr e
+    return $ "(" ++ e' ++ ")[" ++ show n ++ "]"
 tojsExpr (_, _, MLConstructor v es) = do
     v' <- getVariant v
     es' <- mapM tojsExpr es

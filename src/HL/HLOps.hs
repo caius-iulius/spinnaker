@@ -46,6 +46,7 @@ inline binds (c, t, ExprLambda l' le) =
         in (c, t, ExprLambda l' (inline newbinds le))
 inline binds (c, t, ExprPut vs pses) = (c, t, ExprPut (map (inline binds) vs)
     (map (\(p, e)->
-        --TODO: questo non fa l'inline dei shadowing, ma bisognerebbe ristrutturare il codice: let newbinds = filter (\(sl, _) -> not $ any (appearsPat sl) p) binds in
-            (p, inline binds e)) pses))
+        --TODO: questo è un fix per evitare shadowing, significa che bisogna ristrutturare l'optimizer per creare nuove variabili uniche
+        let newbinds = filter (\(sl, _) -> not $ any (appearsPat sl) p) binds in
+            (p, inline newbinds e)) pses))
 
