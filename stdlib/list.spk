@@ -2,6 +2,7 @@ use Core
 
 mod Maybe "maybe.spk"
 
+
 def pub head : forall a. [a] -> a
     = \[x | xs] -> x
 def pub tail : forall a. [a] -> [a]
@@ -175,3 +176,11 @@ and pub transpose : forall a. [[a]] -> [[a]] =
     \ [] -> []
     | ls -> transposeAux ls
 # TODO: intercalate, subsequences, permutations, enumerate
+
+
+# NOTE: forse deve andare in un altro file
+def pub catMaybes : forall a. [Maybe.Maybe a] -> [a] =
+    \ [] -> []
+    | [Maybe.None | xs] -> catMaybes xs
+    | [Maybe.Some x | xs] -> x :: catMaybes xs
+

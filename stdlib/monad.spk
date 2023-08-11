@@ -45,11 +45,25 @@ rel pub MonadTrans t = lift : forall m a. {Monad m, Monad (t m)} => m a -> t m a
     # 1) lift <| return = return
     # 2) lift (m >>= f) = lift m >>= (lift <| f)
 
+# Monade identità, può servire come placeholder nei transformers, ad esempio State s a = StateT s Id a
+mod pub Id {
+    data pub Id a = Id a
+    def pub runId : forall a. Id a -> a = \Id a -> a
+    
+    inst Functor Id {
+        def fmap = \f, Id a -> Id (f a)
+    }
+    inst Monad Id {
+        def return = Id
+        def bind = \Id a, f -> f a
+    }
+}
+
 mod pub State {
     # qui la mancanza delle FunctionalDependencies è un problema, in diversi casi l'inferenza è indecidibile
-    rel pub {Monad m} => MonadState m s =
-        gets : m s,
-        puts : s -> m ()
+    # rel pub {Monad m} => MonadState m s =
+    #     gets : m s,
+    #     puts : s -> m ()
 
     data pub StateT s m a = StateT (s -> m (a, s))
     def pub runStateT : forall s m a. StateT s m a -> s -> m (a, s)
@@ -69,12 +83,15 @@ mod pub State {
         )
     }
 
-    inst forall s m. {Monad m} => MonadState (StateT s m) s {
-        def gets = StateT (\s -> return (s, s))
-        def puts = \s -> StateT(const $ return ((), s))
-    }
+    # inst forall s m. {Monad m} => MonadState (StateT s m) s {
+        def pub gets = StateT (\s -> return (s, s))
+        def pub puts = \s -> StateT(const $ return ((), s))
+    # }
 
     inst forall s. MonadTrans (StateT s) {
         def lift = \m -> StateT (\s -> fmap (\a -> (a, s)) m)
     }
+
+    typesyn pub State s = StateT s Id.Id
+    def pub runState : forall s a. (State s) a -> s -> (a, s) = \m, s -> Id.runId (runStateT m s)
 }

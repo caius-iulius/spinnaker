@@ -29,6 +29,17 @@ inst forall a. {Show a} => Show (Maybe a) { #NOTE: temporaneo, aggiunge parentes
         | Some a -> "Some (" ++ show a ++ ")"
 }
 
+inst forall a. {Eq a} => Eq (Maybe a) {
+    def (==) =
+        \ None, None -> True
+        | Some a, Some b -> a == b
+        | _, _ -> False
+    def (!=) =
+        \ None, None -> False
+        | Some a, Some b -> a != b
+        | _, _ -> True
+}
+
 inst Functor Maybe {
     def fmap = \f, m -> put m
         | None -> None
