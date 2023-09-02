@@ -288,16 +288,16 @@ mod ShowCore {
 
     def showDigit : Int -> Chr = \i -> toEnum (fromEnum '0' + i)
 
-    def showNonNegAux = \s, i -> put (i < 10)
-        | True -> showDigit i :: s
-        | _ ->
-            showNonNegAux (showDigit (rem i 10) :: s) (i / 10)
-    def showNonNeg = showNonNegAux Nil
+    def showNosignAux = \s, i -> put i
+        | 0 -> s
+        | _ -> showNosignAux (showDigit (abs $ rem i 10) :: s) (i / 10)
+    def showNosign = showNosignAux Nil
 
-    def showInt = \i ->
-        put i < 0
-        | True -> '-' :: showNonNeg (0-i)
-        | _ -> showNonNeg i
+    def showInt = \i -> put i
+        | 0 -> '0' :: Nil
+        | _ ->  put i > 0
+                | True -> showNosign i
+                | _ -> '-' :: showNosign i
 
     inst Show Int { def show = showInt }
 

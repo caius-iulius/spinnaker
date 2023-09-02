@@ -69,6 +69,6 @@ executable spinnaker
         Backends.MLtoSCM
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.17.0.0, mtl, containers
+    build-depends:    base ^>=4.18.0.0, mtl, containers
     hs-source-dirs:   src
     default-language: Haskell2010
