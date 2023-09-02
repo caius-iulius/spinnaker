@@ -2,7 +2,7 @@ use Std
 
 def bsd_round = \n -> rem (12345 + n*1103515245) (2^31)
 
-data Random a = Random (Int -> a)
+data pub Random a = Random (Int -> a)
 
 inst Monad Random {
     def return = \x -> Random (const x)
@@ -11,9 +11,9 @@ inst Monad Random {
             let Random sf' = f (sf s)
             -> sf' (bsd_round s))
 }
-def randInt : Random Int = Random id
+def pub randInt : Random Int = Random id
 
-def runRandom : forall a. Int -> Random a -> a =
+def pub runRandom : forall a. Int -> Random a -> a =
     \ seed, Random f -> f seed
 
 def main = runRandom 0 $

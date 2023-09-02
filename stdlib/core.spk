@@ -178,6 +178,11 @@ mod NumCore {
         def (>) = _greFlt
         def (<=)= _leqFlt
     }
+    inst Ord Chr {
+        def (>) = \a, b -> fromEnum a > fromEnum b
+        def (<=) = \a, b -> fromEnum a <= fromEnum b
+    }
+
 } use pub NumCore
 
 mod MonadCore {
