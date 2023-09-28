@@ -1,13 +1,19 @@
 module HL.HLOps where
-import Data.Maybe (fromMaybe)
+import Data.Maybe (isJust, maybeToList, fromMaybe)
+import Typer.TypingDefs(DataType)
 import HLDefs
 
 
+patVarsInner PatWildcard = []
+patVarsInner (PatLiteral _) = []
+patVarsInner (PatVariant c ps) = ps >>= patVars
+
+patVars :: HLPattern -> [(String, DataType)]
+patVars (_, _, Nothing, ip) = patVarsInner ip
+patVars (_, t, Just l, ip) = (l, t) : patVarsInner ip
+
 appearsPat :: String -> HLPattern -> Bool
-appearsPat l (_, _, ml, ip) = Just l == ml || appearsPatInner l ip
-    where appearsPatInner myl PatWildcard = False
-          appearsPatInner myl (PatLiteral _) = False
-          appearsPatInner myl (PatVariant c ps) = any (appearsPat myl) ps
+appearsPat l pat = isJust $ lookup l (patVars pat)
 
 appears :: String -> HLExpr -> Int
 appears _ (_, _, ExprLiteral _) = 0

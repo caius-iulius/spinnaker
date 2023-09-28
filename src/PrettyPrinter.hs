@@ -47,9 +47,11 @@ toTreeMLExpr (c, dt, MLLiteral l) = Node (show c ++ " DT:" ++ show dt ++ " Liter
 toTreeMLExpr (c, dt, MLLabel l) = Node (show c ++ " DT:" ++ show dt ++ " Label: " ++ show l) []
 toTreeMLExpr (c, dt, MLConstructor l es) = Node (show c ++ " DT:" ++ show dt ++ " Constructor: " ++ show l) (map toTreeMLExpr es)
 toTreeMLExpr (c, dt, MLCombinator l es) = Node (show c ++ " DT:" ++ show dt ++ " Combinator: " ++ show l) (map toTreeMLExpr es)
+toTreeMLExpr (c, dt, MLJoin l es) = Node (show c ++ " DT:" ++ show dt ++ " Join: " ++ show l) (map toTreeMLExpr es)
 toTreeMLExpr (c, dt, MLTest tv pes def) = Node (show c ++ " DT:" ++ show dt ++ " TEST") (Node "testval" [toTreeMLExpr tv] : map toTreeMLBranch pes ++ [Node "def" [toTreeMLExpr def]])
 toTreeMLExpr (c, dt, MLProj e var n) = Node (show c ++ " DT: " ++ show dt ++ " PROJ FIELD " ++ show n) [toTreeMLExpr e]
 toTreeMLExpr (c, dt, MLLet l e0 e1) = Node (show c ++ " DT:" ++ show dt ++ " LET:" ++ show l) [Node "val" [toTreeMLExpr e0], Node "expr" [toTreeMLExpr e1]]
+toTreeMLExpr (c, dt, MLLetJoin l args e0 e1) = Node (show c ++ " DT:" ++ show dt ++ " LETJOIN:" ++ show l) [Node "args" (map (\(al, at) -> Node (show al ++ ":" ++ show at) []) args), Node "val" [toTreeMLExpr e0], Node "expr" [toTreeMLExpr e1]]
 toTreeMLExpr (c, dt, MLError _ s) = Node (show c ++ " DT:" ++ show dt ++ " ERROR:" ++ show s) []
 
 toTreeMLDef (l, as, e) = Node (show l) [Node "args" (map (\(al,at)-> Node (show al ++ ":" ++ show at) []) as), toTreeMLExpr e]

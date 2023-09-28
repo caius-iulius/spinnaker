@@ -3,6 +3,7 @@ import Parser.MPCL(StdCoord)
 import CompDefs
 import Typer.TypingDefs
 import HLDefs
+import HL.HLOps
 import MLDefs
 import ML.MLOps
 import Control.Monad.State
@@ -19,6 +20,13 @@ pushvalassigns = map (uncurry $ pushvals [])
                       Nothing -> e
                       Just patlab -> mlsubst patlab (c, pt, MLLabel l) e
               in pushvals ps' lps e'
+
+makeJoins :: Branches -> MLState (Branches, [(String, [(String, DataType)], MLExpr)])
+makeJoins = fmap unzip . mapM makeJoinsSingle
+    where makeJoinsSingle (lps, e@(c, t, _)) = let ltys = filter ((/= 0) . flip mlappears e . fst) $ lpatsVars lps in do
+            joinLab <- newlab
+            return ((lps, (c, t, MLJoin joinLab $ map (\(argl, argt)->(c, argt, MLLabel argl)) ltys)), (joinLab, ltys, e))
+          lpatsVars lps = lps >>= (patVars . snd)
 
 chooseTestHeuristic :: Branches -> (StdCoord, DataType, String)
 chooseTestHeuristic ((lps,_):lpsses) = 
@@ -67,8 +75,9 @@ treatput c t lpsses = do
         let (testc, testty, testlab) = chooseTestHeuristic lpsses'
         lift $ compLog $ show testc ++ " TESTING LABEL:" ++ show testlab
         (test, notest) <- splitTests testlab lpsses'
+        (notest', joins) <- makeJoins notest
         mltest <- mapM (\((pat, projs), branches) -> do
-                res <- treatput c t (branches ++ notest)
+                res <- treatput c t (branches ++ notest')
                 let res_projs = case pat of
                         MLPLiteral _ -> res
                         MLPVariant vname -> foldr (\(projn, (projl, projt)) e -> (c, t, MLLet projl (c, projt, MLProj (c, testty, MLLabel testlab) vname projn) e) ) res
@@ -76,8 +85,10 @@ treatput c t lpsses = do
                             $ zip [0..] projs
                 return (pat, res_projs)
             ) test
-        mlnotest <- treatput testc t notest
-        return (c, t, MLTest (testc, testty, MLLabel testlab)  mltest mlnotest)
+        mlnotest <- treatput testc t notest'
+        return $ foldr (\(joinl, joinargs, joine) e -> (c, t, MLLetJoin joinl joinargs joine e))
+            (c, t, MLTest (testc, testty, MLLabel testlab)  mltest mlnotest)
+            joins
 
 exprtomlexpr :: HLExpr -> MLState MLExpr
 exprtomlexpr (c, t, ExprLiteral l) = return (c, t,MLLiteral l)

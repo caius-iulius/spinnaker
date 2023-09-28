@@ -99,11 +99,22 @@ toscmExpr (_, _, MLCombinator c es) = do
     c' <- getCombinator c
     es' <- mapM toscmExpr es
     return $ "(" ++ unwords (c' : es') ++ ")"
+toscmExpr (_, _, MLJoin j es) = do
+    j' <- getLabel j
+    es' <- mapM toscmExpr es
+    return $ "(" ++ unwords (j' : es') ++ ")"
 toscmExpr (_, _, MLLet l e0 e1) = do
     l' <- newMapLabel l
     e0' <- toscmExpr e0
     e1' <- toscmExpr e1
     return $ "(let ((" ++ l' ++ " " ++ e0' ++ "))\n" ++ e1' ++ ")"
+toscmExpr (_, _, MLLetJoin j lts e0 e1) = do
+    j' <- newMapLabel j
+    e1' <- toscmExpr e1
+    as <- mapM (newMapLabel . fst) lts
+    e0' <- toscmExpr e0
+    return $ "(let ((" ++ j' ++ " (lambda (" ++ unwords as ++ ") " ++ e0' ++ ")))\n" ++ e1' ++ ")"
+    
 
 toscmVariant :: [String] -> String -> Int -> CodeGen ()
 toscmVariant vused vname numargs =

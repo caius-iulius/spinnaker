@@ -115,10 +115,21 @@ tojsExpr (_, _, MLCombinator c es) = do
     c' <- getCombinator c
     es' <- mapM tojsExpr es
     return $ c' ++ "(" ++ toCommaList es' ++ ")"
+tojsExpr (_, _, MLJoin j es) = do
+    j' <- getLabel j
+    es' <- mapM tojsExpr es
+    return $ j' ++ "(" ++ toCommaList es' ++ ")"
 tojsExpr (_, _, MLLet l e0 e1) = do
     l' <- newMapLabel l
     e0' <- tojsExpr e0
     emit $ "let " ++ l' ++ " = " ++ e0' ++ ";\n"
+    tojsExpr e1
+tojsExpr (_, _, MLLetJoin j lvs e0 e1) = do
+    j' <- newMapLabel j
+    as <- mapM (newMapLabel . fst) lvs
+    emit $ "let " ++ j' ++ " = function(" ++ toCommaList as ++ "){\n"
+    tojsBlock (\e' -> "return " ++ e' ++ ";\n") e0
+    emit "};\n"
     tojsExpr e1
 tojsExpr other = do
     l <- newLabel

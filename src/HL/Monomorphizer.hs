@@ -3,6 +3,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List(find, partition)
 import Data.Maybe(isJust, catMaybes)
+import Control.Monad(join)
 import Control.Monad.State
 
 import CompDefs
